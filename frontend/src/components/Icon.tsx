@@ -19,6 +19,7 @@ export type IconName =
   | 'search'
   | 'chevron-down'
   | 'chevron-right'
+  | 'chevron-left'
   | 'external-link'
   | 'refresh'
   | 'plus'
@@ -120,7 +121,12 @@ export type IconName =
   | 'location'
   | 'globe'
   // 翻译相关
-  | 'language';
+  | 'language'
+  // 音乐播放器相关
+  | 'heart'
+  | 'pause'
+  | 'skip-back'
+  | 'skip-forward';
 
 interface IconProps {
   name: IconName;
@@ -219,6 +225,11 @@ export function Icon({ name, size = 20, className = '', color = 'currentColor' }
     'chevron-right': (
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={style} className={className}>
         <polyline points="9 18 15 12 9 6" />
+      </svg>
+    ),
+    'chevron-left': (
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={style} className={className}>
+        <polyline points="15 18 9 12 15 6" />
       </svg>
     ),
     'external-link': (
@@ -784,6 +795,29 @@ export function Icon({ name, size = 20, className = '', color = 'currentColor' }
         <circle cx="12" cy="12" r="10" />
         <line x1="2" y1="12" x2="22" y2="12" />
         <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+      </svg>
+    ),
+    heart: (
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={style} className={className}>
+        <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
+      </svg>
+    ),
+    pause: (
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={style} className={className}>
+        <rect x="6" y="4" width="4" height="16" />
+        <rect x="14" y="4" width="4" height="16" />
+      </svg>
+    ),
+    'skip-back': (
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={style} className={className}>
+        <polygon points="19 20 9 12 19 4 19 20" />
+        <line x1="5" y1="19" x2="5" y2="5" />
+      </svg>
+    ),
+    'skip-forward': (
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={style} className={className}>
+        <polygon points="5 4 15 12 5 20 5 4" />
+        <line x1="19" y1="5" x2="19" y2="19" />
       </svg>
     ),
     photo: (

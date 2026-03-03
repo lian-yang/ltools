@@ -10,6 +10,7 @@ ltools
 .DS_Store
 .gitnexus
 .claude
+ref
 task_plan.md
 progress.md
 findings.md

@@ -23,5 +23,9 @@
             <string>true</string>
         <key>NSHumanReadableCopyright</key>
             <string>© 2026, My Company</string>
+        <key>NSCameraUsageDescription</key>
+            <string>Camera</string>
+        <key>NSMicrophoneUsageDescription</key>
+            <string>Microphone</string>
     </dict>
 </plist>

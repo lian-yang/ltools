@@ -28,5 +28,9 @@
             <key>NSAllowsLocalNetworking</key>
             <true/>
         </dict>
+        <key>NSCameraUsageDescription</key>
+            <string>Camera</string>
+        <key>NSMicrophoneUsageDescription</key>
+            <string>Microphone</string>
     </dict>
 </plist>

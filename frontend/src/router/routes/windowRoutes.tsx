@@ -8,6 +8,7 @@ const Screenshot2Overlay = lazy(() => import('../../windows/Screenshot2Overlay')
 const PinWindowComponent = lazy(() => import('../../windows/PinWindow'))
 const StickyWindowComponent = lazy(() => import('../../windows/StickyWindow'))
 const LocalTranslateWindowComponent = lazy(() => import('../../windows/LocalTranslateWindow'))
+const MusicPlayerWindowComponent = lazy(() => import('../../windows/MusicPlayerWindow'))
 
 /**
  * PinWindow 包装器 - 从 URL 参数获取 windowId
@@ -30,6 +31,13 @@ function StickyWindowWrapper() {
  */
 function LocalTranslateWindowWrapper() {
   return <LocalTranslateWindowComponent />
+}
+
+/**
+ * MusicPlayerWindow 包装器
+ */
+function MusicPlayerWindowWrapper() {
+  return <MusicPlayerWindowComponent />
 }
 
 /**
@@ -99,11 +107,19 @@ export const windowRoutes: RouteConfig[] = [
       </LazyWindowWrapper>
     ),
   },
+  {
+    path: '/music-player',
+    element: (
+      <LazyWindowWrapper>
+        <MusicPlayerWindowWrapper />
+      </LazyWindowWrapper>
+    ),
+  },
 ]
 
 /**
  * 判断当前路径是否为窗口路由
  */
 export function isWindowPath(path: string): boolean {
-  return path === '/search' || path === '/screenshot2-overlay' || path === '/pin-window' || path === '/sticky-window' || path === '/localtranslate-window'
+  return path === '/search' || path === '/screenshot2-overlay' || path === '/pin-window' || path === '/sticky-window' || path === '/localtranslate-window' || path === '/music-player'
 }

@@ -411,6 +411,67 @@ function PluginContent({ pluginId, plugin, pluginIcon, onBack, isActive }: Plugi
           </div>
         )
 
+      case 'musicplayer.builtin':
+        return (
+          <div className="p-8">
+            <div className="max-w-2xl mx-auto text-center">
+              <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-[#7C3AED] to-[#A78BFA] mb-6">
+                <Icon name="play" size={36} color="white" />
+              </div>
+              <h1 className="text-3xl font-bold mb-2">随机音乐播放器</h1>
+              <p className="text-white/50 mb-8">基于 Meting API 的随机音乐播放器，支持网易云、腾讯、酷狗等多个平台</p>
+
+              <div className="glass-light rounded-xl p-8 mb-6">
+                <button
+                  onClick={async () => {
+                    try {
+                      const MusicPlayerService = await import('../../bindings/ltools/plugins/musicplayer/service')
+                      await MusicPlayerService.ShowWindow()
+                    } catch (error) {
+                      console.error('Failed to open music player:', error)
+                    }
+                  }}
+                  className="px-8 py-4 rounded-xl bg-gradient-to-r from-[#7C3AED] to-[#A78BFA] text-white font-semibold text-lg hover:opacity-90 transition-opacity"
+                >
+                  <div className="flex items-center gap-3">
+                    <Icon name="play" size={24} color="white" />
+                    <span>打开播放器</span>
+                  </div>
+                </button>
+                <p className="text-white/40 text-sm mt-4">
+                  点击打开独立的音乐播放器窗口
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="glass-light rounded-xl p-4 text-left">
+                  <h3 className="text-sm font-medium text-white/60 mb-2">功能特性</h3>
+                  <ul className="text-sm text-white/40 space-y-1">
+                    <li>• 多平台音乐源支持</li>
+                    <li>• 随机播放模式</li>
+                    <li>• 自动播放下一曲</li>
+                    <li>• 预加载队列优化</li>
+                  </ul>
+                </div>
+                <div className="glass-light rounded-xl p-4 text-left">
+                  <h3 className="text-sm font-medium text-white/60 mb-2">支持平台</h3>
+                  <div className="flex flex-wrap gap-2">
+                    <span className="px-2 py-1 rounded bg-[#7C3AED]/10 text-[#A78BFA] text-xs border border-[#7C3AED]/20">
+                      网易云音乐
+                    </span>
+                    <span className="px-2 py-1 rounded bg-[#7C3AED]/10 text-[#A78BFA] text-xs border border-[#7C3AED]/20">
+                      腾讯音乐
+                    </span>
+                    <span className="px-2 py-1 rounded bg-[#7C3AED]/10 text-[#A78BFA] text-xs border border-[#7C3AED]/20">
+                      酷狗音乐
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+
       default:
         // 默认插件界面
         return (

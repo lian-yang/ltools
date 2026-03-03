@@ -8,8 +8,6 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/wailsapp/wails/v3/pkg/application"
-	"github.com/wailsapp/wails/v3/pkg/events"
 	"ltools/internal/plugins"
 	"ltools/internal/sync"
 	"ltools/plugins/applauncher"
@@ -24,6 +22,7 @@ import (
 	"ltools/plugins/kanban"
 	"ltools/plugins/localtranslate"
 	"ltools/plugins/markdown"
+	"ltools/plugins/musicplayer"
 	"ltools/plugins/password"
 	"ltools/plugins/processmanager"
 	"ltools/plugins/qrcode"
@@ -32,6 +31,9 @@ import (
 	"ltools/plugins/sysinfo"
 	"ltools/plugins/tunnel"
 	"ltools/plugins/vault"
+
+	"github.com/wailsapp/wails/v3/pkg/application"
+	"github.com/wailsapp/wails/v3/pkg/events"
 )
 
 // Wails uses Go's `embed` package to embed the frontend files into the binary.
@@ -210,6 +212,14 @@ func main() {
 		},
 		Mac: application.MacOptions{
 			ApplicationShouldTerminateAfterLastWindowClosed: false, // 保持应用在窗口关闭后运行
+		},
+		Windows: application.WindowsOptions{
+			EnabledFeatures: []string{
+				"ignore-certificate-errors",      // 忽略与证书相关的错误
+				"allow-insecure-localhost",       // 允许忽略本地主机上的 TLS/SSL 错误
+				"allow-running-insecure-content", // 解除对从 HTTP 源提供内容的 MSP 的阻止
+				"autoplay-policy",                // 允许自动播放策略
+			},
 		},
 	})
 
@@ -405,6 +415,12 @@ func main() {
 		log.Fatal("Failed to register localtranslate plugin:", err)
 	}
 
+	// Create and register musicplayer plugin
+	musicPlayerPlugin := musicplayer.NewMusicPlayerPlugin()
+	if err := pluginManager.Register(musicPlayerPlugin); err != nil {
+		log.Fatal("Failed to register musicplayer plugin:", err)
+	}
+
 	// Start all enabled plugins - this calls ServiceStartup() on each enabled plugin
 	// This is crucial for plugins like clipboard that need to start background monitoring
 	if err := pluginManager.StartupAll(); err != nil {
@@ -479,6 +495,14 @@ func main() {
 	// Create localtranslate service to expose local translation functionality to frontend
 	localTranslateService := localtranslate.NewLocalTranslateService(localTranslatePlugin, app)
 
+	// Create musicplayer service to expose music player functionality to frontend
+	musicPlayerService, err := musicplayer.NewService(musicPlayerPlugin, app)
+	if err != nil {
+		log.Fatal("Failed to create musicplayer service:", err)
+	}
+	// Set service reference in plugin
+	musicPlayerPlugin.SetService(musicPlayerService)
+
 	// Create shortcut service to expose keyboard shortcut management to frontend
 	shortcutService, err := plugins.NewShortcutService(app, dataDir)
 	if err != nil {
@@ -518,6 +542,7 @@ func main() {
 	app.RegisterService(application.NewService(stickyService))
 	app.RegisterService(application.NewService(imagebedService))
 	app.RegisterService(application.NewService(localTranslateService))
+	app.RegisterService(application.NewService(musicPlayerService))
 	app.RegisterService(application.NewService(shortcutService))
 	app.RegisterService(application.NewService(searchWindowService))
 	app.RegisterService(application.NewService(syncService))
@@ -528,19 +553,26 @@ func main() {
 	// 'BackgroundColour' is the background colour of the window.
 	// 'URL' is the URL that will be loaded into the webview.
 	mainWindow = app.Window.NewWithOptions(application.WebviewWindowOptions{
-		Title: "LTools",
+		Title:  "LTools",
 		Width:  1400,
-		Height:  900,
+		Height: 900,
 		Mac: application.MacWindow{
 			TitleBar: application.MacTitleBar{
-				HideTitle:          true,    // 隐藏标题文字
-				AppearsTransparent: true,    // 标题栏透明
-				FullSizeContent:    true,    // 内容延伸到标题栏区域（关键！）
+				HideTitle:          true, // 隐藏标题文字
+				AppearsTransparent: true, // 标题栏透明
+				FullSizeContent:    true, // 内容延伸到标题栏区域（关键！）
 			},
 			Backdrop: application.MacBackdropTransparent,
 		},
 		BackgroundColour: application.NewRGB(27, 38, 54),
 		URL:              "/",
+		Windows: application.WindowsWindow{
+			Permissions: map[application.CoreWebView2PermissionKind]application.CoreWebView2PermissionState{
+				application.CoreWebView2PermissionKindCamera:        application.CoreWebView2PermissionStateAllow, // 相机权限
+				application.CoreWebView2PermissionKindMicrophone:    application.CoreWebView2PermissionStateAllow, // 麦克风权限
+				application.CoreWebView2PermissionKindNotifications: application.CoreWebView2PermissionStateAllow, // 通知权限
+			},
+		},
 	})
 
 	// 监听主窗口关闭事件，隐藏窗口而非销毁（系统托盘应用模式）
