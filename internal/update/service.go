@@ -9,8 +9,10 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -243,29 +245,245 @@ func (s *Service) InstallUpdate(filePath string) error {
 
 // installMacOS macOS 安装逻辑
 func (s *Service) installMacOS(filePath string) error {
-	// macOS 通常下载 .tar.gz 或 .app.zip
-	// 解压并替换当前应用
-	// 实际实现需要：
-	// 1. 解压下载的文件
-	// 2. 验证签名（如果有）
-	// 3. 替换当前应用
-	// 4. 重启应用
-	log.Println("[UpdateService] macOS installation not yet implemented")
-	return fmt.Errorf("macOS installation not yet implemented")
+	log.Println("[UpdateService] Starting macOS installation...")
+
+	// 1. 验证文件是 tar.gz
+	if !strings.HasSuffix(filePath, ".tar.gz") {
+		return fmt.Errorf("unsupported file format: expected .tar.gz, got %s", filePath)
+	}
+
+	// 2. 获取当前应用路径
+	currentAppPath, err := s.getCurrentAppPath()
+	if err != nil {
+		return fmt.Errorf("failed to get current app path: %w", err)
+	}
+
+	log.Printf("[UpdateService] Current app path: %s", currentAppPath)
+
+	// 3. 解压到临时目录
+	tmpDir := filepath.Join(os.TempDir(), "ltools-update")
+	if err := os.RemoveAll(tmpDir); err != nil {
+		log.Printf("[UpdateService] Warning: failed to clean temp dir: %v", err)
+	}
+	if err := os.MkdirAll(tmpDir, 0755); err != nil {
+		return fmt.Errorf("failed to create temp dir: %w", err)
+	}
+	defer os.RemoveAll(tmpDir) // 清理临时文件
+
+	// 4. 解压 tar.gz
+	cmd := exec.Command("tar", "xzf", filePath, "-C", tmpDir)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("failed to extract archive: %w\nOutput: %s", err, string(output))
+	}
+
+	// 5. 查找解压后的 .app
+	var appPath string
+	err = filepath.Walk(tmpDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if strings.HasSuffix(path, ".app") && info.IsDir() {
+			appPath = path
+			return filepath.SkipAll
+		}
+		return nil
+	})
+	if err != nil || appPath == "" {
+		return fmt.Errorf("failed to find .app bundle in extracted files")
+	}
+
+	log.Printf("[UpdateService] Extracted app: %s", appPath)
+
+	// 6. 备份旧版本（以防万一）
+	backupPath := currentAppPath + ".backup"
+	if err := os.Rename(currentAppPath, backupPath); err != nil {
+		log.Printf("[UpdateService] Warning: failed to backup old app: %v", err)
+		// 如果备份失败，继续尝试替换
+	}
+
+	// 7. 替换应用
+	if err := os.Rename(appPath, currentAppPath); err != nil {
+		// 恢复备份
+		if _, backupErr := os.Stat(backupPath); backupErr == nil {
+			os.Rename(backupPath, currentAppPath)
+		}
+		return fmt.Errorf("failed to replace app: %w", err)
+	}
+
+	// 8. 删除备份
+	os.Remove(backupPath)
+
+	log.Println("[UpdateService] macOS installation completed successfully")
+
+	// 9. 提示重启
+	return s.promptRestart()
 }
 
 // installWindows Windows 安装逻辑
 func (s *Service) installWindows(filePath string) error {
-	// Windows 通常下载 .zip 或安装程序
-	log.Println("[UpdateService] Windows installation not yet implemented")
-	return fmt.Errorf("Windows installation not yet implemented")
+	log.Println("[UpdateService] Starting Windows installation...")
+
+	// 1. 验证文件是 .exe
+	if !strings.HasSuffix(filePath, ".exe") {
+		return fmt.Errorf("unsupported file format: expected .exe, got %s", filePath)
+	}
+
+	// 2. 获取当前安装目录
+	currentDir, err := s.getCurrentInstallDir()
+	if err != nil {
+		return fmt.Errorf("failed to get current install directory: %w", err)
+	}
+
+	log.Printf("[UpdateService] Current install directory: %s", currentDir)
+
+	// 3. 运行 NSIS 静默安装
+	// NSIS 参数: /S (静默) /D=目录 (安装目录，必须是最后一个参数)
+	cmd := exec.Command(filePath, "/S", "/D="+currentDir)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	log.Printf("[UpdateService] Running silent installer: %s /S /D=%s", filePath, currentDir)
+
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("failed to start installer: %w", err)
+	}
+
+	// 4. 等待安装完成
+	if err := cmd.Wait(); err != nil {
+		return fmt.Errorf("installer failed: %w", err)
+	}
+
+	log.Println("[UpdateService] Windows installation completed successfully")
+
+	// 5. 提示重启
+	return s.promptRestart()
 }
 
 // installLinux Linux 安装逻辑
 func (s *Service) installLinux(filePath string) error {
-	// Linux 通常下载 .tar.gz 或 AppImage
-	log.Println("[UpdateService] Linux installation not yet implemented")
-	return fmt.Errorf("Linux installation not yet implemented")
+	log.Println("[UpdateService] Starting Linux installation...")
+
+	// 1. 判断文件类型
+	if strings.HasSuffix(filePath, ".AppImage") {
+		return s.installLinuxAppImage(filePath)
+	} else if strings.HasSuffix(filePath, ".deb") || strings.HasSuffix(filePath, ".rpm") {
+		return fmt.Errorf("DEB/RPM packages require manual installation with sudo. Please run: sudo dpkg -i %s or sudo rpm -U %s", filePath, filePath)
+	}
+
+	return fmt.Errorf("unsupported file format: %s", filePath)
+}
+
+// installLinuxAppImage AppImage 安装逻辑
+func (s *Service) installLinuxAppImage(filePath string) error {
+	log.Println("[UpdateService] Installing AppImage...")
+
+	// 1. 获取当前 AppImage 路径
+	currentPath, err := os.Executable()
+	if err != nil {
+		return fmt.Errorf("failed to get current executable path: %w", err)
+	}
+
+	log.Printf("[UpdateService] Current executable: %s", currentPath)
+
+	// 2. 备份旧版本
+	backupPath := currentPath + ".backup"
+	if err := os.Rename(currentPath, backupPath); err != nil {
+		log.Printf("[UpdateService] Warning: failed to backup old version: %v", err)
+	}
+
+	// 3. 复制新版本
+	if err := copyFile(filePath, currentPath); err != nil {
+		// 恢复备份
+		if _, backupErr := os.Stat(backupPath); backupErr == nil {
+			os.Rename(backupPath, currentPath)
+		}
+		return fmt.Errorf("failed to replace AppImage: %w", err)
+	}
+
+	// 4. 设置可执行权限
+	if err := os.Chmod(currentPath, 0755); err != nil {
+		return fmt.Errorf("failed to set executable permission: %w", err)
+	}
+
+	// 5. 删除备份
+	os.Remove(backupPath)
+
+	log.Println("[UpdateService] AppImage installation completed successfully")
+
+	// 6. 提示重启
+	return s.promptRestart()
+}
+
+// getCurrentAppPath 获取当前 .app 路径（macOS）
+func (s *Service) getCurrentAppPath() (string, error) {
+	execPath, err := os.Executable()
+	if err != nil {
+		return "", err
+	}
+
+	// macOS: /Applications/LTools.app/Contents/MacOS/LTools
+	// 需要向上查找 .app 目录
+	dir := filepath.Dir(execPath)
+	for {
+		if strings.HasSuffix(dir, ".app") {
+			return dir, nil
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			// 到达根目录，未找到 .app
+			break
+		}
+		dir = parent
+	}
+
+	// 未找到 .app，可能是开发环境
+	// 使用默认路径
+	return "/Applications/LTools.app", nil
+}
+
+// getCurrentInstallDir 获取当前安装目录（Windows）
+func (s *Service) getCurrentInstallDir() (string, error) {
+	execPath, err := os.Executable()
+	if err != nil {
+		return "", err
+	}
+
+	// Windows: C:\Program Files\My Company\LTools\ltools.exe
+	// 返回安装目录
+	return filepath.Dir(execPath), nil
+}
+
+// promptRestart 提示用户重启应用
+func (s *Service) promptRestart() error {
+	log.Println("[UpdateService] Prompting user to restart...")
+
+	// 发送事件通知前端
+	if s.app != nil {
+		s.app.Event.Emit("update:installed", map[string]interface{}{
+			"message": "Update installed successfully. Please restart the application.",
+			"action":  "restart",
+		})
+	}
+
+	return nil
+}
+
+// copyFile 复制文件
+func copyFile(src, dst string) error {
+	sourceFile, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer sourceFile.Close()
+
+	destFile, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer destFile.Close()
+
+	_, err = io.Copy(destFile, sourceFile)
+	return err
 }
 
 // GetCurrentVersion 获取当前版本（前端调用）

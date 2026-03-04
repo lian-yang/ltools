@@ -41,9 +41,24 @@ export function UpdateNotification() {
       }
     });
 
+    // 监听安装完成事件
+    const unsubscribeInstalled = Events.On('update:installed', (ev) => {
+      console.log('Update installed:', ev.data);
+      if (ev.data) {
+        setDownloaded(true);
+        setDownloading(false);
+        // 显示重启提示
+        if (ev.data.action === 'restart') {
+          // 可以在这里自动重启或显示重启按钮
+          setError(null);
+        }
+      }
+    });
+
     return () => {
       unsubscribeUpdate();
       unsubscribeProgress();
+      unsubscribeInstalled();
     };
   }, []);
 
