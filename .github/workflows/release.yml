@@ -40,11 +40,32 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install Windows dependencies
+      - name: Cache MinGW-w64 (Windows)
         if: matrix.goos == 'windows'
+        id: cache-mingw
+        uses: actions/cache@v4
+        with:
+          path: |
+            C:\ProgramData\chocolatey\lib\mingw
+            C:\ProgramData\chocolatey\bin\gcc.exe
+            C:\ProgramData\chocolatey\bin\g++.exe
+            C:\ProgramData\chocolatey\bin\make.exe
+          key: ${{ runner.os }}-mingw-w64
+          restore-keys: |
+            ${{ runner.os }}-mingw-
+
+      - name: Install Windows dependencies
+        if: matrix.goos == 'windows' && steps.cache-mingw.outputs.cache-hit != 'true'
         run: |
           choco install mingw -y
           echo "MinGW-w64 installed successfully"
+          gcc --version
+        shell: powershell
+
+      - name: Verify MinGW from cache
+        if: matrix.goos == 'windows' && steps.cache-mingw.outputs.cache-hit == 'true'
+        run: |
+          echo "Using MinGW-w64 from cache"
           gcc --version
         shell: powershell
 
