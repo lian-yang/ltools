@@ -79,9 +79,12 @@ func NewProcessManager(config *ProcessManagerConfig) (*ProcessManager, error) {
 		}
 
 		// 查找第一个存在的路径
-		for _, path := range possiblePaths {
+		for i, path := range possiblePaths {
+			absPath, _ := filepath.Abs(path)
+			log.Printf("[ProcessManager] Checking path %d: %s (absolute: %s)", i, path, absPath)
 			if _, err := os.Stat(path); err == nil {
 				config.ServiceDir = path
+				log.Printf("[ProcessManager] Found service directory: %s", path)
 				break
 			}
 		}
@@ -111,6 +114,8 @@ If you're a user:
 If you're a developer:
   Run 'wails3 package' to create a properly bundled application.`, config.ServiceDir)
 	}
+
+	log.Printf("[ProcessManager] Using service directory: %s", config.ServiceDir)
 
 	// 检查 Node.js 是否安装
 	if err := checkNodeInstalled(config.NodePath); err != nil {
@@ -143,7 +148,11 @@ func (pm *ProcessManager) Start() error {
 	}
 
 	// 构建启动命令
-	serverPath := filepath.Join(pm.serviceDir, "server.js")
+	// 注意：如果设置了 cmd.Dir，则 serverPath 应该是相对于该目录的相对路径
+	serverPath := "server.js" // 相对于 pm.serviceDir
+	absServiceDir, _ := filepath.Abs(pm.serviceDir)
+	log.Printf("[ProcessManager] Server path: %s (relative to working dir)", serverPath)
+	log.Printf("[ProcessManager] Working directory: %s (absolute: %s)", pm.serviceDir, absServiceDir)
 	pm.cmd = exec.Command(pm.nodePath, serverPath)
 	pm.cmd.Dir = pm.serviceDir
 
