@@ -59,6 +59,10 @@ jobs:
         if: matrix.goos == 'windows' && steps.cache-windows-deps.outputs.cache-hit != 'true'
         run: |
           choco install mingw nsis -y
+          # 将 NSIS 目录添加到 GITHUB_PATH 供后续步骤使用（避免编码问题）
+          echo "C:\Program Files (x86)\NSIS" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          # 刷新 PATH 使当前会话生效
+          $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
           gcc --version
           makensis -version
         shell: powershell
@@ -67,6 +71,10 @@ jobs:
         if: matrix.goos == 'windows' && steps.cache-windows-deps.outputs.cache-hit == 'true'
         run: |
           echo "Using MinGW-w64 and NSIS from cache"
+          # 将 NSIS 目录添加到 GITHUB_PATH 供后续步骤使用（避免编码问题）
+          echo "C:\Program Files (x86)\NSIS" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          # 刷新 PATH 使当前会话生效
+          $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
           gcc --version
           makensis -version
         shell: powershell
