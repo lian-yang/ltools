@@ -122,6 +122,7 @@ import "C"
 import (
 	"bytes"
 	"log"
+	"unsafe"
 )
 
 // SetImage sets an image to the clipboard on macOS
@@ -187,7 +188,7 @@ func (c *ImageClipboard) GetImage() ([]byte, error) {
 	}
 
 	// Copy the data to a Go byte slice
-	imgData := C.GoBytes(data, C.int(length))
+	imgData := C.GoBytes(unsafe.Pointer(data), C.int(length))
 
 	//log.Printf("[Clipboard] ✓ Retrieved image from clipboard (%d bytes)", len(imgData))
 	return imgData, nil
