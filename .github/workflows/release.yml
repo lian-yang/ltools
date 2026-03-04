@@ -66,18 +66,24 @@ jobs:
             pkg-config \
             build-essential
 
-      - name: Install Wails CLI
-        run: |
-          go install github.com/wailsapp/wails/v3/cmd/wails3@latest
-          echo "$HOME/go/bin" >> $GITHUB_PATH
-
       - name: Cache Wails CLI
+        id: cache-wails
         uses: actions/cache@v4
         with:
           path: ~/go/bin/wails3
           key: ${{ runner.os }}-wails3-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-wails3-
+
+      - name: Install Wails CLI
+        if: steps.cache-wails.outputs.cache-hit != 'true'
+        run: |
+          go install github.com/wailsapp/wails/v3/cmd/wails3@latest
+          echo "$HOME/go/bin" >> $GITHUB_PATH
+
+      - name: Add Wails to PATH (from cache)
+        if: steps.cache-wails.outputs.cache-hit == 'true'
+        run: echo "$HOME/go/bin" >> $GITHUB_PATH
 
       - name: Install Task
         run: |
