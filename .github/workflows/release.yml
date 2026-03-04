@@ -59,10 +59,17 @@ jobs:
         if: matrix.goos == 'windows' && steps.cache-windows-deps.outputs.cache-hit != 'true'
         run: |
           choco install mingw nsis -y
-          # 将 NSIS 目录添加到 GITHUB_PATH 供后续步骤使用
-          echo "C:\Program Files (x86)\NSIS" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-          # 显式将 NSIS 添加到当前会话 PATH 的前面（确保优先级）
-          $env:Path = "C:\Program Files (x86)\NSIS;" + [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+
+          # 1. 将 NSIS 真实路径添加到 GITHUB_PATH（供后续步骤使用，无 BOM）
+          Add-Content -Path $env:GITHUB_PATH -Value "C:\Program Files (x86)\NSIS"
+
+          # 2. 为当前步骤安全地追加 NSIS 路径（不覆盖原有 PATH）
+          $nsisPath = "C:\Program Files (x86)\NSIS"
+          if ($env:Path -notlike "*$nsisPath*") {
+              $env:Path += ";$nsisPath"
+          }
+
+          # 3. 验证安装
           gcc --version
           makensis -version
         shell: powershell
@@ -71,10 +78,17 @@ jobs:
         if: matrix.goos == 'windows' && steps.cache-windows-deps.outputs.cache-hit == 'true'
         run: |
           echo "Using MinGW-w64 and NSIS from cache"
-          # 将 NSIS 目录添加到 GITHUB_PATH 供后续步骤使用
-          echo "C:\Program Files (x86)\NSIS" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-          # 显式将 NSIS 添加到当前会话 PATH 的前面（确保优先级）
-          $env:Path = "C:\Program Files (x86)\NSIS;" + [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+
+          # 1. 将 NSIS 真实路径添加到 GITHUB_PATH（供后续步骤使用，无 BOM）
+          Add-Content -Path $env:GITHUB_PATH -Value "C:\Program Files (x86)\NSIS"
+
+          # 2. 为当前步骤安全地追加 NSIS 路径（不覆盖原有 PATH）
+          $nsisPath = "C:\Program Files (x86)\NSIS"
+          if ($env:Path -notlike "*$nsisPath*") {
+              $env:Path += ";$nsisPath"
+          }
+
+          # 3. 验证安装
           gcc --version
           makensis -version
         shell: powershell
