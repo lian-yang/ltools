@@ -59,23 +59,16 @@ jobs:
         if: matrix.goos == 'windows' && steps.cache-windows-deps.outputs.cache-hit != 'true'
         run: |
           choco install mingw nsis -y
-          echo "MinGW-w64 and NSIS installed successfully"
-          echo "C:\Program Files (x86)\NSIS" >> $env:GITHUB_PATH
-          echo "C:\ProgramData\chocolatey\bin" >> $env:GITHUB_PATH
-          $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
           gcc --version
-          & 'C:\Program Files (x86)\NSIS\makensis.exe' --version
+          makensis -version
         shell: powershell
 
       - name: Verify Windows dependencies from cache
         if: matrix.goos == 'windows' && steps.cache-windows-deps.outputs.cache-hit == 'true'
         run: |
           echo "Using MinGW-w64 and NSIS from cache"
-          echo "C:\Program Files (x86)\NSIS" >> $env:GITHUB_PATH
-          echo "C:\ProgramData\chocolatey\bin" >> $env:GITHUB_PATH
-          $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
           gcc --version
-          & 'C:\Program Files (x86)\NSIS\makensis.exe' --version
+          makensis -version
         shell: powershell
 
       - name: Setup Go
