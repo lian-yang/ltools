@@ -88,7 +88,7 @@ jobs:
           npm prune --production
 
       - name: Build and package application
-        run: wails3 package -v
+        run: wails3 package
 
       - name: Prepare release (macOS)
         if: matrix.goos == 'darwin'
