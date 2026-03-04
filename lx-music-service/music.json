@@ -1,0 +1,160 @@
+{
+  "plugins": [
+    {
+        "url":"https://www.imwzh.com/musicfree/5sing_0.0.3_SoEasy.js"
+    },
+    {
+        "url":"https://www.imwzh.com/musicfree/6yueting_0.1.5_SoEasy.js"
+    },
+    {
+        "url":"https://www.imwzh.com/musicfree/Audiomack_0.02_猫头猫.js"
+    },
+    {
+        "url":"https://www.imwzh.com/musicfree/bilibili_0.2.3_猫头猫.js"
+    },
+    {
+        "url":"https://www.imwzh.com/musicfree/Navidrome_猫头猫.js"
+    },
+    {
+        "url":"https://www.imwzh.com/musicfree/QQ_1.0.3_Teyond.js"
+    },
+    {
+        "url":"https://www.imwzh.com/musicfree/QQ音乐_0.2.0_猫头猫.js"
+    },
+    {
+        "url":"https://www.imwzh.com/musicfree/suno.js"
+    },
+    {
+        "url":"https://www.imwzh.com/musicfree/udio_猫头猫.js"
+    },
+    {
+        "url":"https://www.imwzh.com/musicfree/WebDAV_0.02_猫头猫.js"
+    },
+    {
+        "url":"https://www.imwzh.com/musicfree/xiaoqiu1.js"
+    },
+    {
+        "url":"https://www.imwzh.com/musicfree/Youtube_0.0.1_猫头猫.js"
+    },
+    {
+        "url":"https://www.imwzh.com/musicfree/哔哩_1.0.2_Teyond.js"
+    },
+    {
+        "url":"https://www.imwzh.com/musicfree/酷狗_1.0.3_Teyond.js"
+    },
+    {
+        "url":"https://www.imwzh.com/musicfree/酷我_1.0.2_Teyond.js"
+    },
+    {
+        "url":"https://www.imwzh.com/musicfree/咪咕_1.0.2_Teyond.js"
+    },
+    {
+        "url":"https://www.imwzh.com/musicfree/网易_1.0.2_Teyond.js"
+    },
+    {
+        "url":"https://www.imwzh.com/musicfree/歌词千寻_未知.js"
+    },
+    {
+        "url":"https://www.imwzh.com/musicfree/歌词网_未知.js"
+    },
+    {
+        "url":"https://www.imwzh.com/musicfree/种子_0.1.0_SoEasy.js"
+    },
+    {
+        "url":"https://www.imwzh.com/musicfree/歌曲宝_0.0.5_SoEasy.js"
+    },
+    {
+        "url":"https://www.imwzh.com/musicfree/果核音乐_0.0.1_SoEasy.js"
+    },
+    {
+        "url":"https://www.imwzh.com/musicfree/书音FM_SoEasy.js"
+    },
+    {
+        "url":"https://www.imwzh.com/musicfree/好听轻音乐_0.1.0_SoEasy.js"
+    },
+    {
+        "url":"https://www.imwzh.com/musicfree/爱听_0.1.0_SoEasy.js"
+    },
+    {
+        "url":"https://www.imwzh.com/musicfree/岸听_0.0.6_SoEasy.js"
+    },
+    {
+        "url":"https://www.imwzh.com/musicfree/快手_0.0.2_猫头猫.js"
+    },
+    {
+        "url":"https://www.imwzh.com/musicfree/猫耳FM_0.1.4_猫头猫.js"
+    },
+    {
+        "url":"https://www.imwzh.com/musicfree/音悦台_0.0.1_猫头猫.js"
+    },
+    {
+        "url":"https://www.imwzh.com/musicfree/小枸音乐_0.3.0_Huibq.js"
+    },
+    {
+        "url":"https://www.imwzh.com/musicfree/小蜜音乐_0.3.0_Huibq.js"
+    },
+    {
+        "url":"https://www.imwzh.com/musicfree/小秋音乐_0.3.0_Huibq.js"
+    },
+    {
+        "url":"https://www.imwzh.com/musicfree/小蜗音乐_0.3.0_Huibq.js"
+    },
+    {
+        "url":"https://www.imwzh.com/musicfree/小芸音乐_0.3.0_Huibq.js"
+    },
+    {
+        "url":"https://www.imwzh.com/musicfree/元力wy1.1.0.js"
+    },
+    {
+        "url":"https://www.imwzh.com/musicfree/元力qq1.1.0.js"
+    },
+    {
+        "url":"https://www.imwzh.com/musicfree/元力kw1.1.0.js"
+    },
+    {
+        "url":"https://www.imwzh.com/musicfree/元力kg1.1.0.js"
+    },
+    {
+        "url":"https://www.imwzh.com/musicfree/元力xm1.1.0.js"
+    },
+    {
+        "url":"https://www.imwzh.com/musicfree/开心汽水_0.1.5_鸿蒙.js"
+    },
+    {
+        "url":"https://www.imwzh.com/musicfree/腾讯音乐_250913.js"
+    },
+    {
+        "url":"https://www.imwzh.com/musicfree/网易音乐_250913.js"
+    },
+    {
+      "name": "网易",
+      "url": "https://13413.kstore.vip/yuanli/wy.js",
+      "version": "1.1.1"
+    },
+    {
+      "name": "酷我",
+      "url": "https://13413.kstore.vip/yuanli/kw.js",
+      "version": "1.1.0"
+    },
+    {
+      "name": "酷gou",
+      "url": "https://13413.kstore.vip/yuanli/kg.js",
+      "version": "1.1.0"
+    },
+    {
+      "name": "qq",
+      "url": "https://13413.kstore.vip/yuanli/qq.js",
+      "version": "1.1.1"
+    },
+    {
+      "name": "bilibili",
+      "url": "https://gitee.com/maotoumao/MusicFreePlugins/raw/v0.1/dist/bilibili/index.js",
+      "version": "0.1.0"
+    },
+    {
+      "name": "mg",
+      "url": "https://13413.kstore.vip/yuanli/xiaomi.js",
+      "version": "1.1.0"
+    }
+  ]
+}

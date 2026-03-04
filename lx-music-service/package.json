@@ -1,0 +1,30 @@
+{
+  "name": "lx-music-service",
+  "version": "2.0.0",
+  "description": "音乐播放器服务 - 简化版（仅MusicFree插件）",
+  "main": "server-simple.js",
+  "scripts": {
+    "start": "node server-simple.js",
+    "start:legacy": "node server.js",
+    "test": "node test/final-test.js",
+    "dev": "node --inspect server-simple.js"
+  },
+  "keywords": [
+    "music",
+    "musicfree",
+    "ltools"
+  ],
+  "author": "LTools",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.13.6",
+    "big-integer": "^1.6.52",
+    "cheerio": "^1.2.0",
+    "crypto-js": "^4.2.0",
+    "he": "^1.2.0",
+    "qs": "^6.15.0"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}

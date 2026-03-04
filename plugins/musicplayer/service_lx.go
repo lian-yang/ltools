@@ -22,7 +22,6 @@ type ServiceLX struct {
 	lxClient       *LXClient
 	cacheManager   *CacheManager
 	sourceManager  *SourceManager
-	proxyService   *ProxyService // 代理服务
 
 	// 状态
 	initialized bool
@@ -51,12 +50,6 @@ func NewServiceLX(plugin *MusicPlayerPlugin, app *application.App) (*ServiceLX, 
 	// 初始化源管理器
 	sourceManager := NewSourceManager()
 
-	// 初始化代理服务
-	proxyService, err := NewProxyService()
-	if err != nil {
-		return nil, fmt.Errorf("failed to initialize proxy service: %w", err)
-	}
-
 	// 初始化进程管理器
 	processManager, err := NewProcessManager(&ProcessManagerConfig{
 		NodePath: "node", // 使用系统 Node.js
@@ -73,7 +66,6 @@ func NewServiceLX(plugin *MusicPlayerPlugin, app *application.App) (*ServiceLX, 
 		processManager: processManager,
 		cacheManager:   cacheManager,
 		sourceManager:  sourceManager,
-		proxyService:   proxyService,
 		initialized:    false,
 	}
 
@@ -311,28 +303,20 @@ func (s *ServiceLX) GetSongURLWithMetadata(song *Song, quality string) (string, 
 
 	// 返回第一个 URL
 	url := result.URLs[0].URL
-	log.Printf("[ServiceLX] Got music URL for song %s from source %s", song.ID, result.URLs[0].Source)
+	log.Printf("[ServiceLX] Got music URL for song %s from source %s: %s", song.ID, result.URLs[0].Source, url)
 
-	// 注册到代理服务，返回本地代理 URL
-	localURL := s.proxyService.RegisterAudioURL(url)
-	log.Printf("[ServiceLX] Proxied audio URL: %s -> %s", url, localURL)
-
-	return localURL, nil
+	return url, nil
 }
 
 // GetPicURL 获取封面图片URL（暴露给前端）
 func (s *ServiceLX) GetPicURL(picID string) (string, error) {
-	// picID 实际上是歌曲的 meta 信息中的图片 URL
-	// 前端应该已经从搜索结果中获得了封面 URL，这里通过代理返回
+	// picID 实际上是完整的图片 URL
 	if picID == "" {
 		return "", nil
 	}
 
-	// 注册到代理服务，返回本地代理 URL
-	localURL := s.proxyService.RegisterImageURL(picID)
-	log.Printf("[ServiceLX] Proxied image URL: %s -> %s", picID, localURL)
-
-	return localURL, nil
+	// 直接返回原始 URL（应用已禁用 web 安全）
+	return picID, nil
 }
 
 // GetLyric 获取歌词（暴露给前端）

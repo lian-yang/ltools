@@ -213,6 +213,7 @@ func main() {
 		Mac: application.MacOptions{
 			ApplicationShouldTerminateAfterLastWindowClosed: false, // 保持应用在窗口关闭后运行
 		},
+		// 参考 https://learn.microsoft.com/en-us/microsoft-edge/webview2/concepts/webview-features-flags?tabs=dotnetcsharp
 		Windows: application.WindowsOptions{
 			EnabledFeatures: []string{
 				"ignore-certificate-errors",      // 忽略与证书相关的错误
@@ -220,9 +221,10 @@ func main() {
 				"allow-running-insecure-content", // 解除对从 HTTP 源提供内容的 MSP 的阻止
 				"autoplay-policy",                // 允许自动播放策略
 			},
+			DisabledFeatures: []string{},
 			AdditionalBrowserArgs: []string{
 				"--disable-web-security", // 禁用同源策略
-			},
+			}, // webview2 启动参数
 		},
 	})
 
