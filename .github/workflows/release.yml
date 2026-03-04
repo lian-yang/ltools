@@ -166,7 +166,15 @@ jobs:
         run: go clean -cache
 
       - name: Build and package application
-        run: wails3 package
+        run: |
+          wails3 package
+
+          # 调试：检查构建输出
+          echo "=== Build output check ==="
+          if [ "${{ matrix.goos }}" = "linux" ]; then
+            echo "Linux build artifacts:"
+            ls -lah bin/ || echo "bin directory not found"
+          fi
 
       - name: Prepare release (macOS)
         if: matrix.goos == 'darwin'
@@ -193,17 +201,36 @@ jobs:
             ARCH="amd64"
           fi
 
+          # 调试：查看 bin 目录内容
+          echo "=== Listing bin directory contents ==="
+          ls -lah bin/ || echo "bin directory not found or empty"
+
           # Linux: AppImage (用于更新和首次安装)
           if [ -f bin/ltools-${ARCH}.AppImage ]; then
             cp bin/ltools-${ARCH}.AppImage ltools-${{ github.ref_name }}-${{ matrix.goos }}-${ARCH}.AppImage
+            echo "✓ AppImage copied successfully"
+          else
+            echo "⚠ AppImage not found at bin/ltools-${ARCH}.AppImage"
           fi
+
           # DEB/RPM (可选，供手动下载)
           if [ -f bin/ltools_*_${ARCH}.deb ]; then
             cp bin/ltools_*_${ARCH}.deb ltools-${{ github.ref_name }}-${{ matrix.goos }}-${ARCH}.deb
+            echo "✓ DEB package copied successfully"
+          else
+            echo "⚠ DEB package not found"
           fi
+
           if [ -f bin/ltools-*.x86_64.rpm ]; then
             cp bin/ltools-*.x86_64.rpm ltools-${{ github.ref_name }}-${{ matrix.goos }}-${ARCH}.rpm
+            echo "✓ RPM package copied successfully"
+          else
+            echo "⚠ RPM package not found"
           fi
+
+          # 调试：查看当前目录生成的文件
+          echo "=== Listing generated release files ==="
+          ls -lh *.AppImage *.deb *.rpm 2>/dev/null || echo "No Linux packages found in current directory"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
