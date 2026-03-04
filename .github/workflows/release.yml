@@ -23,7 +23,7 @@ jobs:
             arch: arm64
             ext: '.app'
             archive: tar.gz
-          - os: macos-12
+          - os: macos-13
             goos: darwin
             arch: amd64
             ext: '.app'
