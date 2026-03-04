@@ -198,26 +198,28 @@ jobs:
           ls -lah bin/ || echo "bin directory not found or empty"
 
           # Linux: AppImage (用于更新和首次安装)
-          if [ -f bin/ltools-${ARCH}.AppImage ]; then
-            cp bin/ltools-${ARCH}.AppImage ltools-${{ github.ref_name }}-${{ matrix.goos }}-${ARCH}.AppImage
+          # 注意：实际生成的文件名是 ltools-x86_64.AppImage (带连字符)
+          if [ -f bin/ltools-x86_64.AppImage ]; then
+            cp bin/ltools-x86_64.AppImage ltools-${{ github.ref_name }}-${{ matrix.goos }}-${ARCH}.AppImage
             echo "✓ AppImage copied successfully"
           else
-            echo "⚠ AppImage not found at bin/ltools-${ARCH}.AppImage"
+            echo "⚠ AppImage not found at bin/ltools-x86_64.AppImage"
           fi
 
           # DEB/RPM (可选，供手动下载)
-          if [ -f bin/ltools_*_${ARCH}.deb ]; then
-            cp bin/ltools_*_${ARCH}.deb ltools-${{ github.ref_name }}-${{ matrix.goos }}-${ARCH}.deb
+          # 注意：实际生成的文件名是 ltools.deb 和 ltools.rpm
+          if [ -f bin/ltools.deb ]; then
+            cp bin/ltools.deb ltools-${{ github.ref_name }}-${{ matrix.goos }}-${ARCH}.deb
             echo "✓ DEB package copied successfully"
           else
-            echo "⚠ DEB package not found"
+            echo "⚠ DEB package not found at bin/ltools.deb"
           fi
 
-          if [ -f bin/ltools-*.x86_64.rpm ]; then
-            cp bin/ltools-*.x86_64.rpm ltools-${{ github.ref_name }}-${{ matrix.goos }}-${ARCH}.rpm
+          if [ -f bin/ltools.rpm ]; then
+            cp bin/ltools.rpm ltools-${{ github.ref_name }}-${{ matrix.goos }}-${ARCH}.rpm
             echo "✓ RPM package copied successfully"
           else
-            echo "⚠ RPM package not found"
+            echo "⚠ RPM package not found at bin/ltools.rpm"
           fi
 
           # 调试：查看当前目录生成的文件
