@@ -36,11 +36,14 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: '1.25'
+          cache: true
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'lx-music-service/package-lock.json'
 
       - name: Install Linux dependencies
         if: matrix.goos == 'linux'
@@ -49,11 +52,23 @@ jobs:
           sudo apt-get install -y \
             libgtk-3-dev \
             libwebkit2gtk-4.1-dev \
+            libwebkit2gtk-4.0-dev \
             pkg-config \
             build-essential
+        continue-on-error: true
 
       - name: Install Wails CLI
-        run: go install github.com/wailsapp/wails/v3/cmd/wails3@latest
+        run: |
+          go install github.com/wailsapp/wails/v3/cmd/wails3@latest
+          echo "$HOME/go/bin" >> $GITHUB_PATH
+
+      - name: Cache Wails CLI
+        uses: actions/cache@v4
+        with:
+          path: ~/go/bin/wails3
+          key: ${{ runner.os }}-wails3-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-wails3-
 
       - name: Install Task
         uses: arduino/setup-task@v2
@@ -65,7 +80,7 @@ jobs:
           npm prune --production
 
       - name: Build application
-        run: wails3 build
+        run: wails3 build -v
 
       - name: Package with music service (macOS)
         if: matrix.goos == 'darwin'
