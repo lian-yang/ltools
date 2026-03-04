@@ -40,33 +40,37 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Cache MinGW-w64 (Windows)
+      - name: Cache MinGW-w64 and NSIS (Windows)
         if: matrix.goos == 'windows'
-        id: cache-mingw
+        id: cache-windows-deps
         uses: actions/cache@v4
         with:
           path: |
             C:\ProgramData\chocolatey\lib\mingw
+            C:\ProgramData\chocolatey\lib\nsis
             C:\ProgramData\chocolatey\bin\gcc.exe
             C:\ProgramData\chocolatey\bin\g++.exe
             C:\ProgramData\chocolatey\bin\make.exe
-          key: ${{ runner.os }}-mingw-w64
+            C:\ProgramData\chocolatey\bin\makensis.exe
+          key: ${{ runner.os }}-mingw-nsis
           restore-keys: |
-            ${{ runner.os }}-mingw-
+            ${{ runner.os }}-mingw-nsis-
 
       - name: Install Windows dependencies
-        if: matrix.goos == 'windows' && steps.cache-mingw.outputs.cache-hit != 'true'
+        if: matrix.goos == 'windows' && steps.cache-windows-deps.outputs.cache-hit != 'true'
         run: |
-          choco install mingw -y
-          echo "MinGW-w64 installed successfully"
+          choco install mingw nsis -y
+          echo "MinGW-w64 and NSIS installed successfully"
           gcc --version
+          makensis --version
         shell: powershell
 
-      - name: Verify MinGW from cache
-        if: matrix.goos == 'windows' && steps.cache-mingw.outputs.cache-hit == 'true'
+      - name: Verify Windows dependencies from cache
+        if: matrix.goos == 'windows' && steps.cache-windows-deps.outputs.cache-hit == 'true'
         run: |
-          echo "Using MinGW-w64 from cache"
+          echo "Using MinGW-w64 and NSIS from cache"
           gcc --version
+          makensis --version
         shell: powershell
 
       - name: Setup Go
