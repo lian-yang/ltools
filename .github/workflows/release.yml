@@ -60,6 +60,9 @@ jobs:
           sudo apt-get install -y \
             libgtk-3-dev \
             libwebkit2gtk-4.1-dev \
+            libx11-dev \
+            libxcb1-dev \
+            libx11-xcb-dev \
             pkg-config \
             build-essential
 
