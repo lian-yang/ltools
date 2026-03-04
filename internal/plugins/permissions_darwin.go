@@ -10,10 +10,10 @@ package plugins
 #import <ApplicationServices/ApplicationServices.h>
 
 // Check if the app has accessibility permissions
-BOOL checkAccessibilityPermissions() {
+int checkAccessibilityPermissions() {
     NSDictionary *options = @{(__bridge id)kAXTrustedCheckOptionPrompt: @NO};
     BOOL accessibilityEnabled = AXIsProcessTrustedWithOptions((__bridge CFDictionaryRef)options);
-    return accessibilityEnabled;
+    return accessibilityEnabled ? 1 : 0;
 }
 */
 import "C"
@@ -31,7 +31,7 @@ func CheckAccessibilityPermissions() (bool, error) {
 	}
 
 	enabled := C.checkAccessibilityPermissions()
-	return enabled != 0, nil
+	return enabled == 1, nil
 }
 
 // OpenAccessibilitySettings opens System Preferences to the Accessibility section

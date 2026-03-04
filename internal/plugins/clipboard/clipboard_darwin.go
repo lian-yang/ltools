@@ -12,7 +12,7 @@ package clipboard
 static NSData *g_imageData = nil;
 
 // SetPNGToClipboard sets PNG image data to the clipboard on macOS
-BOOL SetPNGToClipboard(const void *data, size_t length) {
+int SetPNGToClipboard(const void *data, size_t length) {
     @autoreleasepool {
         // Create NSData from the PNG data
         NSData *pngData = [NSData dataWithBytes:data length:length];
@@ -20,7 +20,7 @@ BOOL SetPNGToClipboard(const void *data, size_t length) {
         // Create NSImage from PNG data
         NSImage *image = [[NSImage alloc] initWithData:pngData];
         if (!image) {
-            return NO;
+            return 0;
         }
 
         // Get the pasteboard
@@ -38,7 +38,7 @@ BOOL SetPNGToClipboard(const void *data, size_t length) {
             success = [pasteboard setData:pngData forType:@"PNG data"];
         }
 
-        return success;
+        return success ? 1 : 0;
     }
 }
 
