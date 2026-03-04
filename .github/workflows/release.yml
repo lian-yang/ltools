@@ -61,10 +61,12 @@ jobs:
           choco install mingw -y
           winget install --id NSIS.NSIS -e --accept-source-agreements --accept-package-agreements
           echo "MinGW-w64 and NSIS installed successfully"
+          # Create symbolic link for makensis in Chocolatey bin directory
+          New-Item -ItemType SymbolicLink -Path "C:\ProgramData\chocolatey\bin\makensis.exe" -Target "C:\Program Files (x86)\NSIS\makensis.exe" -Force
           echo "C:\Program Files (x86)\NSIS" >> $env:GITHUB_PATH
           $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
           gcc --version
-          & 'C:\Program Files (x86)\NSIS\makensis.exe' --version
+          makensis --version
         shell: powershell
 
       - name: Verify Windows dependencies from cache
@@ -74,7 +76,7 @@ jobs:
           echo "C:\Program Files (x86)\NSIS" >> $env:GITHUB_PATH
           $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
           gcc --version
-          & 'C:\Program Files (x86)\NSIS\makensis.exe' --version
+          makensis --version
         shell: powershell
 
       - name: Setup Go
