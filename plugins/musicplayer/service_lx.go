@@ -594,8 +594,10 @@ func (s *ServiceLX) DownloadSong(song Song, savePath string) error {
 		if s.proxyHandler != nil {
 			parts := strings.Split(audioURL, "/")
 			if len(parts) > 0 {
-				songID := parts[len(parts)-1]
-				realURL := s.proxyHandler.GetAudioURL(songID)
+				// 提取哈希 ID（URL 最后一段）
+				fullID := parts[len(parts)-1]
+				// 使用新方法通过哈希 ID 直接获取真实 URL
+				realURL := s.proxyHandler.GetURLByFullID(fullID)
 				if realURL != "" {
 					audioURL = realURL
 				}

@@ -19,4 +19,10 @@ type ProxyHandler interface {
 	// resourceID: 资源唯一标识
 	// 返回: 远程音频 URL（如果不存在则返回空字符串）
 	GetAudioURL(resourceID string) string
+
+	// GetURLByFullID 通过完整的资源 ID（哈希值）直接获取 URL
+	// 用于下载等场景，只有哈希 ID 而不知道原始 resourceID
+	// fullID: 完整的资源 ID（哈希值）
+	// 返回: 远程 URL（如果不存在则返回空字符串）
+	GetURLByFullID(fullID string) string
 }

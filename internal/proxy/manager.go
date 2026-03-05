@@ -187,6 +187,14 @@ func (pm *ProxyManager) GetAudioURL(pluginName, resourceID string) string {
 	return pm.GetResourceURL(ResourceTypeAudio, pluginName, resourceID)
 }
 
+// GetURLByFullID 通过完整的资源 ID（哈希值）直接获取 URL
+// 用于下载等场景，只有哈希 ID 而不知道原始 resourceID
+func (pm *ProxyManager) GetURLByFullID(fullID string) string {
+	pm.mutex.RLock()
+	defer pm.mutex.RUnlock()
+	return pm.urlMapping[fullID]
+}
+
 // UnregisterResource 注销资源
 func (pm *ProxyManager) UnregisterResource(resourceType ResourceType, pluginName, resourceID string) {
 	pm.mutex.Lock()
