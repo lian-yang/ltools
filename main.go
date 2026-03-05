@@ -208,15 +208,15 @@ func main() {
 
 	// Create proxy manager for all plugins
 	proxyManager := proxy.NewProxyManager(&proxy.ProxyConfig{
-		RequestTimeout:   30 * time.Second,
-		MaxRetries:       2,
-		EnableCache:      true,
-		CacheTTL:         30 * time.Minute,
-		MaxCacheEntries:  1000,
-		EnableLogging:    true,
+		RequestTimeout:  30 * time.Second,
+		MaxRetries:      2,
+		EnableCache:     true,
+		CacheTTL:        30 * time.Minute,
+		MaxCacheEntries: 1000,
+		EnableLogging:   true,
 	})
 
-	// Create combined asset handler: proxy first, then static files
+	// 创建组合资源处理器：代理请求 + 静态文件
 	proxyHandler := NewCombinedAssetHandler(proxyManager, application.AssetFileServerFS(assets))
 
 	// Create a new Wails application by providing the necessary options.
@@ -247,6 +247,9 @@ func main() {
 			}, // webview2 启动参数
 		},
 	})
+
+	// 设置 proxyHandler 的 app 引用，用于访问环境信息
+	proxyHandler.SetApp(app)
 
 	// 创建系统托盘
 	systray := app.SystemTray.New()

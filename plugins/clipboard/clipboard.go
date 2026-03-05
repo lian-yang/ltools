@@ -3,6 +3,7 @@
 package clipboard
 
 import (
+	"encoding/base64"
 	"fmt"
 	"log"
 	"os"
@@ -164,12 +165,24 @@ func (p *ClipboardPlugin) monitorClipboard() {
 				enabled, metadataState, stateEnabled, shouldMonitor)
 
 			if shouldMonitor {
-				currentClipboard := p.getSystemClipboard()
-				if currentClipboard != "" && currentClipboard != p.lastClipboard {
-					// Clipboard has changed
-					log.Printf("[Clipboard Plugin] Clipboard changed! New content length: %d\n", len(currentClipboard))
-					p.lastClipboard = currentClipboard
-					p.AddToHistory(currentClipboard, "text")
+				// Check for image first
+				imageData := p.getClipboardImage()
+				if imageData != "" {
+					// Image found in clipboard
+					if imageData != p.lastClipboard {
+						log.Printf("[Clipboard Plugin] Clipboard image changed! Length: %d\n", len(imageData))
+						p.lastClipboard = imageData
+						p.AddToHistory(imageData, "image")
+					}
+				} else {
+					// No image, check for text
+					currentClipboard := p.getSystemClipboard()
+					if currentClipboard != "" && currentClipboard != p.lastClipboard {
+						// Clipboard has changed
+						log.Printf("[Clipboard Plugin] Clipboard changed! New content length: %d\n", len(currentClipboard))
+						p.lastClipboard = currentClipboard
+						p.AddToHistory(currentClipboard, "text")
+					}
 				}
 			}
 		}
@@ -192,6 +205,66 @@ func (p *ClipboardPlugin) getSystemClipboard() string {
 	// 		truncateString(content, 50), len(content))
 	// }
 	return content
+}
+
+// getClipboardImage gets image from clipboard as base64 data URL
+func (p *ClipboardPlugin) getClipboardImage() string {
+	// Check if clipboard contains image
+	cmd := exec.Command("osascript", "-e", "clipboard info")
+	output, err := cmd.Output()
+	if err != nil {
+		return ""
+	}
+
+	info := string(output)
+	// Check if clipboard contains image types
+	if !strings.Contains(info, "TIFF") && !strings.Contains(info, "PNG") && !strings.Contains(info, "JPEG") {
+		return ""
+	}
+
+	// Try to save clipboard image to a temp file and convert to base64
+	tmpFile := "/tmp/ltools_clipboard_image.png"
+
+	// Use osascript to save clipboard image as PNG
+	script := fmt.Sprintf(`
+		tell application "System Events"
+			try
+				set theData to the clipboard as «class PNGf»
+				set theFile to open for access POSIX file "%s" with write permission
+				set eof of theFile to 0
+				write theData to theFile
+				close access theFile
+			on error
+				try
+					close access POSIX file "%s"
+				end try
+				return ""
+			end try
+		end tell
+	`, tmpFile, tmpFile)
+
+	cmd = exec.Command("osascript", "-e", script)
+	_, err = cmd.Output()
+	if err != nil {
+		debugWrite("Failed to save clipboard image: %v", err)
+		return ""
+	}
+
+	// Read the file and convert to base64
+	imageData, err := os.ReadFile(tmpFile)
+	if err != nil {
+		debugWrite("Failed to read temp image file: %v", err)
+		return ""
+	}
+
+	// Clean up temp file
+	defer os.Remove(tmpFile)
+
+	// Convert to base64 data URL
+	base64Data := "data:image/png;base64," + base64.StdEncoding.EncodeToString(imageData)
+	debugWrite("Got clipboard image, length: %d", len(base64Data))
+
+	return base64Data
 }
 
 // Helper function to truncate string for logging

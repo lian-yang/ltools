@@ -91,8 +91,6 @@ func (wm *WindowManager) ShowWindow() error {
 	wm.musicWindow.Focus()
 	wm.isVisible = true
 
-	log.Printf("[MusicPlayer] Created music player window")
-
 	return nil
 }
 

@@ -162,9 +162,6 @@ jobs:
           npm install --production
           npm prune --production
 
-      - name: Clean Go build cache
-        run: go clean -cache
-
       - name: Build and package application
         run: wails3 package
 
