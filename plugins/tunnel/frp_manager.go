@@ -56,7 +56,7 @@ func NewFRPProcessManager(config *TunnelConfig, emitEvent func(eventName string,
 }
 
 // findFRPCExecutable 查找 frpc 可执行文件
-// 支持多种安装方式：PATH、Homebrew、手动安装
+// 参考音乐插件的 Node.js 查找策略：先 PATH，再常见路径
 func findFRPCExecutable(app *application.App) string {
 	logPrefix := "[FRPManager]"
 
@@ -71,6 +71,7 @@ func findFRPCExecutable(app *application.App) string {
 	log.Printf("%s ========== Finding frpc executable ==========", logPrefix)
 	log.Printf("%s GOOS: %s, GOARCH: %s", logPrefix, runtime.GOOS, runtime.GOARCH)
 	log.Printf("%s Environment: HOME=%s, USER=%s, PATH=%s", logPrefix, os.Getenv("HOME"), os.Getenv("USER"), os.Getenv("PATH"))
+
 	execName := "frpc"
 	if runtime.GOOS == "windows" {
 		execName = "frpc.exe"
@@ -85,55 +86,18 @@ func findFRPCExecutable(app *application.App) string {
 		return path
 	}
 
-	log.Printf("%s frpc not found via exec.LookPath, trying login shell...", logPrefix)
-
-	// 2. 尝试使用 login shell 查找（继承用户的 PATH 配置）
-	// 这样可以找到用户在 ~/.bashrc 或 ~/.zshrc 中配置的 ~/bin 等目录
-	var shellCmd *exec.Cmd
-	if runtime.GOOS == "windows" {
-		// Windows: 使用 cmd.exe 的 where 命令
-		shellCmd = exec.Command("cmd.exe", "/c", "where", execName)
-	} else {
-		// Unix/macOS: 使用 bash 登录 shell 执行 which 命令
-		// -l: 登录 shell，加载 ~/.bash_profile / ~/.bashrc
-		// -c: 执行命令
-		shellCmd = exec.Command("/bin/bash", "-l", "-c", "which "+execName)
-	}
-
-	if output, err := shellCmd.Output(); err == nil {
-		// which/where 命令可能返回多行，取第一个
-		lines := strings.Split(strings.TrimSpace(string(output)), "\n")
-		if len(lines) > 0 && lines[0] != "" {
-			foundPath := strings.TrimSpace(lines[0])
-			// 验证文件存在
-			if _, err := os.Stat(foundPath); err == nil {
-				if app != nil {
-					app.Logger.Info(logPrefix + " Found frpc via login shell: " + foundPath)
-				}
-				log.Printf("%s Found frpc via login shell: %s", logPrefix, foundPath)
-				return foundPath
-			}
-		}
-	} else {
-		log.Printf("%s Login shell lookup failed: %v", logPrefix, err)
-	}
+	log.Printf("%s frpc not found via exec.LookPath, searching common locations...", logPrefix)
 
 	if app != nil {
-		app.Logger.Info(logPrefix + " frpc not found in PATH or via login shell, searching common locations...")
 		app.Logger.Info(logPrefix + " Environment: HOME=" + os.Getenv("HOME") + ", USER=" + os.Getenv("USER"))
 	}
 
-	// 3. 获取 home 目录（多种方式确保可靠性）
-	homeDir := os.Getenv("HOME")
-	if homeDir == "" {
-		var err error
-		homeDir, err = os.UserHomeDir()
-		if err != nil {
-			log.Printf("%s Failed to get home directory: %v", logPrefix, err)
-			if app != nil {
-				app.Logger.Warn(logPrefix + " Failed to get home directory: " + err.Error())
-			}
-			// 最后尝试从用户信息获取
+	// 2. 获取 home 目录（多种方式确保可靠性）
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		log.Printf("%s Failed to get home directory: %v", logPrefix, err)
+		homeDir = os.Getenv("HOME")
+		if homeDir == "" {
 			homeDir = "/Users/" + os.Getenv("USER")
 		}
 	}
@@ -166,9 +130,9 @@ func findFRPCExecutable(app *application.App) string {
 
 	case "windows":
 		// Windows 常见安装位置
-		appData := os.Getenv("APPDATA")       // C:\Users\<user>\AppData\Roaming
-		localAppData := os.Getenv("LOCALAPPDATA") // C:\Users\<user>\AppData\Local
-		programFiles := os.Getenv("ProgramFiles") // C:\Program Files
+		appData := os.Getenv("APPDATA")
+		localAppData := os.Getenv("LOCALAPPDATA")
+		programFiles := os.Getenv("ProgramFiles")
 
 		candidates = []string{
 			// 用户手动安装
