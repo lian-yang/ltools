@@ -60,25 +60,88 @@ func NewFRPProcessManager(config *TunnelConfig, emitEvent func(eventName string,
 func findFRPCExecutable(app *application.App) string {
 	logPrefix := "[FRPManager]"
 
-	// 1. 先尝试 PATH 中的 "frpc"
+	// 创建调试日志文件
+	debugLogPath := filepath.Join(os.TempDir(), "ltools_frp_debug.log")
+	debugLog, err := os.OpenFile(debugLogPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	if err == nil {
+		defer debugLog.Close()
+		log.SetOutput(debugLog)
+	}
+
+	log.Printf("%s ========== Finding frpc executable ==========", logPrefix)
+	log.Printf("%s GOOS: %s, GOARCH: %s", logPrefix, runtime.GOOS, runtime.GOARCH)
+	log.Printf("%s Environment: HOME=%s, USER=%s, PATH=%s", logPrefix, os.Getenv("HOME"), os.Getenv("USER"), os.Getenv("PATH"))
 	execName := "frpc"
 	if runtime.GOOS == "windows" {
 		execName = "frpc.exe"
 	}
 
+	// 1. 尝试从当前环境的 PATH 查找
 	if path, err := exec.LookPath(execName); err == nil {
 		if app != nil {
 			app.Logger.Info(logPrefix + " Found frpc in PATH: " + path)
 		}
+		log.Printf("%s Found frpc via exec.LookPath: %s", logPrefix, path)
 		return path
 	}
 
-	if app != nil {
-		app.Logger.Info(logPrefix + " frpc not found in PATH, searching common locations...")
+	log.Printf("%s frpc not found via exec.LookPath, trying login shell...", logPrefix)
+
+	// 2. 尝试使用 login shell 查找（继承用户的 PATH 配置）
+	// 这样可以找到用户在 ~/.bashrc 或 ~/.zshrc 中配置的 ~/bin 等目录
+	var shellCmd *exec.Cmd
+	if runtime.GOOS == "windows" {
+		// Windows: 使用 cmd.exe 的 where 命令
+		shellCmd = exec.Command("cmd.exe", "/c", "where", execName)
+	} else {
+		// Unix/macOS: 使用登录 shell 执行 which 命令
+		// -l: 登录 shell，加载 ~/.bash_profile / ~/.zprofile
+		shellCmd = exec.Command("/bin/bash", "-l", "-c", "which "+execName)
 	}
 
-	// 2. 根据操作系统尝试常见路径
-	homeDir, _ := os.UserHomeDir()
+	if output, err := shellCmd.Output(); err == nil {
+		// which/where 命令可能返回多行，取第一个
+		lines := strings.Split(strings.TrimSpace(string(output)), "\n")
+		if len(lines) > 0 && lines[0] != "" {
+			foundPath := strings.TrimSpace(lines[0])
+			// 验证文件存在
+			if _, err := os.Stat(foundPath); err == nil {
+				if app != nil {
+					app.Logger.Info(logPrefix + " Found frpc via login shell: " + foundPath)
+				}
+				log.Printf("%s Found frpc via login shell: %s", logPrefix, foundPath)
+				return foundPath
+			}
+		}
+	} else {
+		log.Printf("%s Login shell lookup failed: %v", logPrefix, err)
+	}
+
+	if app != nil {
+		app.Logger.Info(logPrefix + " frpc not found in PATH or via login shell, searching common locations...")
+		app.Logger.Info(logPrefix + " Environment: HOME=" + os.Getenv("HOME") + ", USER=" + os.Getenv("USER"))
+	}
+
+	// 3. 获取 home 目录（多种方式确保可靠性）
+	homeDir := os.Getenv("HOME")
+	if homeDir == "" {
+		var err error
+		homeDir, err = os.UserHomeDir()
+		if err != nil {
+			log.Printf("%s Failed to get home directory: %v", logPrefix, err)
+			if app != nil {
+				app.Logger.Warn(logPrefix + " Failed to get home directory: " + err.Error())
+			}
+			// 最后尝试从用户信息获取
+			homeDir = "/Users/" + os.Getenv("USER")
+		}
+	}
+
+	if app != nil {
+		app.Logger.Info(logPrefix + " Using home directory: " + homeDir)
+	}
+
+	// 3. 根据操作系统尝试常见路径
 	var candidates []string
 
 	switch runtime.GOOS {
@@ -141,19 +204,25 @@ func findFRPCExecutable(app *application.App) string {
 		}
 	}
 
-	for _, candidate := range candidates {
+	for i, candidate := range candidates {
 		if candidate == "" {
 			continue
 		}
-		if _, err := os.Stat(candidate); err == nil {
+		log.Printf("%s Checking candidate #%d: %s", logPrefix, i+1, candidate)
+		if info, err := os.Stat(candidate); err == nil {
 			if absPath, err := filepath.Abs(candidate); err == nil {
+				log.Printf("%s Found frpc at: %s (size: %d)", logPrefix, absPath, info.Size())
 				if app != nil {
 					app.Logger.Info(logPrefix + " Found frpc at: " + absPath)
 				}
 				return absPath
 			}
+		} else {
+			log.Printf("%s Candidate #%d not found: %v", logPrefix, i+1, err)
 		}
 	}
+
+	log.Printf("%s frpc not found in any of %d locations", logPrefix, len(candidates))
 
 	if app != nil {
 		app.Logger.Warn(logPrefix + " frpc not found in common locations")
@@ -253,25 +322,8 @@ func (pm *FRPProcessManager) StartTunnel(tunnel *Tunnel) (*OperationResult, erro
 		}, nil
 	}
 
-	// 使用查找到的 frpc 路径
-	frpcPath := pm.frpcPath
-
-	// 如果没有找到 frpc，返回错误
-	if frpcPath == "" {
-		return &OperationResult{
-			Success: false,
-			Error:   "FRP 未安装。请通过 'brew install frpc' 或访问 https://github.com/fatedier/frp/releases 下载安装",
-		}, nil
-	}
-
 	// 生成配置文件
 	configPath, err := pm.generateFRPConfig(tunnel.ID, tunnel)
-
-	// 添加调试日志
-	if pm.app != nil {
-		pm.app.Logger.Info(fmt.Sprintf("[FRP] Generated config: tunnelID=%s, configPath=%s", tunnel.ID, configPath))
-	}
-
 	if err != nil {
 		return &OperationResult{
 			Success: false,
@@ -279,28 +331,35 @@ func (pm *FRPProcessManager) StartTunnel(tunnel *Tunnel) (*OperationResult, erro
 		}, nil
 	}
 
-	// 打印调试信息
+	// 添加调试日志
 	if pm.app != nil {
-		log.Println("[FRP] Starting tunnel with frpc path: " + frpcPath)
-		log.Println("[FRP] Executing command: " + frpcPath + " -c " + configPath)
-		pm.app.Logger.Debug("[FRP] Starting tunnel: " + frpcPath)
-		pm.app.Logger.Debug("[FRP] Executing command: " + frpcPath + " -c " + configPath)
-	}
-
-	// 检查 frpc 是否存在（使用动态路径）
-	if _, err := os.Stat(frpcPath); err != nil {
-		return &OperationResult{
-			Success: false,
-			Error:   fmt.Sprintf("FRP 未找到: %s (请确保 frpc 在 PATH 中: %s)", frpcPath, err.Error()),
-		}, nil
+		pm.app.Logger.Info(fmt.Sprintf("[FRP] Generated config: tunnelID=%s, configPath=%s", tunnel.ID, configPath))
 	}
 
 	// 创建上下文
 	ctx, cancel := context.WithCancel(context.Background())
 
-	// 构建命令
-	args := []string{"-c", configPath}
-	cmd := exec.CommandContext(ctx, frpcPath, args...)
+	// 构建命令 - 使用登录 shell 来继承用户的 PATH 配置
+	// 这样可以找到用户在 ~/.bashrc 或 ~/.zshrc 中配置的 ~/bin 等目录
+	var cmd *exec.Cmd
+	frpcPath := pm.frpcPath
+
+	if frpcPath != "" && frpcPath != "frpc" {
+		// 找到了具体路径，直接使用
+		if pm.app != nil {
+			pm.app.Logger.Info("[FRP] Using frpc at: " + frpcPath)
+		}
+		cmd = exec.CommandContext(ctx, frpcPath, "-c", configPath)
+	} else {
+		// 使用登录 shell 执行，继承用户的环境变量
+		// -l: 登录 shell，加载 ~/.bash_profile / ~/.zprofile
+		// -c: 执行命令
+		if pm.app != nil {
+			pm.app.Logger.Info("[FRP] Using login shell to find frpc...")
+		}
+		shellCmd := fmt.Sprintf("frpc -c %s", configPath)
+		cmd = exec.CommandContext(ctx, "/bin/bash", "-l", "-c", shellCmd)
+	}
 
 	// 设置环境变量
 	if tunnel.FRPServer != nil && tunnel.FRPServer.Token != "" {
@@ -311,8 +370,8 @@ func (pm *FRPProcessManager) StartTunnel(tunnel *Tunnel) (*OperationResult, erro
 	if pm.app != nil {
 		pm.app.Logger.Debug(fmt.Sprintf("[FRP] Environment variables set: FRP_TOKEN=%s", tunnel.FRPServer.Token))
 		log.Println("[FRP] Environment: Token:", tunnel.FRPServer.Token)
-		pm.app.Logger.Debug(fmt.Sprintf("[FRP] Token set to: %s", tunnel.FRPServer.Token))
 	}
+
 	// 创建日志文件
 	logPath := filepath.Join(os.TempDir(), fmt.Sprintf("frp_%s_%s.log", tunnel.ID, time.Now().Format("20060102_150405")))
 

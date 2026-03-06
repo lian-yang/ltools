@@ -335,18 +335,35 @@ type GitHubFile struct {
 	DownloadURL string `json:"download_url"`
 }
 
-// ListRepositoryImages lists all images in the configured path
+// GitHubTreeItem represents an item in a Git tree
+type GitHubTreeItem struct {
+	Path string `json:"path"`
+	Mode string `json:"mode"`
+	Type string `json:"type"` // "blob", "tree", "commit"
+	SHA  string `json:"sha"`
+	Size int    `json:"size,omitempty"`
+}
+
+// GitHubTreeResponse represents the response from Git Tree API
+type GitHubTreeResponse struct {
+	SHA       string           `json:"sha"`
+	URL       string           `json:"url"`
+	Tree      []GitHubTreeItem `json:"tree"`
+	Truncated bool             `json:"truncated"`
+}
+
+// ListRepositoryImages lists all images in the configured path (including subdirectories)
 func (u *Uploader) ListRepositoryImages() ([]UploadRecord, error) {
 	if err := u.validateConfig(); err != nil {
 		return nil, err
 	}
 
-	// Build API URL for getting directory contents
-	apiURL := fmt.Sprintf("%s/repos/%s/%s/contents/%s?ref=%s",
+	// Use Git Tree API to get all files recursively
+	// This is more efficient than multiple Contents API calls
+	apiURL := fmt.Sprintf("%s/repos/%s/%s/git/trees/%s?recursive=1",
 		githubAPIBaseURL,
 		url.PathEscape(u.config.Owner),
 		url.PathEscape(u.config.Repo),
-		url.PathEscape(u.config.Path),
 		url.QueryEscape(u.getBranch()))
 
 	req, err := http.NewRequest(http.MethodGet, apiURL, nil)
@@ -377,8 +394,9 @@ func (u *Uploader) ListRepositoryImages() ([]UploadRecord, error) {
 		return nil, fmt.Errorf("GitHub API returned %d: %s", resp.StatusCode, string(body))
 	}
 
-	var files []GitHubFile
-	if err := json.Unmarshal(body, &files); err != nil {
+	// Parse tree response
+	var treeResp GitHubTreeResponse
+	if err := json.Unmarshal(body, &treeResp); err != nil {
 		return nil, fmt.Errorf("failed to parse response: %w", err)
 	}
 
@@ -395,29 +413,44 @@ func (u *Uploader) ListRepositoryImages() ([]UploadRecord, error) {
 		".ico":  true,
 	}
 
-	for _, file := range files {
-		if file.Type != "file" {
+	// Normalize the configured path (ensure it doesn't start with /)
+	configPath := strings.TrimPrefix(u.config.Path, "/")
+	if configPath != "" && !strings.HasSuffix(configPath, "/") {
+		configPath += "/"
+	}
+
+	for _, item := range treeResp.Tree {
+		// Only process files (not directories or submodules)
+		if item.Type != "blob" {
+			continue
+		}
+
+		// Check if file is within the configured path
+		if configPath != "" && !strings.HasPrefix(item.Path, configPath) {
 			continue
 		}
 
 		// Check if file has image extension
-		ext := strings.ToLower(path.Ext(file.Name))
+		ext := strings.ToLower(path.Ext(item.Path))
 		if !imageExtensions[ext] {
 			continue
 		}
 
 		// Generate CDN URL
-		cdnURL := u.buildJsDelivrURL(file.Path)
-		originalURL := u.buildGitHubRawURL(file.Path)
+		cdnURL := u.buildJsDelivrURL(item.Path)
+		originalURL := u.buildGitHubRawURL(item.Path)
+
+		// Extract filename from path
+		fileName := path.Base(item.Path)
 
 		record := UploadRecord{
-			ID:          fmt.Sprintf("sync-%s", file.SHA[:8]),
-			FileName:    file.Name,
+			ID:          fmt.Sprintf("sync-%s", item.SHA[:8]),
+			FileName:    fileName,
 			OriginalURL: originalURL,
 			CDNURL:      cdnURL,
-			Size:        int64(file.Size),
-			Path:        file.Path,
-			Sha:         file.SHA,
+			Size:        int64(item.Size),
+			Path:        item.Path,
+			Sha:         item.SHA,
 			UploadTime:  time.Now(), // Use current time as we don't have actual upload time
 		}
 		records = append(records, record)
