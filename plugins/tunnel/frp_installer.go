@@ -25,13 +25,43 @@ func NewFRPInstaller() *FRPInstaller {
 
 // CheckInstallation 检查 FRP 是否已安装
 func (i *FRPInstaller) CheckInstallation() (string, error) {
-	// 检查 frpc 是否在 PATH 中
-	if path, err := exec.LookPath("frpc"); err == nil {
+	execName := "frpc"
+	if runtime.GOOS == "windows" {
+		execName = "frpc.exe"
+	}
+
+	// 1. 尝试从当前环境的 PATH 查找
+	if path, err := exec.LookPath(execName); err == nil {
 		version, _ := i.getVersion(path)
 		return version + " (" + path + ")", nil
 	}
 
-	// 检查常见安装路径
+	// 2. 尝试使用 login shell 查找（继承用户的 PATH 配置）
+	// 这样可以找到用户在 ~/.bashrc 或 ~/.zshrc 中配置的 ~/bin 等目录
+	var shellCmd *exec.Cmd
+	if runtime.GOOS == "windows" {
+		// Windows: 使用 cmd.exe 的 where 命令
+		shellCmd = exec.Command("cmd.exe", "/c", "where", execName)
+	} else {
+		// Unix/macOS: 使用登录 shell 执行 which 命令
+		// -l: 登录 shell，加载 ~/.bash_profile / ~/.zprofile
+		shellCmd = exec.Command("/bin/bash", "-l", "-c", "which "+execName)
+	}
+
+	if output, err := shellCmd.Output(); err == nil {
+		// which/where 命令可能返回多行，取第一个
+		lines := strings.Split(strings.TrimSpace(string(output)), "\n")
+		if len(lines) > 0 && lines[0] != "" {
+			foundPath := strings.TrimSpace(lines[0])
+			// 验证文件存在
+			if _, err := os.Stat(foundPath); err == nil {
+				version, _ := i.getVersion(foundPath)
+				return version + " (" + foundPath + ")", nil
+			}
+		}
+	}
+
+	// 3. 检查常见安装路径
 	homeDir := os.Getenv("HOME")
 	commonPaths := []string{
 		filepath.Join(homeDir, ".local", "bin", "frpc"),
