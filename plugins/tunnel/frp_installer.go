@@ -36,41 +36,53 @@ func (i *FRPInstaller) CheckInstallation() (string, error) {
 		return version + " (" + path + ")", nil
 	}
 
-	// 2. 尝试使用 login shell 查找（继承用户的 PATH 配置）
-	// 这样可以找到用户在 ~/.bashrc 或 ~/.zshrc 中配置的 ~/bin 等目录
-	var shellCmd *exec.Cmd
-	if runtime.GOOS == "windows" {
-		// Windows: 使用 cmd.exe 的 where 命令
-		shellCmd = exec.Command("cmd.exe", "/c", "where", execName)
-	} else {
-		// Unix/macOS: 使用 bash 登录 shell 执行 which 命令
-		// -l: 登录 shell，加载 ~/.bash_profile / ~/.bashrc
-		shellCmd = exec.Command("/bin/bash", "-l", "-c", "which "+execName)
+	// 2. 检查常见安装路径（不依赖 shell，直接检查文件系统）
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		homeDir = os.Getenv("HOME")
+	}
+	if homeDir == "" {
+		homeDir = "/Users/" + os.Getenv("USER")
 	}
 
-	if output, err := shellCmd.Output(); err == nil {
-		// which/where 命令可能返回多行，取第一个
-		lines := strings.Split(strings.TrimSpace(string(output)), "\n")
-		if len(lines) > 0 && lines[0] != "" {
-			foundPath := strings.TrimSpace(lines[0])
-			// 验证文件存在
-			if _, err := os.Stat(foundPath); err == nil {
-				version, _ := i.getVersion(foundPath)
-				return version + " (" + foundPath + ")", nil
-			}
+	var commonPaths []string
+	switch runtime.GOOS {
+	case "darwin":
+		commonPaths = []string{
+			filepath.Join(homeDir, "bin", "frpc"),
+			"/opt/homebrew/bin/frpc",
+			"/usr/local/bin/frpc",
+			"/usr/bin/frpc",
+			filepath.Join(homeDir, ".local", "bin", "frpc"),
+			filepath.Join(homeDir, ".frp", "frpc"),
+		}
+	case "windows":
+		appData := os.Getenv("APPDATA")
+		localAppData := os.Getenv("LOCALAPPDATA")
+		programFiles := os.Getenv("ProgramFiles")
+
+		commonPaths = []string{
+			filepath.Join(homeDir, "bin", "frpc.exe"),
+			filepath.Join(programFiles, "frp", "frpc.exe"),
+			filepath.Join(appData, "frp", "frpc.exe"),
+			filepath.Join(localAppData, "frp", "frpc.exe"),
+			"C:\\ProgramData\\chocolatey\\bin\\frpc.exe",
+		}
+	default: // Linux
+		commonPaths = []string{
+			filepath.Join(homeDir, "bin", "frpc"),
+			filepath.Join(homeDir, ".local", "bin", "frpc"),
+			"/usr/bin/frpc",
+			"/usr/local/bin/frpc",
+			filepath.Join(homeDir, ".frp", "frpc"),
+			"/snap/bin/frpc",
 		}
 	}
 
-	// 3. 检查常见安装路径
-	homeDir := os.Getenv("HOME")
-	commonPaths := []string{
-		filepath.Join(homeDir, ".local", "bin", "frpc"),
-		"/usr/local/bin/frpc",
-		"/usr/bin/frpc",
-		filepath.Join(homeDir, ".frp", "frpc"),
-	}
-
 	for _, path := range commonPaths {
+		if path == "" {
+			continue
+		}
 		if _, err := os.Stat(path); err == nil {
 			version, _ := i.getVersion(path)
 			return version + " (" + path + ")", nil
