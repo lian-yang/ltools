@@ -4,6 +4,8 @@
 
 LTools 使用 GitHub Releases 作为更新服务器，实现完全自动化的发布和更新流程。
 
+> **📋 快速发布指南：** 查看 [发布流程指南](RELEASE_PROCESS.md) 或 [快速参考](../RELEASING.md)
+
 ## 架构
 
 ```
@@ -87,8 +89,17 @@ vim build/config.yml  # version: "0.2.0"
 git add build/config.yml
 git commit -m "chore: bump version to 0.2.0"
 
-# 3. 创建 tag
-git tag -a v0.2.0 -m "Release v0.2.0"
+# 3. 创建 tag（带发布说明）
+git tag -a v0.2.0 -m "## 新功能
+- 添加某某功能
+- 新增某某特性
+
+## 改进
+- 优化性能
+- 改进用户体验
+
+## 修复
+- 修复已知 BUG"
 
 # 4. 推送 tag
 git push origin v0.2.0
@@ -96,6 +107,12 @@ git push origin v0.2.0
 # 5. 等待 GitHub Actions 自动构建和发布
 # 大约需要 10-15 分钟
 ```
+
+**重要说明：**
+- **Tag 消息会作为 `update.json` 中的 `releaseNotes`**
+- 消息会自动过滤 `Co-Authored-By:` 签名行
+- 如果 tag 消息为空，会使用默认内容：`## 改进\n- 性能优化\n- 用户体验优化\n\n## 修复\n- 修复已知 BUG`
+- **GitHub Release 页面的内容**从 `RELEASE.md` 文件读取
 
 ### 方式 2: 使用 GitHub Web UI
 
@@ -265,23 +282,66 @@ curl https://raw.githubusercontent.com/lian-yang/ltools/main/update.json | jq .
 
 ## 高级配置
 
-### 自定义发布说明
+### 发布说明来源
 
-修改 `.github/workflows/release.yml` 中的 `body` 部分：
+LTools 使用两个来源的发布说明：
 
+#### 1. Tag 消息（用于 update.json）
+
+**用途：** 应用内更新通知的 `releaseNotes` 字段
+
+**获取方式：**
+```bash
+# 创建带消息的 tag
+git tag -a v1.0.0 -m "## 新功能
+- 功能 1
+- 功能 2
+
+## 修复
+- 修复 1"
+```
+
+**自动处理：**
+- 过滤 `Co-Authored-By:` 签名行
+- 空消息使用默认内容
+
+**脚本实现：** `scripts/generate-update-manifest.sh`
+```bash
+# 从 git tag 获取消息
+TAG_MSG=$(git tag -l --format='%(contents)' "$VERSION")
+# 过滤 Co-Authored-By
+TAG_MSG=$(echo "$TAG_MSG" | grep -v "Co-Authored-By:")
+```
+
+#### 2. RELEASE.md 文件（用于 GitHub Release）
+
+**用途：** GitHub Release 页面的完整发布说明
+
+**文件位置：** 仓库根目录 `RELEASE.md`
+
+**模板变量：**
+- `{{VERSION}}` - 自动替换为版本号（如 `v1.0.0`）
+- `{{REPO}}` - 自动替换为 `github.repository`
+
+**修改方式：**
+```bash
+# 编辑 RELEASE.md
+vim RELEASE.md
+
+# 提交更改
+git add RELEASE.md
+git commit -m "docs: 更新发布说明模板"
+```
+
+**GitHub Actions 处理：** `.github/workflows/release.yml`
 ```yaml
-body: |
-  ## 🎉 LTools ${{ github.ref_name }} 发布
-
-  ### 新功能
-  - 功能 1
-  - 功能 2
-
-  ### 修复
-  - 修复 1
-
-  ### 完整更新日志
-  查看 [commits](https://github.com/lian-yang/ltools/commits/${{ github.ref_name }})
+- name: Read release notes
+  run: |
+    # 读取 RELEASE.md 并替换占位符
+    RELEASE_BODY=$(cat RELEASE.md | \
+      sed "s|{{VERSION}}|${{ github.ref_name }}|g" | \
+      sed "s|{{REPO}}|${{ github.repository }}|g")
+    echo "$RELEASE_BODY" > /tmp/release_body.md
 ```
 
 ### 添加补丁更新

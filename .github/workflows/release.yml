@@ -274,135 +274,22 @@ jobs:
             ./release \
             https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}
 
+      - name: Read release notes
+        id: release_notes
+        run: |
+          # 读取 RELEASE.md 并替换占位符
+          RELEASE_BODY=$(cat RELEASE.md | \
+            sed "s|{{VERSION}}|${{ github.ref_name }}|g" | \
+            sed "s|{{REPO}}|${{ github.repository }}|g")
+          # 保存到文件（避免多行字符串问题）
+          echo "$RELEASE_BODY" > /tmp/release_body.md
+          echo "release_body_file=/tmp/release_body.md" >> $GITHUB_OUTPUT
+
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
           files: release/*
-          body: |
-            ## 🎉 LTools ${{ github.ref_name }} 发布
-
-            ### 系统要求
-
-            **⚠️ 重要：音乐播放器功能需要 Node.js >= 16.0.0**
-
-            - 下载地址：https://nodejs.org/
-            - 推荐版本：LTS (Long Term Support)
-
-            ### 下载地址
-
-            | 平台 | 文件 | 大小 | 说明 |
-            |------|------|------|------|
-            | macOS (ARM64) | `ltools-${{ github.ref_name }}-darwin-arm64.tar.gz` | ~50 MB | .app bundle (Apple Silicon) |
-            | macOS (AMD64) | `ltools-${{ github.ref_name }}-darwin-amd64.tar.gz` | ~50 MB | .app bundle (Intel Mac) |
-            | Windows (x64) | `ltools-${{ github.ref_name }}-windows-amd64-installer.exe` | ~55 MB | NSIS 安装程序 |
-            | Linux (x64) | `ltools-${{ github.ref_name }}-linux-amd64.AppImage` | ~52 MB | AppImage（推荐）|
-            | Linux (x64) | `ltools-${{ github.ref_name }}-linux-amd64.deb` | ~52 MB | Debian/Ubuntu |
-            | Linux (x64) | `ltools-${{ github.ref_name }}-linux-amd64.rpm` | ~52 MB | RHEL/CentOS/Fedora |
-
-            ### 新功能
-
-            - ✨ 自动更新机制（启动 10 秒后自动检查）
-            - 🎵 音乐播放器（已包含音源服务）
-            - 📋 剪贴板管理
-            - 🔍 全局搜索
-
-            ### 自动更新
-
-            此版本已配置自动更新机制：
-            - 应用启动 10 秒后自动检查更新
-            - 发现新版本时显示更新通知
-            - 支持手动检查（点击右下角刷新按钮或设置 → 关于）
-
-            **更新方式**：
-            - **Windows**: 下载新版本安装程序 → 静默安装 → 重启应用
-            - **macOS**: 下载 .app bundle → 替换 /Applications/LTools.app → 重启应用
-            - **Linux**: 下载 AppImage → 替换旧版本 → 重启应用
-
-            更新清单：[update.json](https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/update.json)
-
-            ### 安装说明
-
-            #### macOS
-            ```bash
-            # 1. 确保已安装 Node.js >= 16.0.0
-            node --version
-
-            # 2. 解压并安装应用
-            # ARM64 (Apple Silicon - M1/M2/M3):
-            tar xzf ltools-${{ github.ref_name }}-darwin-arm64.tar.gz
-            # 或 AMD64 (Intel Mac):
-            # tar xzf ltools-${{ github.ref_name }}-darwin-amd64.tar.gz
-
-            mv LTools.app /Applications/
-
-            # 3. 启动应用
-            open /Applications/LTools.app
-            ```
-
-            #### Windows
-            ```powershell
-            # 1. 确保已安装 Node.js >= 16.0.0
-            node --version
-
-            # 2. 下载并运行安装程序
-            # 双击 ltools-${{ github.ref_name }}-windows-amd64-installer.exe
-            # 安装程序会自动包含音乐服务依赖
-
-            # 3. 从开始菜单或桌面快捷方式启动
-            ```
-
-            #### Linux
-            ```bash
-            # 1. 确保已安装 Node.js >= 16.0.0
-            node --version
-
-            # 方式 A: AppImage (推荐)
-            chmod +x ltools-${{ github.ref_name }}-linux-amd64.AppImage
-            ./ltools-${{ github.ref_name }}-linux-amd64.AppImage
-
-            # 方式 B: DEB 包 (Debian/Ubuntu)
-            sudo dpkg -i ltools-${{ github.ref_name }}-linux-amd64.deb
-            ltools
-
-            # 方式 C: RPM 包 (RHEL/CentOS/Fedora)
-            sudo rpm -i ltools-${{ github.ref_name }}-linux-amd64.rpm
-            ltools
-            ```
-
-            ### 包含的组件
-
-            - **LTools 主程序**
-            - **音乐播放器音源服务**（已内置）
-              - Node.js 依赖已预装
-              - 支持多音源
-              - 自动代理
-
-            ### 故障排查
-
-            **音乐播放器无法使用？**
-            ```bash
-            # 检查 Node.js 版本
-            node --version  # 应该 >= v16.0.0
-
-            # macOS: 音乐服务位于应用包内
-            ls -la /Applications/LTools.app/Contents/Resources/lx-music-service/
-
-            # Windows: 音乐服务位于安装目录
-            ls "C:\Program Files\My Company\LTools\lx-music-service\"
-
-            # Linux: 音乐服务位于
-            ls /usr/local/share/ltools/lx-music-service/  # DEB/RPM
-            # 或 AppImage 内部（自动处理）
-            ```
-
-            **应用无法启动？**
-            - macOS: `chmod +x /Applications/LTools.app/Contents/MacOS/LTools`
-            - Linux: `chmod +x ltools`
-            - Windows: 检查防病毒软件
-
-            ---
-
-            **完整更新日志**: 查看 [commits](https://github.com/${{ github.repository }}/commits/${{ github.ref_name }})
+          body_path: ${{ steps.release_notes.outputs.release_body_file }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

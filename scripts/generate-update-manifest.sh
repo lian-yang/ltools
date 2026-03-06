@@ -112,6 +112,24 @@ OUTPUT_FILE="$UPDATE_DIR/update.json"
 # 移除版本号前缀的 'v'（如果有）
 CLEAN_VERSION="${VERSION#v}"
 
+# 获取 git tag 消息作为 releaseNotes
+RELEASE_NOTES=""
+if command -v git &> /dev/null && git rev-parse --git-dir > /dev/null 2>&1; then
+  # 尝试获取当前 tag 的消息（支持带或不带 v 前缀）
+  TAG_MSG=$(git tag -l --format='%(contents)' "$VERSION" 2>/dev/null || git tag -l --format='%(contents)' "v$CLEAN_VERSION" 2>/dev/null || true)
+  if [ -n "$TAG_MSG" ]; then
+    # 移除 Co-Authored-By 行
+    TAG_MSG=$(echo "$TAG_MSG" | grep -v "Co-Authored-By:")
+    # 转义双引号和反斜杠，并移除换行符（转为 \n）
+    RELEASE_NOTES=$(echo "$TAG_MSG" | sed 's/\\/\\\\/g' | sed 's/"/\\"/g' | awk '{printf "%s\\n", $0}' | sed 's/\\n$//')
+  fi
+fi
+
+# 如果 tag 消息为空，使用默认内容
+if [ -z "$RELEASE_NOTES" ]; then
+  RELEASE_NOTES="## 改进\\n- 性能优化\\n- 用户体验优化\\n\\n## 修复\\n- 修复已知 BUG"
+fi
+
 # 生成 platforms 部分，用逗号和换行符连接
 PLATFORMS_JSON=""
 for i in "${!PLATFORM_INFOS[@]}"; do
@@ -125,7 +143,7 @@ cat > "$OUTPUT_FILE" <<EOF
 {
   "version": "$CLEAN_VERSION",
   "releaseDate": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
-  "releaseNotes": "## 新功能\n- 自动更新机制\n\n## 改进\n- 性能优化\n\n## 修复\n- Bug 修复",
+  "releaseNotes": "$RELEASE_NOTES",
   "mandatory": false,
   "platforms": {
 $(echo -e "$PLATFORMS_JSON")
@@ -150,7 +168,8 @@ echo ""
 echo "---"
 echo ""
 echo "下一步:"
-echo "1. 编辑 $OUTPUT_FILE 更新 releaseNotes"
-echo "2. 上传到更新服务器:"
+echo "1. 上传到更新服务器:"
 echo "   scp -r $UPDATE_DIR/* user@server:/var/www/updates/"
-echo "3. 或使用 GitHub Releases / S3 等托管服务"
+echo "2. 或使用 GitHub Releases / S3 等托管服务"
+echo ""
+echo "提示: releaseNotes 已从 git tag 消息中自动获取"
