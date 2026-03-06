@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -42,29 +43,123 @@ type FRPProcess struct {
 
 // NewFRPProcessManager 创建 FRP 进程管理器
 func NewFRPProcessManager(config *TunnelConfig, emitEvent func(eventName string, data interface{}), app *application.App) *FRPProcessManager {
-	// 尝试从 PATH 中查找 frpc
-	frpcPath, err := exec.LookPath("frpc")
-	if err != nil {
-		// 如果找不到 frpc，返回错误（记录日志但不退出）
-		if app != nil {
-			app.Logger.Info("FRP not found in PATH, will use default path")
-		}
-		return &FRPProcessManager{
-			config:       config,
-			frpcPath:     "",  // 未找到
-			processes:    make(map[string]*FRPProcess),
-			emitEvent:    emitEvent,
-			app:          app,
-		}
-	}
+	// 查找 frpc 可执行文件
+	frpcPath := findFRPCExecutable(app)
 
 	return &FRPProcessManager{
 		config:       config,
-		frpcPath:     frpcPath,  // 使用 LookPath 找到的路径
+		frpcPath:     frpcPath,
 		processes:    make(map[string]*FRPProcess),
 		emitEvent:    emitEvent,
 		app:          app,
 	}
+}
+
+// findFRPCExecutable 查找 frpc 可执行文件
+// 支持多种安装方式：PATH、Homebrew、手动安装
+func findFRPCExecutable(app *application.App) string {
+	logPrefix := "[FRPManager]"
+
+	// 1. 先尝试 PATH 中的 "frpc"
+	execName := "frpc"
+	if runtime.GOOS == "windows" {
+		execName = "frpc.exe"
+	}
+
+	if path, err := exec.LookPath(execName); err == nil {
+		if app != nil {
+			app.Logger.Info(logPrefix + " Found frpc in PATH: " + path)
+		}
+		return path
+	}
+
+	if app != nil {
+		app.Logger.Info(logPrefix + " frpc not found in PATH, searching common locations...")
+	}
+
+	// 2. 根据操作系统尝试常见路径
+	homeDir, _ := os.UserHomeDir()
+	var candidates []string
+
+	switch runtime.GOOS {
+	case "darwin":
+		candidates = []string{
+			// 用户 bin 目录（常见手动安装位置）
+			filepath.Join(homeDir, "bin", "frpc"),
+			// Homebrew (Apple Silicon)
+			"/opt/homebrew/bin/frpc",
+			// Homebrew (Intel)
+			"/usr/local/bin/frpc",
+			// 系统路径
+			"/usr/bin/frpc",
+			// 用户本地安装
+			filepath.Join(homeDir, ".local", "bin", "frpc"),
+			// FRP 默认安装目录
+			filepath.Join(homeDir, ".frp", "frpc"),
+			// 应用数据目录
+			filepath.Join(homeDir, "Library", "Application Support", "ltools", "frp", "frpc"),
+		}
+
+	case "windows":
+		// Windows 常见安装位置
+		appData := os.Getenv("APPDATA")       // C:\Users\<user>\AppData\Roaming
+		localAppData := os.Getenv("LOCALAPPDATA") // C:\Users\<user>\AppData\Local
+		programFiles := os.Getenv("ProgramFiles") // C:\Program Files
+
+		candidates = []string{
+			// 用户手动安装
+			filepath.Join(homeDir, "bin", "frpc.exe"),
+			// Program Files
+			filepath.Join(programFiles, "frp", "frpc.exe"),
+			// AppData (用户安装)
+			filepath.Join(appData, "frp", "frpc.exe"),
+			// LocalAppData
+			filepath.Join(localAppData, "frp", "frpc.exe"),
+			// Scoop 安装
+			filepath.Join(homeDir, "scoop", "apps", "frp", "current", "frpc.exe"),
+			// Chocolatey 安装
+			"C:\\ProgramData\\chocolatey\\bin\\frpc.exe",
+			// 应用数据目录
+			filepath.Join(appData, "ltools", "frp", "frpc.exe"),
+		}
+
+	default: // Linux 和其他系统
+		candidates = []string{
+			// 用户 bin 目录
+			filepath.Join(homeDir, "bin", "frpc"),
+			// 用户本地安装
+			filepath.Join(homeDir, ".local", "bin", "frpc"),
+			// 系统路径
+			"/usr/bin/frpc",
+			"/usr/local/bin/frpc",
+			// FRP 默认安装目录
+			filepath.Join(homeDir, ".frp", "frpc"),
+			// Snap 安装
+			"/snap/bin/frpc",
+			// 应用数据目录
+			filepath.Join(homeDir, ".config", "ltools", "frp", "frpc"),
+		}
+	}
+
+	for _, candidate := range candidates {
+		if candidate == "" {
+			continue
+		}
+		if _, err := os.Stat(candidate); err == nil {
+			if absPath, err := filepath.Abs(candidate); err == nil {
+				if app != nil {
+					app.Logger.Info(logPrefix + " Found frpc at: " + absPath)
+				}
+				return absPath
+			}
+		}
+	}
+
+	if app != nil {
+		app.Logger.Warn(logPrefix + " frpc not found in common locations")
+	}
+
+	return "" // 未找到
 }
 
 // NewFRPProcess 创建 FRP 进程信息
@@ -158,8 +253,16 @@ func (pm *FRPProcessManager) StartTunnel(tunnel *Tunnel) (*OperationResult, erro
 		}, nil
 	}
 
-	// 使用从 PATH 查找的 frpc 路径
+	// 使用查找到的 frpc 路径
 	frpcPath := pm.frpcPath
+
+	// 如果没有找到 frpc，返回错误
+	if frpcPath == "" {
+		return &OperationResult{
+			Success: false,
+			Error:   "FRP 未安装。请通过 'brew install frpc' 或访问 https://github.com/fatedier/frp/releases 下载安装",
+		}, nil
+	}
 
 	// 生成配置文件
 	configPath, err := pm.generateFRPConfig(tunnel.ID, tunnel)
@@ -208,7 +311,7 @@ func (pm *FRPProcessManager) StartTunnel(tunnel *Tunnel) (*OperationResult, erro
 	if pm.app != nil {
 		pm.app.Logger.Debug(fmt.Sprintf("[FRP] Environment variables set: FRP_TOKEN=%s", tunnel.FRPServer.Token))
 		log.Println("[FRP] Environment: Token:", tunnel.FRPServer.Token)
-		pm.app.Logger.Debug("[FRP] Token set to:", tunnel.FRPServer.Token)
+		pm.app.Logger.Debug(fmt.Sprintf("[FRP] Token set to: %s", tunnel.FRPServer.Token))
 	}
 	// 创建日志文件
 	logPath := filepath.Join(os.TempDir(), fmt.Sprintf("frp_%s_%s.log", tunnel.ID, time.Now().Format("20060102_150405")))
@@ -297,7 +400,7 @@ func (pm *FRPProcessManager) monitorProcess(process *FRPProcess, stdout, stderr 
 	// 打印调试信息
 	if pm.app != nil {
 		log.Println("[FRP] Monitor starting for tunnel: " + process.TunnelID)
-		pm.app.Logger.Debug("[FRP] Monitor starting:", process.TunnelID)
+		pm.app.Logger.Debug(fmt.Sprintf("[FRP] Monitor starting: %s", process.TunnelID))
 	}
 
 	// URL 提取正则 - 扩展匹配模式
