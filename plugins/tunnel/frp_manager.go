@@ -94,22 +94,10 @@ func findFRPCExecutable(app *application.App) string {
 		// Windows: 使用 cmd.exe 的 where 命令
 		shellCmd = exec.Command("cmd.exe", "/c", "where", execName)
 	} else {
-		// Unix/macOS: 使用用户的默认 shell 执行 which 命令
-		// 获取用户的 shell（从 SHELL 环境变量，默认到 /bin/zsh 或 /bin/bash）
-		shell := os.Getenv("SHELL")
-		if shell == "" {
-			// 尝试常见的 shell
-			if _, err := os.Stat("/bin/zsh"); err == nil {
-				shell = "/bin/zsh"
-			} else {
-				shell = "/bin/bash"
-			}
-		}
-
-		// 使用 -l: 登录 shell，加载 ~/.zprofile / ~/.bash_profile
-		// 使用 -c: 执行命令
-		shellCmd = exec.Command(shell, "-l", "-c", "which "+execName)
-		log.Printf("%s Using shell: %s", logPrefix, shell)
+		// Unix/macOS: 使用 bash 登录 shell 执行 which 命令
+		// -l: 登录 shell，加载 ~/.bash_profile / ~/.bashrc
+		// -c: 执行命令
+		shellCmd = exec.Command("/bin/bash", "-l", "-c", "which "+execName)
 	}
 
 	if output, err := shellCmd.Output(); err == nil {

@@ -1,10 +1,6 @@
 package tunnel
 
 import (
-	"log"
-	"os"
-	"path/filepath"
-
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"ltools/internal/plugins"
 )
@@ -73,14 +69,6 @@ func (p *TunnelPlugin) ServiceShutdown(app *application.App) error {
 
 // SetDataDir 设置数据目录
 func (p *TunnelPlugin) SetDataDir(dataDir string) error {
-	// 添加调试日志
-	debugLogPath := filepath.Join(os.TempDir(), "ltools_tunnel_plugin.log")
-	if debugLog, err := os.OpenFile(debugLogPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644); err == nil {
-		logger := log.New(debugLog, "[TunnelPlugin] ", log.LstdFlags)
-		logger.Printf("SetDataDir called with: %s", dataDir)
-		debugLog.Close()
-	}
-
 	// 初始化配置管理器
 	p.configMgr = NewConfigManager(dataDir)
 
