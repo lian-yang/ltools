@@ -5,14 +5,31 @@
 
 set -e
 
+# 解析命令行参数
+SKIP_CHECK=false
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --skip-check)
+      SKIP_CHECK=true
+      shift
+      ;;
+    *)
+      break
+      ;;
+  esac
+done
+
 # 配置
 VERSION="${1:-}"
 UPDATE_DIR="${2:-./updates}"
 BASE_URL="${3:-https://updates.ltools.app/stable}"
 
 if [ -z "$VERSION" ]; then
-  echo "Usage: $0 <version> [update-dir] [base-url]"
-  echo "Example: $0 0.2.0 ./updates https://updates.ltools.app/stable"
+  echo "Usage: $0 [--skip-check] <version> [update-dir] [base-url]"
+  echo "Example: $0 --skip-check 0.2.0 ./updates https://updates.ltools.app/stable"
+  echo ""
+  echo "Options:"
+  echo "  --skip-check    跳过平台包检查（用于测试）"
   exit 1
 fi
 
@@ -33,6 +50,11 @@ check_package() {
   local platform=$1
   local ext=$2
   local file="$UPDATE_DIR/ltools-$VERSION-$platform.$ext"
+
+  if [ "$SKIP_CHECK" = "true" ]; then
+    echo "⚠️  跳过检查: $file"
+    return 0
+  fi
 
   if [ ! -f "$file" ]; then
     echo "警告: 未找到 $platform 包: $file"
@@ -96,8 +118,7 @@ check_and_add_platform() {
     # 这样 "windows-amd64-installer" 会映射到 "windows-amd64" 平台键
     local platform_key="${platform%-installer}"
 
-    # 单行格式，稍后会被逗号分隔
-    PLATFORM_INFOS+=("    \"$platform_key\": {\"url\": \"$BASE_URL/ltools-$VERSION-$platform.$ext\", \"size\": $size, \"checksum\": \"sha256:$checksum\"}")
+    # 单行格式，    PLATFORM_INFOS+=("    \"$platform_key\": {\"url\": \"$BASE_URL/ltools-$VERSION-$platform.$ext\", \"size\": $size, \"checksum\": \"sha256:$checksum\"}")
   fi
 }
 
@@ -114,9 +135,15 @@ CLEAN_VERSION="${VERSION#v}"
 
 # 获取 git tag 消息作为 releaseNotes
 RELEASE_NOTES=""
-if command -v git &> /dev/null && git rev-parse --git-dir > /dev/null 2>&1; then
+if [ "$SKIP_CHECK" != "true" ] && command -v git &> /dev/null && git rev-parse --git-dir > /dev/null 2>&1; then
   # 尝试获取当前 tag 的消息（支持带或不带 v 前缀）
-  TAG_MSG=$(git tag -l --format='%(contents)' "$VERSION" 2>/dev/null || git tag -l --format='%(contents)' "v$CLEAN_VERSION" 2>/dev/null || true)
+  # 先尝试带 v 前缀的版本
+  TAG_MSG=$(git tag -l --format='%(contents)' "v$CLEAN_VERSION" 2>/dev/null || true)
+  if [ -z "$TAG_MSG" ]; then
+    # 如果失败，再尝试不带 v 前缀
+    TAG_MSG=$(git tag -l --format='%(contents)' "$CLEAN_VERSION" 2>/dev/null || true)
+  fi
+
   if [ -n "$TAG_MSG" ]; then
     # 移除 Co-Authored-By 行
     TAG_MSG=$(echo "$TAG_MSG" | grep -v "Co-Authored-By:")
