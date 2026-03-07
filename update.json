@@ -1,23 +1,23 @@
 {
-  "version": "0.1.2",
-  "releaseDate": "2026-03-07T06:32:19Z",
-  "releaseNotes": "fix: fetch app version from backend in AboutSettings\n\nProblem:\n- AboutSettings.tsx had hardcoded version '0.1.0'\n- Version displayed in UI didn't match actual build version\n- Users saw outdated version even after updates\n\nSolution:\n- Use useEffect to fetch version from UpdateService.GetCurrentVersion()\n- Display '加载中...' while loading, '未知' on error\n- Version now matches the ldflags-injected version\n\nBenefits:\n- ✅ Version always accurate in UI\n- ✅ Reflects actual compiled version\n- ✅ No manual updates needed\n\nTesting:\n- npm run build: successful\n- TypeScript compilation: passed\n\nRelated: #S387, commits f961845, 95a7ab7, 401636a",
+  "version": "0.1.3",
+  "releaseDate": "2026-03-07T11:49:58Z",
+  "releaseNotes": "chore: bump version to 0.1.3",
   "mandatory": false,
   "platforms": {
     "darwin-arm64": {
-      "url": "https://github.com/lian-yang/ltools/releases/download/v0.1.2/ltools-v0.1.2-darwin-arm64.tar.gz",
-      "size": 9357747,
-      "checksum": "sha256:21cb03051df25cc45bfb034e465258e34ca870171b69ee98e5ccb6599561204a"
+      "url": "https://github.com/lian-yang/ltools/releases/download/v0.1.3/ltools-v0.1.3-darwin-arm64.tar.gz",
+      "size": 9359603,
+      "checksum": "sha256:7d01aeae3b85fe88af727fe6f7f62253f117400a1555d6c674baf05c7041d78a"
     },
     "windows-amd64": {
-      "url": "https://github.com/lian-yang/ltools/releases/download/v0.1.2/ltools-v0.1.2-windows-amd64-installer.exe",
-      "size": 13569859,
-      "checksum": "sha256:c73cbe998cd9b1770b9dc06551093ca6709e252b862c36c3b66085c73760d9da"
+      "url": "https://github.com/lian-yang/ltools/releases/download/v0.1.3/ltools-v0.1.3-windows-amd64-installer.exe",
+      "size": 13571657,
+      "checksum": "sha256:690dca2c3644ad1ed101d78ed97b4686014d50591f90cbbd8b0c74e9505c87da"
     },
     "linux-amd64": {
-      "url": "https://github.com/lian-yang/ltools/releases/download/v0.1.2/ltools-v0.1.2-linux-amd64.AppImage",
-      "size": 79542776,
-      "checksum": "sha256:e9b4be0d38c7badcfc5c079bc30cf8a1372ab521496f28ae3496f17f1b0edd25"
+      "url": "https://github.com/lian-yang/ltools/releases/download/v0.1.3/ltools-v0.1.3-linux-amd64.AppImage",
+      "size": 79555064,
+      "checksum": "sha256:9e152670b0b7ddc3c4206590531becc4fbc3fdadc6a6498554c3bd33be727fb5"
     }
   }
 }
