@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strings"
 	"time"
 
 	"ltools/internal/plugins"
@@ -50,6 +49,10 @@ var assets embed.FS
 
 //go:embed build/appicon.png
 var systrayIcon []byte
+
+// 版本号，通过 -ldflags 在编译时注入
+// 示例: go build -ldflags="-X main.version=0.1.2"
+var version = "0.1.0" // 默认值，开发时使用
 
 func init() {
 	// Register custom events for the datetime plugin
@@ -558,24 +561,9 @@ func main() {
 	// Set app launcher service for app search integration
 	searchWindowService.SetAppLauncherService(appLauncherService)
 
-	// Load version from build/config.yml
-	version := "0.1.0" // fallback version
-	if configData, err := os.ReadFile("build/config.yml"); err == nil {
-		// Simple regex to extract version from YAML
-		lines := strings.Split(string(configData), "\n")
-		for _, line := range lines {
-			line = strings.TrimSpace(line)
-			if strings.HasPrefix(line, "version:") {
-				parts := strings.SplitN(line, ":", 2)
-				if len(parts) == 2 {
-					version = strings.Trim(strings.TrimSpace(parts[1]), "\"'")
-					break
-				}
-			}
-		}
-	}
-
 	// Create update service
+	// Note: version is injected at build time via -ldflags
+	// Example: go build -ldflags="-X main.version=0.1.2"
 	updateService := update.NewService(&update.ServiceConfig{
 		CurrentVersion: version,
 		UpdateURL:      "https://raw.githubusercontent.com/lian-yang/ltools/main/",
