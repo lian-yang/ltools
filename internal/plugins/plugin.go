@@ -65,6 +65,12 @@ type PluginMetadata struct {
 	// HasPage 控制插件是否有独立的页面视图，默认 true
 	// 使用指针类型以区分"未设置"（nil）和"显式设置为 false"（*false）
 	HasPage *bool `json:"hasPage,omitempty"`
+	// 使用统计和智能排序字段
+	UsageCount  int    `json:"usageCount,omitempty"`  // 累计访问次数
+	LastUsedAt  string `json:"lastUsedAt,omitempty"`  // 最后访问时间（RFC3339）
+	Pinned      *bool  `json:"pinned,omitempty"`      // 是否固定到顶部
+	PinnedAt    string `json:"pinnedAt,omitempty"`    // 固定时间（RFC3339）
+	Score       int    `json:"score,omitempty"`       // 加权使用分数（衰减算法）
 }
 
 // Plugin defines the interface that all plugins must implement

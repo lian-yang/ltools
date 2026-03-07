@@ -20,6 +20,7 @@ export function UpdateNotification() {
   const [downloading, setDownloading] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [downloaded, setDownloaded] = useState(false);
+  const [downloadedFilePath, setDownloadedFilePath] = useState<string | null>(null);
   const [installing, setInstalling] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dismissed, setDismissed] = useState(false);
@@ -35,8 +36,8 @@ export function UpdateNotification() {
     }
   }, []);
 
-  const handleInstall = useCallback(async (filePath: string) => {
-    if (!filePath) {
+  const handleInstall = useCallback(async () => {
+    if (!downloadedFilePath) {
       setError('安装失败：文件路径不存在');
       return;
     }
@@ -44,7 +45,7 @@ export function UpdateNotification() {
     try {
       setInstalling(true);
       setError(null);
-      await UpdateService.InstallUpdate(filePath);
+      await UpdateService.InstallUpdate(downloadedFilePath);
 
       // macOS/Linux: 安装成功后会发送 update:installed 事件
       // Windows: 安装程序会自动退出应用
@@ -55,7 +56,7 @@ export function UpdateNotification() {
       setDownloaded(false);
       setError(err instanceof Error ? err.message : String(err));
     }
-  }, []);
+  }, [downloadedFilePath]);
 
   const handleDownload = useCallback(async () => {
     if (!updateInfo) return;
@@ -78,42 +79,21 @@ export function UpdateNotification() {
       );
 
       console.log('Download completed:', filePath);
+      setDownloadedFilePath(filePath); // 保存文件路径
       setDownloaded(true);
       setDownloading(false);
-
-      // 自动安装（macOS/Linux 会等待用户确认，Windows 会立即退出）
-      await handleInstall(filePath);
     } catch (err) {
       console.error('Download failed:', err);
       setError(err instanceof Error ? err.message : String(err));
       setDownloading(false);
     }
-  }, [updateInfo, handleInstall]);
+  }, [updateInfo]);
 
   const handleDismiss = useCallback(() => {
     if (!updateInfo?.mandatory) {
       setDismissed(true);
     }
   }, [updateInfo?.mandatory]);
-
-  const handleCheckUpdate = useCallback(async () => {
-    try {
-      setError(null);
-      const info = await UpdateService.CheckForUpdate();
-
-      if (info) {
-        setUpdateInfo(info);
-        setDismissed(false);
-      } else {
-        // 已经是最新版本
-        setError('您已经在使用最新版本！');
-        setTimeout(() => setError(null), 3000);
-      }
-    } catch (err) {
-      console.error('Check update failed:', err);
-      setError(err instanceof Error ? err.message : String(err));
-    }
-  }, []);
 
   // 然后使用 useEffect
   useEffect(() => {
@@ -157,18 +137,9 @@ export function UpdateNotification() {
   }, [handleRestart]);
 
   if (!updateInfo || dismissed) {
-    // 手动检查更新按钮
-    return (
-      <div className="fixed bottom-4 right-4">
-        <button
-          onClick={handleCheckUpdate}
-          className="p-2 rounded-lg glass hover:bg-white/10 transition-colors"
-          title="检查更新"
-        >
-          <Icon name="refresh" className="w-5 h-5" />
-        </button>
-      </div>
-    );
+    // 没有更新信息，不显示任何内容
+    // 用户应该通过设置页面手动检查更新
+    return null;
   }
 
   return (
@@ -239,16 +210,24 @@ export function UpdateNotification() {
               </>
             )}
 
-            {downloading && (
-              <div className="flex-1 text-center text-white/80 text-sm">
-                下载中... {downloadProgress}%
-              </div>
-            )}
+            {downloaded && !installing && (
+              <>
+                <button
+                  onClick={handleInstall}
+                  className="flex-1 bg-white text-purple-600 font-medium px-4 py-2 rounded-lg hover:bg-white/90 transition-colors"
+                >
+                  安装更新
+                </button>
 
-            {installing && (
-              <div className="flex-1 text-center text-white/80 text-sm">
-                正在安装...
-              </div>
+                {!updateInfo.mandatory && (
+                  <button
+                    onClick={handleDismiss}
+                    className="px-4 py-2 rounded-lg hover:bg-white/20 transition-colors"
+                  >
+                    稍后安装
+                  </button>
+                )}
+              </>
             )}
           </div>
         </div>

@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useParams, useLocation } from 'react-router-dom'
 import * as ProcessManagerService from '../../../bindings/ltools/plugins/processmanager/processmanagerservice'
+import * as PluginService from '../../../bindings/ltools/internal/plugins/pluginservice'
 import type { PluginLifecycleHandler } from '../types'
 
 /**
@@ -50,6 +51,13 @@ export function PluginGuard({ children }: { children: React.ReactNode }) {
     if (currentPluginId && pluginEnterHandlers[currentPluginId]) {
       pluginEnterHandlers[currentPluginId](currentPluginId).catch(err => {
         console.error(`Failed to enter plugin ${currentPluginId}:`, err)
+      })
+    }
+
+    // 记录使用（fire-and-forget）
+    if (currentPluginId) {
+      PluginService.RecordUsage(currentPluginId).catch(err => {
+        console.error(`Failed to record usage for ${currentPluginId}:`, err)
       })
     }
 

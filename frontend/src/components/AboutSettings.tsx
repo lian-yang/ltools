@@ -24,8 +24,10 @@ export function AboutSettings() {
       const info = await UpdateService.CheckForUpdate();
 
       if (info) {
-        setUpdateMessage(`发现新版本 ${info.version}`);
-        // 更新信息会通过事件发送到 UpdateNotification 组件显示
+        // 更新信息会通过 "update:available" 事件发送到 UpdateNotification 组件显示
+        // 这里只显示一个简短的提示
+        setUpdateMessage('发现新版本，请查看更新通知');
+        setTimeout(() => setUpdateMessage(null), 3000);
       } else {
         setUpdateMessage('您已经在使用最新版本！');
         setTimeout(() => setUpdateMessage(null), 3000);

@@ -4,17 +4,21 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 )
 
 // Registry manages plugin metadata persistence
 type Registry struct {
-	mu        sync.RWMutex
-	file      string
-	plugins   map[string]*PluginMetadata
-	dirty     bool
+	mu                  sync.RWMutex
+	file                string
+	plugins             map[string]*PluginMetadata
+	dirty               bool
+	lastSaveTime        time.Time // 上次保存时间（防抖）
+	lastScoreUpdateTime time.Time // 上次分数更新时间
 }
 
 // NewRegistry creates a new plugin registry
@@ -69,7 +73,13 @@ func (r *Registry) save() error {
 		return err
 	}
 
-	return os.Rename(tmpFile, r.file)
+	if err := os.Rename(tmpFile, r.file); err != nil {
+		return err
+	}
+
+	r.lastSaveTime = time.Now()
+	r.dirty = false
+	return nil
 }
 
 // Register registers a plugin in the registry
@@ -282,3 +292,98 @@ var (
 	ErrPluginNotFound = errors.New("plugin not found")
 	ErrPluginExists   = errors.New("plugin already exists")
 )
+
+// CalculateUsageScore 基于衰减算法计算使用分数
+// 使用指数衰减：7 天半衰期（最近使用的权重更高）
+func CalculateUsageScore(usageCount int, lastUsedAt string) int {
+	if usageCount == 0 {
+		return 0
+	}
+
+	if lastUsedAt == "" {
+		return usageCount
+	}
+
+	lastUse, err := time.Parse(time.RFC3339, lastUsedAt)
+	if err != nil {
+		return usageCount
+	}
+
+	daysSinceLastUse := time.Since(lastUse).Hours() / 24
+	decayFactor := math.Pow(0.5, daysSinceLastUse/7)
+
+	return int(float64(usageCount) * decayFactor)
+}
+
+// RecordUsage 记录插件使用并重新计算分数
+func (r *Registry) RecordUsage(id string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	metadata, ok := r.plugins[id]
+	if !ok {
+		return ErrPluginNotFound
+	}
+
+	// 更新使用统计
+	metadata.UsageCount++
+	metadata.LastUsedAt = time.Now().Format(time.RFC3339)
+
+	// 重新计算该插件的分数
+	metadata.Score = CalculateUsageScore(metadata.UsageCount, metadata.LastUsedAt)
+
+	r.dirty = true
+	return r.debouncedSave()
+}
+
+// TogglePin 切换插件固定状态
+func (r *Registry) TogglePin(id string) (bool, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	metadata, ok := r.plugins[id]
+	if !ok {
+		return false, ErrPluginNotFound
+	}
+
+	currentPinned := metadata.Pinned != nil && *metadata.Pinned
+	newPinned := !currentPinned
+	metadata.Pinned = &newPinned
+
+	// 如果是固定操作，记录固定时间；如果是取消固定，清空固定时间
+	if newPinned {
+		metadata.PinnedAt = time.Now().Format(time.RFC3339)
+	} else {
+		metadata.PinnedAt = ""
+	}
+
+	r.dirty = true
+	return newPinned, r.debouncedSave()
+}
+
+// UpdateAllScores 更新所有插件的分数（定期调用）
+func (r *Registry) UpdateAllScores() error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	// 最多每小时更新一次
+	if !r.lastScoreUpdateTime.IsZero() && time.Since(r.lastScoreUpdateTime) < time.Hour {
+		return nil
+	}
+
+	for _, metadata := range r.plugins {
+		metadata.Score = CalculateUsageScore(metadata.UsageCount, metadata.LastUsedAt)
+	}
+
+	r.lastScoreUpdateTime = time.Now()
+	r.dirty = true
+	return r.debouncedSave()
+}
+
+// debouncedSave 防抖保存（最小间隔 5 秒）
+func (r *Registry) debouncedSave() error {
+	if !r.lastSaveTime.IsZero() && time.Since(r.lastSaveTime) < 5*time.Second {
+		return nil
+	}
+	return r.save()
+}

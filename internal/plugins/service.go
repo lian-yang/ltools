@@ -146,3 +146,13 @@ func (s *PluginService) GetPluginMethods(id string) ([]string, error) {
 		fmt.Sprintf("%s methods", plugin.Metadata().Name),
 	}, nil
 }
+
+// RecordUsage 记录插件使用（供前端调用）
+func (s *PluginService) RecordUsage(id string) error {
+	return s.manager.registry.RecordUsage(id)
+}
+
+// TogglePin 切换插件固定状态（供前端调用）
+func (s *PluginService) TogglePin(id string) (bool, error) {
+	return s.manager.registry.TogglePin(id)
+}

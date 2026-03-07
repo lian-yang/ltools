@@ -9,7 +9,7 @@ export type IconName = 'home' | 'puzzle-piece' | 'clock' | 'cog' | 'key' | 'shie
   'code' | 'alert-circle' | 'check' | 'download' | 'upload' | 'process' | 'close' |
   'trash' | 'x-mark' | 'camera' | 'qrcode' | 'folder' | 'folder-open' | 'wrench' |
   'arrow-left' | 'arrow-right' | 'stop' | 'play' | 'pencil' | 'log' | 'terminal' |
-  'view-columns'
+  'view-columns' | 'pin'
 
 /**
  * 基础路由配置接口
@@ -37,6 +37,7 @@ export interface NavItem {
   icon: IconName
   path: string
   pluginId?: string
+  pinned?: boolean // 是否固定
 }
 
 /**

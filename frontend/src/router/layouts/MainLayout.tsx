@@ -2,6 +2,7 @@ import { Outlet } from 'react-router-dom'
 import { ToastProvider } from '../../contexts/ToastContext'
 import { Sidebar } from '../../components/navigation/Sidebar'
 import { useGlobalShortcuts } from '../../hooks/useGlobalShortcuts'
+import { UpdateNotification } from '../../widgets/UpdateNotificationWidget'
 
 // Re-export IconName for use in other files
 export type { IconName } from '../types'
@@ -25,6 +26,9 @@ export function MainLayout() {
           <Outlet />
         </main>
       </div>
+
+      {/* 更新通知组件（全局） */}
+      <UpdateNotification />
     </ToastProvider>
   )
 }

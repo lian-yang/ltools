@@ -97,6 +97,7 @@ func (s *Service) CheckForUpdate() (*UpdateInfo, error) {
 
 	// 获取平台标识
 	platform := s.getPlatformKey()
+	log.Printf("[UpdateService] Detected platform: %s (GOOS=%s, GOARCH=%s)", platform, runtime.GOOS, runtime.GOARCH)
 
 	// 下载更新清单
 	manifest, err := s.fetchManifest()
@@ -139,6 +140,11 @@ func (s *Service) CheckForUpdate() (*UpdateInfo, error) {
 	}
 
 	log.Printf("[UpdateService] Update available: %s (size: %d bytes)", info.Version, info.Size)
+
+	// 发送事件通知前端（保持与启动时自动检查的行为一致）
+	if s.app != nil {
+		s.app.Event.Emit("update:available", info)
+	}
 
 	return info, nil
 }
@@ -225,7 +231,41 @@ func (s *Service) DownloadUpdate(url string, expectedChecksum string) (string, e
 
 	log.Printf("[UpdateService] Download completed: %d bytes, checksum: %s", written, actualChecksum)
 
-	return tmpFile, nil
+	// 确定文件扩展名（从 URL 提取）
+	var ext string
+	// 特殊处理 .tar.gz 双扩展名
+	if strings.HasSuffix(url, ".tar.gz") {
+		ext = ".tar.gz"
+	} else if strings.HasSuffix(url, ".tar.bz2") {
+		ext = ".tar.bz2"
+	} else {
+		ext = filepath.Ext(url)
+	}
+
+	if ext == "" || ext == "." {
+		// 如果 URL 没有扩展名，根据平台使用默认扩展名
+		switch runtime.GOOS {
+		case "darwin":
+			ext = ".tar.gz"
+		case "windows":
+			ext = ".exe"
+		case "linux":
+			ext = ".AppImage"
+		default:
+			ext = ".tar.gz"
+		}
+	}
+
+	// 重命名临时文件为最终文件名
+	finalFile := filepath.Join(downloadDir, "update"+ext)
+	if err := os.Rename(tmpFile, finalFile); err != nil {
+		log.Printf("[UpdateService] Warning: failed to rename file, using temp path: %v", err)
+		// 如果重命名失败，返回临时文件路径
+		return tmpFile, nil
+	}
+
+	log.Printf("[UpdateService] File renamed to: %s", finalFile)
+	return finalFile, nil
 }
 
 // InstallUpdate 安装更新（前端调用）
@@ -308,23 +348,35 @@ func (s *Service) installMacOS(filePath string) error {
 
 	// 6. 备份旧版本（以防万一）
 	backupPath := currentAppPath + ".backup"
+	backupSuccess := true
 	if err := os.Rename(currentAppPath, backupPath); err != nil {
 		log.Printf("[UpdateService] Warning: failed to backup old app: %v", err)
-		// 如果备份失败，继续尝试替换
+		backupSuccess = false
+
+		// 如果备份失败（可能文件正在使用），尝试直接删除
+		log.Printf("[UpdateService] Attempting to remove old app directly...")
+		if err := os.RemoveAll(currentAppPath); err != nil {
+			return fmt.Errorf("failed to backup or remove old app: %w", err)
+		}
 	}
 
 	// 7. 替换应用
 	if err := os.Rename(appPath, currentAppPath); err != nil {
-		// 恢复备份
-		if _, backupErr := os.Stat(backupPath); backupErr == nil {
-			os.Rename(backupPath, currentAppPath)
+		// 如果替换失败，尝试恢复备份
+		if backupSuccess {
+			if _, backupErr := os.Stat(backupPath); backupErr == nil {
+				log.Printf("[UpdateService] Attempting to restore backup...")
+				os.Rename(backupPath, currentAppPath)
+			}
 		}
 		return fmt.Errorf("failed to replace app: %w", err)
 	}
 
-	// 8. 删除备份
-	if err := os.Remove(backupPath); err != nil {
-		log.Printf("[UpdateService] Warning: failed to remove backup: %v", err)
+	// 8. 删除备份（如果存在）
+	if backupSuccess {
+		if err := os.Remove(backupPath); err != nil {
+			log.Printf("[UpdateService] Warning: failed to remove backup: %v", err)
+		}
 	}
 
 	log.Println("[UpdateService] macOS installation completed successfully")
