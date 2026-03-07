@@ -11,7 +11,7 @@ info:
   description: "多功能开发工具集" # 应用程序描述
   copyright: "(c) 2025, LTools" # 版权文本
   comments: "开发者效率工具" # 备注
-  version: "0.1.1" # 应用程序版本
+  version: "0.1.2" # 应用程序版本
 
 # iOS 构建配置（取消注释以自定义 iOS 项目生成）
 # 注意：`ios` 下的键在设置时会覆盖 `info` 下的值。
