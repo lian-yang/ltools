@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Icon } from './Icon';
 import { Browser } from '@wailsio/runtime';
 import * as UpdateService from '../../bindings/ltools/internal/update/service';
@@ -10,11 +10,21 @@ import * as UpdateService from '../../bindings/ltools/internal/update/service';
 export function AboutSettings() {
   const [checking, setChecking] = useState(false);
   const [updateMessage, setUpdateMessage] = useState<string | null>(null);
+  const [appVersion, setAppVersion] = useState<string>('加载中...');
 
-  const appVersion = '0.1.0';
   const goVersion = '1.25+';
   const wailsVersion = 'v3 (alpha)';
   const reactVersion = '18.2';
+
+  // 从后端获取应用版本
+  useEffect(() => {
+    UpdateService.GetCurrentVersion()
+      .then(version => setAppVersion(version))
+      .catch(err => {
+        console.error('Failed to get app version:', err);
+        setAppVersion('未知');
+      });
+  }, []);
 
   const handleCheckUpdate = async () => {
     setChecking(true);
