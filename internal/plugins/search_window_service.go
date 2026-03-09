@@ -136,13 +136,31 @@ func (s *SearchWindowService) Show() error {
 func (s *SearchWindowService) ShowWithQuery(query string) error {
 	s.app.Logger.Info(fmt.Sprintf("[SearchWindowService] Showing search window with query: %s", query))
 
-	// First show the window
-	if err := s.Show(); err != nil {
-		return err
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// Create window if it doesn't exist
+	if s.searchWindow == nil {
+		if err := s.createWindow(); err != nil {
+			s.app.Logger.Error(fmt.Sprintf("[SearchWindowService] Failed to create search window: %v", err))
+			return err
+		}
 	}
 
-	// Emit event to frontend with the query
+	// Restore last position if saved, otherwise use default centered position
+	if s.lastPosition != nil {
+		s.searchWindow.SetPosition(s.lastPosition.X, s.lastPosition.Y)
+	}
+
+	// Show and focus the window
+	s.searchWindow.Show()
+	s.searchWindow.SetAlwaysOnTop(true)
+
+	// Emit event to frontend with the query (只发送一次，带查询参数)
 	s.app.Event.Emit("search:opened", query)
+
+	s.isVisible = true
+	s.app.Logger.Info(fmt.Sprintf("[SearchWindowService] Search window is now visible with query: %s", query))
 
 	return nil
 }

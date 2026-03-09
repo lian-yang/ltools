@@ -4,9 +4,43 @@ import { Events } from '@wailsio/runtime';
 import * as SearchWindowService from '../../bindings/ltools/internal/plugins/searchwindowservice';
 import * as AppLauncherService from '../../bindings/ltools/plugins/applauncher/applauncherservice';
 import { usePlugins } from '../plugins/usePlugins';
-import { getPluginIcon } from '../utils/pluginHelpers';
+import { getPluginIcon, getPluginIconName } from '../utils/pluginHelpers';
 import { PluginState } from '../../bindings/ltools/internal/plugins';
 import './SearchWindow.css';
+
+/**
+ * 插件图标组件 - 优先使用专业 SVG 图标，fallback 到 emoji
+ * 与首页 Home.tsx 保持一致
+ */
+function PluginIcon({
+  plugin,
+  size = 'normal'
+}: {
+  plugin: { id: string; name: string; icon?: string }
+  size?: 'small' | 'normal'
+}) {
+  const iconName = getPluginIconName(plugin)
+  const emoji = getPluginIcon(plugin)
+
+  const iconSize = size === 'small' ? 20 : 28
+  const emojiSize = size === 'small' ? 'text-lg' : 'text-2xl'
+
+  if (iconName) {
+    return (
+      <Icon
+        name={iconName}
+        size={iconSize}
+        className="text-[#A78BFA]"
+      />
+    )
+  }
+
+  return (
+    <span className={emojiSize} role="img" aria-label={plugin.name}>
+      {emoji}
+    </span>
+  )
+}
 
 /**
  * 解码 Unicode 转义字符
@@ -91,14 +125,21 @@ export function SearchWindow() {
     const unsubscribeOpened = Events.On('search:opened', (ev: any) => {
       const queryParam = ev.data as string;
       console.log('[SearchWindow] Search opened event received, query:', queryParam);
+
+      // 立即设置查询参数，不要延迟
+      if (queryParam) {
+        setQuery(queryParam);
+      } else {
+        setQuery('');
+        setResults([]);
+      }
+      setSelectedIndex(0);
+      setCurrentPage(0); // 重置到第一页
+
+      // 聚焦输入框
       setTimeout(() => {
         inputRef.current?.focus();
-        // 如果有查询参数，使用它；否则重置为空
-        setQuery(queryParam || '');
-        setResults([]);
-        setSelectedIndex(0);
-        setCurrentPage(0); // 重置到第一页
-      }, 100);
+      }, 50);
     });
 
     const unsubscribeClosed = Events.On('search:closed', () => {
@@ -411,7 +452,7 @@ export function SearchWindow() {
                             onClick={() => openPlugin(plugin.id)}
                           >
                             <div className="plugin-card-icon">
-                              {getPluginIcon(plugin)}
+                              <PluginIcon plugin={plugin} size="normal" />
                             </div>
                             <div className="plugin-card-name">{plugin.name}</div>
                           </div>
