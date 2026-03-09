@@ -43,6 +43,7 @@ export default defineConfig({
             { text: '全局搜索', link: '/guide/search' },
             { text: '插件管理', link: '/guide/plugin-management' },
             { text: '系统托盘', link: '/guide/system-tray' },
+            { text: '数据同步', link: '/guide/sync' },
           ]
         }
       ],
@@ -63,7 +64,7 @@ export default defineConfig({
             { text: '🌐 Hosts 管理', link: '/plugins/hosts' },
             { text: '🚇 隧道管理', link: '/plugins/tunnel' },
             { text: '🌍 IP 信息', link: '/plugins/ipinfo' },
-            { text: '📌 贴图工具', link: '/plugins/sticky' },
+            { text: '📌 便利贴', link: '/plugins/sticky' },
             { text: '🤖 AI 翻译', link: '/plugins/translate' },
             { text: '📄 Markdown', link: '/plugins/markdown' },
             { text: '📱 二维码', link: '/plugins/qrcode' },
