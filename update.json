@@ -1,23 +1,23 @@
 {
   "version": "0.1.4",
-  "releaseDate": "2026-03-09T05:19:25Z",
-  "releaseNotes": "fix: darwin-arm64 更新 URL 使用 tar.gz，同时提供 DMG 手动下载\n\n- 自动更新使用 tar.gz（自动更新器兼容性更好）\n- DMG 仅作为手动下载选项",
+  "releaseDate": "2026-03-09T05:50:32Z",
+  "releaseNotes": "fix: 修复搜索窗口打开时 URL 协议导航无响应问题\n\n问题：当搜索窗口处于前台时，通过 ltools://settings?tab=about 等 URL\n调用无法正确切换页面，因为主窗口没有获得焦点。\n\n解决方案：\n1. 在 SearchWindowService 添加 IsVisible() 方法\n2. 修改 main.go 中的 URL 事件处理，在发送事件前先：\n   - 检查搜索窗口是否可见，如可见则隐藏\n   - 显示并聚焦主窗口\n3. 将 URL 事件监听移至 SearchWindowService 创建之后，\n   以便使用其方法\n\n修复文件：\n- internal/plugins/search_window_service.go: 添加 IsVisible 方法\n- main.go: 重构 URL 事件处理逻辑，添加窗口焦点管理",
   "mandatory": false,
   "platforms": {
     "darwin-arm64": {
       "url": "https://github.com/lian-yang/ltools/releases/download/v0.1.4/ltools-v0.1.4-darwin-arm64.tar.gz",
-      "size": 9369851,
-      "checksum": "sha256:0005cb089cab201dcce4609498a1289c931edbfbc856ed74a7afd93caeafe8a7"
+      "size": 9369990,
+      "checksum": "sha256:c9e49ae065d883527e6da560b10ea8e00a614135235a51e76a7b21fc6ad73ab5"
     },
     "windows-amd64": {
       "url": "https://github.com/lian-yang/ltools/releases/download/v0.1.4/ltools-v0.1.4-windows-amd64-installer.exe",
-      "size": 13593903,
-      "checksum": "sha256:ef50f5e89193c3e9c0d74eeb6736d27f8add1d693a2217c9c59e0204922b3b92"
+      "size": 13594355,
+      "checksum": "sha256:30bd3654a24ffdc7a5364ea27c363e6d9153246d83a79ba6b90f88803f3cc571"
     },
     "linux-amd64": {
       "url": "https://github.com/lian-yang/ltools/releases/download/v0.1.4/ltools-v0.1.4-linux-amd64.AppImage",
       "size": 79575544,
-      "checksum": "sha256:7f0fb26c845fe04ead8d074fe29b98c94740a4ec00f54a6bff8ebdc18181bdcf"
+      "checksum": "sha256:8c2bb2e8f4709b8212fce1a90d8c08fd0605897e3f1c5e2f956283f3a32a975b"
     }
   }
 }
