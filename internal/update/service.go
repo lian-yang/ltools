@@ -82,7 +82,7 @@ func NewService(config *ServiceConfig, app *application.App) *Service {
 		dataDir:        config.DataDir,
 		app:            app,
 		client: &http.Client{
-			Timeout: 30 * time.Second,
+			Timeout: 10 * time.Minute, // 10 分钟超时，适用于大文件下载
 		},
 	}
 }
