@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0D0F1A;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1A1D2E;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="accentGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#7C3AED;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#22D3EE;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- 背景 -->
+  <rect width="400" height="300" fill="url(#bgGradient)"/>
+
+  <!-- 主 Logo -->
+  <circle cx="200" cy="150" r="80" fill="url(#accentGradient)" opacity="0.9"/>
+  <text x="200" y="170" font-family="Arial, sans-serif" font-size="60" font-weight="bold" fill="white" text-anchor="middle">LT</text>
+
+  <!-- 装饰元素 -->
+  <circle cx="80" cy="80" r="20" fill="#7C3AED" opacity="0.3"/>
+  <circle cx="320" cy="220" r="30" fill="#22D3EE" opacity="0.3"/>
+  <circle cx="350" cy="80" r="15" fill="#7C3AED" opacity="0.5"/>
+  <circle cx="50" cy="220" r="25" fill="#22D3EE" opacity="0.4"/>
+
+  <!-- 标题 -->
+  <text x="200" y="260" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="white" text-anchor="middle">LTools</text>
+  <text x="200" y="285" font-family="Arial, sans-serif" font-size="14" fill="#A0AEC0" text-anchor="middle">插件式桌面工具箱</text>
+</svg>

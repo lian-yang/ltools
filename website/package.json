@@ -1,0 +1,31 @@
+{
+  "name": "ltools-website",
+  "version": "0.1.4",
+  "description": "LTools 产品官网",
+  "type": "module",
+  "scripts": {
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs"
+  },
+  "devDependencies": {
+    "vitepress": "^1.5.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lian-yang/ltools.git"
+  },
+  "keywords": [
+    "ltools",
+    "desktop",
+    "toolbox",
+    "plugins",
+    "wails"
+  ],
+  "author": "LTools Contributors",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/lian-yang/ltools/issues"
+  },
+  "homepage": "https://lian-yang.github.io/ltools/"
+}
