@@ -1,18 +1,23 @@
 {
   "version": "0.1.4",
-  "releaseDate": "2026-03-09T04:55:14Z",
-  "releaseNotes": "fix: 添加 Markdown 文件关联图标修复 Windows 构建失败",
+  "releaseDate": "2026-03-09T05:11:22Z",
+  "releaseNotes": "fix: 支持 macOS DMG 文件在更新清单生成",
   "mandatory": false,
   "platforms": {
+    "darwin-arm64": {
+      "url": "https://github.com/lian-yang/ltools/releases/download/v0.1.4/ltools-v0.1.4-darwin-arm64.dmg",
+      "size": 9535345,
+      "checksum": "sha256:bfb95e908d11ea82da6c84573e1ef82d18c6ed374427f42567ffc5cdaeeb5811"
+    },
     "windows-amd64": {
       "url": "https://github.com/lian-yang/ltools/releases/download/v0.1.4/ltools-v0.1.4-windows-amd64-installer.exe",
-      "size": 13593733,
-      "checksum": "sha256:501ec9382fe87cd068933b7f38a179fea25f31df02cbfd27b83b9de789987981"
+      "size": 13593697,
+      "checksum": "sha256:f029f19ee78d57eefa5fcfacf6846a037497bd5126e330eaf5608427feba83c6"
     },
     "linux-amd64": {
       "url": "https://github.com/lian-yang/ltools/releases/download/v0.1.4/ltools-v0.1.4-linux-amd64.AppImage",
       "size": 79575544,
-      "checksum": "sha256:a5edd4dfdb433c615d493657e93475462693cd15def0bd441f7f2181dbb7f10f"
+      "checksum": "sha256:274a27056789c029fba6bca4a95be3abc241bb5cd11be2a143b29b36a99e2bcf"
     }
   }
 }
