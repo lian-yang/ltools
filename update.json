@@ -1,23 +1,23 @@
 {
   "version": "0.1.4",
-  "releaseDate": "2026-03-09T05:11:22Z",
-  "releaseNotes": "fix: 支持 macOS DMG 文件在更新清单生成",
+  "releaseDate": "2026-03-09T05:19:25Z",
+  "releaseNotes": "fix: darwin-arm64 更新 URL 使用 tar.gz，同时提供 DMG 手动下载\n\n- 自动更新使用 tar.gz（自动更新器兼容性更好）\n- DMG 仅作为手动下载选项",
   "mandatory": false,
   "platforms": {
     "darwin-arm64": {
-      "url": "https://github.com/lian-yang/ltools/releases/download/v0.1.4/ltools-v0.1.4-darwin-arm64.dmg",
-      "size": 9535345,
-      "checksum": "sha256:bfb95e908d11ea82da6c84573e1ef82d18c6ed374427f42567ffc5cdaeeb5811"
+      "url": "https://github.com/lian-yang/ltools/releases/download/v0.1.4/ltools-v0.1.4-darwin-arm64.tar.gz",
+      "size": 9369851,
+      "checksum": "sha256:0005cb089cab201dcce4609498a1289c931edbfbc856ed74a7afd93caeafe8a7"
     },
     "windows-amd64": {
       "url": "https://github.com/lian-yang/ltools/releases/download/v0.1.4/ltools-v0.1.4-windows-amd64-installer.exe",
-      "size": 13593697,
-      "checksum": "sha256:f029f19ee78d57eefa5fcfacf6846a037497bd5126e330eaf5608427feba83c6"
+      "size": 13593903,
+      "checksum": "sha256:ef50f5e89193c3e9c0d74eeb6736d27f8add1d693a2217c9c59e0204922b3b92"
     },
     "linux-amd64": {
       "url": "https://github.com/lian-yang/ltools/releases/download/v0.1.4/ltools-v0.1.4-linux-amd64.AppImage",
       "size": 79575544,
-      "checksum": "sha256:274a27056789c029fba6bca4a95be3abc241bb5cd11be2a143b29b36a99e2bcf"
+      "checksum": "sha256:7f0fb26c845fe04ead8d074fe29b98c94740a4ec00f54a6bff8ebdc18181bdcf"
     }
   }
 }
