@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"time"
 
 	"ltools/internal/plugins"
@@ -269,27 +270,8 @@ func main() {
 		app.Event.Emit("file:open", filePath)
 	})
 
-	// 监听 URL 打开事件（自定义协议 ltools://）
-	app.Event.OnApplicationEvent(events.Common.ApplicationLaunchedWithUrl, func(e *application.ApplicationEvent) {
-		url := e.Context().URL()
-		log.Printf("[Main] URL opened via custom protocol: %s", url)
-
-		// 解析 ltools:// 协议 URL
-		// 支持格式:
-		// - ltools://settings?tab=about
-		// - ltools://plugins/{pluginId}?param=xxx
-		// - ltools://search?q=keyword
-		if len(url) > 9 && url[:9] == "ltools://" {
-			path := url[9:] // 移除 "ltools://" 前缀
-			log.Printf("[Main] Parsed ltools URL path: %s", path)
-
-			// 发送事件到前端，让前端处理导航
-			app.Event.Emit("url:open", map[string]string{
-				"url":  url,
-				"path": path,
-			})
-		}
-	})
+	// 注意：URL 打开事件监听已移至 SearchWindowService 创建之后
+	// 见下方 "Set the main window reference in SearchWindowService" 之后
 
 	// 创建系统托盘
 	systray := app.SystemTray.New()
@@ -704,6 +686,44 @@ func main() {
 
 	// Set the main window reference in SearchWindowService so it can show the main window
 	searchWindowService.SetMainWindow(mainWindow)
+
+	// 监听 URL 打开事件（自定义协议 ltools://）
+	// 注意：此监听必须在 SearchWindowService 和 mainWindow 创建之后设置
+	app.Event.OnApplicationEvent(events.Common.ApplicationLaunchedWithUrl, func(e *application.ApplicationEvent) {
+		url := e.Context().URL()
+		log.Printf("[Main] URL opened via custom protocol: %s", url)
+
+		// 解析 ltools:// 协议 URL
+		// 支持格式:
+		// - ltools://settings?tab=about
+		// - ltools://plugins/{pluginId}?param=xxx
+		// - ltools://search?q=keyword
+		if len(url) > 9 && url[:9] == "ltools://" {
+			path := url[9:] // 移除 "ltools://" 前缀
+			log.Printf("[Main] Parsed ltools URL path: %s", path)
+
+			// 对于非搜索 URL，先确保主窗口获得焦点
+			if !strings.HasPrefix(path, "search") {
+				// 如果搜索窗口可见，先隐藏它
+				if searchWindowService.IsVisible() {
+					log.Printf("[Main] Hiding search window before opening URL")
+					searchWindowService.Hide()
+				}
+				// 显示并聚焦主窗口
+				if mainWindow != nil {
+					log.Printf("[Main] Showing and focusing main window")
+					mainWindow.Show()
+					mainWindow.Focus()
+				}
+			}
+
+			// 发送事件到前端，让前端处理导航
+			app.Event.Emit("url:open", map[string]string{
+				"url":  url,
+				"path": path,
+			})
+		}
+	})
 
 	// Set the main window reference in Screenshot2WindowManager
 	screenshot2WindowManager.SetMainWindow(mainWindow)

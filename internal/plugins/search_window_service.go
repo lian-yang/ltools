@@ -202,6 +202,13 @@ func (s *SearchWindowService) Toggle() error {
 	return s.Show()
 }
 
+// IsVisible returns whether the search window is currently visible
+func (s *SearchWindowService) IsVisible() bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.isVisible
+}
+
 // Search performs a plugin search based on the query
 func (s *SearchWindowService) Search(query string) ([]*SearchResult, error) {
 	s.app.Logger.Info(fmt.Sprintf("[SearchWindowService] Searching for: %s", query))
