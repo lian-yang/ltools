@@ -5,7 +5,7 @@ import * as SearchWindowService from '../../bindings/ltools/internal/plugins/sea
 import * as AppLauncherService from '../../bindings/ltools/plugins/applauncher/applauncherservice';
 import { usePlugins } from '../plugins/usePlugins';
 import { getPluginIcon, getPluginIconName } from '../utils/pluginHelpers';
-import { PluginState } from '../../bindings/ltools/internal/plugins';
+import { PluginState, PluginMetadata } from '../../bindings/ltools/internal/plugins';
 import './SearchWindow.css';
 
 /**
@@ -16,7 +16,7 @@ function PluginIcon({
   plugin,
   size = 'normal'
 }: {
-  plugin: { id: string; name: string; icon?: string }
+  plugin: PluginMetadata
   size?: 'small' | 'normal'
 }) {
   const iconName = getPluginIconName(plugin)
