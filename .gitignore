@@ -13,7 +13,7 @@ ltools
 .DS_Store
 .gitnexus
 .claude
-ref
+.agents
 task_plan.md
 progress.md
 findings.md
