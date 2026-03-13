@@ -12,6 +12,7 @@ import (
 
 	"ltools/internal/plugins"
 	"ltools/internal/proxy"
+	"ltools/internal/settings"
 	"ltools/internal/sync"
 	"ltools/internal/update"
 	"ltools/plugins/applauncher"
@@ -21,6 +22,7 @@ import (
 	"ltools/plugins/datetime"
 	"ltools/plugins/hosts"
 	"ltools/plugins/imagebed"
+	"ltools/plugins/imageprocessor"
 	"ltools/plugins/ipinfo"
 	"ltools/plugins/jsoneditor"
 	"ltools/plugins/kanban"
@@ -195,6 +197,11 @@ func init() {
 	application.RegisterEvent[string]("imagebed:uploaded")
 	application.RegisterEvent[string]("imagebed:deleted")
 	application.RegisterEvent[string]("imagebed:error")
+
+	// Register custom events for the imageprocessor plugin
+	application.RegisterEvent[*imageprocessor.BatchProgress]("imageprocessor:progress")
+	application.RegisterEvent[*imageprocessor.BatchProgress]("imageprocessor:complete")
+	application.RegisterEvent[map[string]any]("imageprocessor:files-dropped")
 
 	// Register custom events for the localtranslate plugin
 	application.RegisterEvent[string]("localtranslate:show-window")
@@ -468,6 +475,16 @@ func main() {
 		log.Printf("[Main] Failed to set data dir for imagebed plugin: %v", err)
 	}
 
+	// Create and register imageprocessor plugin
+	imageprocessorPlugin := imageprocessor.NewImageProcessorPlugin()
+	if err := pluginManager.Register(imageprocessorPlugin); err != nil {
+		log.Fatal("Failed to register imageprocessor plugin:", err)
+	}
+	// Set data directory for imageprocessor plugin
+	if err := imageprocessorPlugin.SetDataDir(dataDir); err != nil {
+		log.Printf("[Main] Failed to set data dir for imageprocessor plugin: %v", err)
+	}
+
 	// Create and register localtranslate plugin
 	localTranslatePlugin := localtranslate.NewLocalTranslatePlugin()
 	if err := pluginManager.Register(localTranslatePlugin); err != nil {
@@ -551,6 +568,9 @@ func main() {
 	// Create imagebed service to expose imagebed functionality to frontend
 	imagebedService := imagebed.NewImageBedService(imagebedPlugin, app)
 
+	// Create imageprocessor service to expose imageprocessor functionality to frontend
+	imageprocessorService := imageprocessor.NewImageProcessorService(imageprocessorPlugin, app)
+
 	// Create localtranslate service to expose local translation functionality to frontend
 	localTranslateService := localtranslate.NewLocalTranslateService(localTranslatePlugin, app)
 
@@ -582,6 +602,9 @@ func main() {
 	if err != nil {
 		log.Fatal("Failed to create sync service:", err)
 	}
+
+	// Create settings service for general app settings
+	settingsService := settings.NewService()
 
 	// Create search window service for global search functionality
 	searchWindowService := plugins.NewSearchWindowService(app, pluginService, shortcutService)
@@ -619,16 +642,18 @@ func main() {
 	app.RegisterService(application.NewService(ipinfoService))
 	app.RegisterService(application.NewService(stickyService))
 	app.RegisterService(application.NewService(imagebedService))
+	app.RegisterService(application.NewService(imageprocessorService))
 	app.RegisterService(application.NewService(localTranslateService))
 	// musicPlayerService already registered above (line 518-523)
 	app.RegisterService(application.NewService(shortcutService))
 	app.RegisterService(application.NewService(searchWindowService))
 	app.RegisterService(application.NewService(syncService))
+	app.RegisterService(application.NewService(settingsService))
 
-	 // Start sync service
-    if err := syncService.ServiceStartup(app); err != nil {
-        log.Printf("Failed to start sync service: %v", err)
-    }
+	// Start sync service
+	if err := syncService.ServiceStartup(app); err != nil {
+		log.Printf("Failed to start sync service: %v", err)
+	}
 	app.RegisterService(application.NewService(updateService))
 
 	// Create a new window with the necessary options.
@@ -657,6 +682,7 @@ func main() {
 		},
 		BackgroundColour: application.NewRGB(27, 38, 54),
 		URL:              "/",
+		EnableFileDrop:   true, // 启用文件拖放
 		Windows: application.WindowsWindow{
 			Permissions: map[application.CoreWebView2PermissionKind]application.CoreWebView2PermissionState{
 				application.CoreWebView2PermissionKindCamera:        application.CoreWebView2PermissionStateAllow, // 相机权限
@@ -670,6 +696,36 @@ func main() {
 	mainWindow.RegisterHook(events.Common.WindowClosing, func(e *application.WindowEvent) {
 		mainWindow.Hide()
 		e.Cancel() // 阻止窗口真正关闭
+	})
+
+	// 监听文件拖放事件
+	mainWindow.OnWindowEvent(events.Common.WindowFilesDropped, func(e *application.WindowEvent) {
+		ctx := e.Context()
+		files := ctx.DroppedFiles()
+		details := ctx.DropTargetDetails()
+
+		// 详细调试日志
+		log.Printf("[FileDrop] === File Drop Event ===")
+		log.Printf("[FileDrop] DroppedFiles() result: %#v", files)
+		log.Printf("[FileDrop] DroppedFiles() length: %d", len(files))
+		log.Printf("[FileDrop] DropTargetDetails: ElementID=%#v", details.ElementID)
+
+		// 如果 DroppedFiles() 返回空，暂时跳过
+		if len(files) == 0 {
+			log.Printf("[FileDrop] WARNING: DroppedFiles() returned empty array")
+			log.Printf("[FileDrop] This might be a Wails v3 alpha limitation")
+			return
+		}
+
+		// 发送事件给前端（图片过滤与目录展开在后端服务中处理）
+		if len(files) > 0 {
+			app.Event.Emit("imageprocessor:files-dropped", map[string]any{
+				"files": files,
+			})
+			log.Printf("[FileDrop] Emitted %d dropped paths to frontend", len(files))
+		} else {
+			log.Printf("[FileDrop] No dropped files")
+		}
 	})
 
 	// Start the search window service

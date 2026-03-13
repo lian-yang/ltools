@@ -12,21 +12,30 @@ import * as plugins$0 from "../../../../../ltools/internal/plugins/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
 import * as update$0 from "../../../../../ltools/internal/update/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as imageprocessor$0 from "../../../../../ltools/plugins/imageprocessor/models.js";
 
 function configure() {
     Object.freeze(Object.assign($Create.Events, {
-        "search:results": $$createType2,
-        "update:available": $$createType4,
-        "url:open": $$createType5,
+        "imageprocessor:complete": $$createType1,
+        "imageprocessor:files-dropped": $$createType2,
+        "imageprocessor:progress": $$createType1,
+        "search:results": $$createType5,
+        "update:available": $$createType7,
+        "url:open": $$createType8,
     }));
 }
 
 // Private type creation functions
-const $$createType0 = plugins$0.SearchResult.createFrom;
+const $$createType0 = imageprocessor$0.BatchProgress.createFrom;
 const $$createType1 = $Create.Nullable($$createType0);
-const $$createType2 = $Create.Array($$createType1);
-const $$createType3 = update$0.UpdateInfo.createFrom;
+const $$createType2 = $Create.Map($Create.Any, $Create.Any);
+const $$createType3 = plugins$0.SearchResult.createFrom;
 const $$createType4 = $Create.Nullable($$createType3);
-const $$createType5 = $Create.Map($Create.Any, $Create.Any);
+const $$createType5 = $Create.Array($$createType4);
+const $$createType6 = update$0.UpdateInfo.createFrom;
+const $$createType7 = $Create.Nullable($$createType6);
+const $$createType8 = $Create.Map($Create.Any, $Create.Any);
 
 configure();

@@ -1,9 +1,12 @@
 module ltools
 
-go 1.25
+go 1.25.2
 
 require (
+	github.com/biessek/golang-ico v0.0.0-20250805151044-6d8ea19fb761
+	github.com/disintegration/imaging v1.6.2
 	github.com/kbinani/screenshot v0.0.0-20250624051815-089614a94018
+	github.com/kirklin/go-blind-watermark v0.0.1
 	github.com/mattn/go-sqlite3 v1.14.34
 	github.com/mozillazg/go-pinyin v0.21.0
 	github.com/robotn/gohook v0.42.3
@@ -11,6 +14,8 @@ require (
 	github.com/wailsapp/wails/v3 v3.0.0-alpha.74
 	github.com/zalando/go-keyring v0.2.6
 	golang.org/x/crypto v0.47.0
+	golang.org/x/image v0.35.0
+	golang.org/x/sys v0.40.0
 	howett.net/plist v1.0.2-0.20250314012144-ee69052608d9
 )
 
@@ -38,6 +43,7 @@ require (
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
 	github.com/jchv/go-winloader v0.0.0-20250406163304-c1995be93bd1 // indirect
 	github.com/jezek/xgb v1.1.1 // indirect
+	github.com/jsummers/gobmp v0.0.0-20230614200233-a9de23ed2e25 // indirect
 	github.com/kevinburke/ssh_config v1.4.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
 	github.com/leaanthony/go-ansi-parser v1.6.1 // indirect
@@ -61,7 +67,7 @@ require (
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	golang.org/x/net v0.49.0 // indirect
-	golang.org/x/sys v0.40.0 // indirect
 	golang.org/x/text v0.33.0 // indirect
+	gonum.org/v1/gonum v0.16.0 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 )

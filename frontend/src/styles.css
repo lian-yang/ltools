@@ -301,6 +301,18 @@ a:focus-visible,
   border: 0;
 }
 
+/* ============================================
+   文件拖放样式
+   ============================================ */
+
+/* 文件拖放激活状态 */
+.file-drop-target-active {
+  border: 2px dashed var(--color-primary) !important;
+  background-color: rgba(124, 58, 237, 0.1) !important;
+  border-radius: 12px;
+  transition: all 0.2s ease-in-out;
+}
+
 /* 隐藏滚动条但保留滚动功能 */
 .scrollbar-hide {
   -ms-overflow-style: none;  /* IE and Edge */
@@ -448,3 +460,90 @@ a:focus-visible,
 .animate-spin {
   animation: spin 1s linear infinite;
 }
+
+/* ============================================
+   React Image Crop 自定义样式
+   符合玻璃态设计系统
+   ============================================ */
+
+/* 裁剪框容器 */
+.ReactCrop {
+  cursor: crosshair;
+}
+
+/* 裁剪选区 */
+.ReactCrop__crop-selection {
+  border: 2px solid #7C3AED;
+  background: rgba(124, 58, 237, 0.1);
+  backdrop-filter: blur(2px);
+}
+
+/* 裁剪区域外的遮罩 */
+.ReactCrop__crop-mask {
+  background: rgba(0, 0, 0, 0.6);
+}
+
+/* 裁剪手柄 */
+.ReactCrop__drag-handle {
+  width: 12px;
+  height: 12px;
+  background: #7C3AED;
+  border: 2px solid #FAF5FF;
+  border-radius: 2px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  transition: all 0.2s ease;
+}
+
+.ReactCrop__drag-handle:hover {
+  background: #A78BFA;
+  transform: scale(1.2);
+}
+
+/* 拖拽时的手柄样式 */
+.ReactCrop__drag-handle.ReactCrop__drag-handle--active {
+  background: #6D28D9;
+  transform: scale(1.3);
+}
+
+/* 四个角的手柄 */
+.ReactCrop__drag-handle.ordinal-nw,
+.ReactCrop__drag-handle.ordinal-ne,
+.ReactCrop__drag-handle.ordinal-sw,
+.ReactCrop__drag-handle.ordinal-se {
+  width: 16px;
+  height: 16px;
+}
+
+/* 网格线 */
+.ReactCrop__rule-of-thirds-hz,
+.ReactCrop__rule-of-thirds-vt {
+  opacity: 0.3;
+  background: #7C3AED;
+}
+
+/* 拖拽边框 */
+.ReactCrop__drag-bar {
+  background: transparent;
+}
+
+.ReactCrop__drag-bar::after {
+  content: '';
+  position: absolute;
+  background: #7C3AED;
+  opacity: 0.5;
+}
+
+.ReactCrop__drag-bar.ordinal-n,
+.ReactCrop__drag-bar.ordinal-s {
+  height: 4px;
+  left: 0;
+  right: 0;
+}
+
+.ReactCrop__drag-bar.ordinal-e,
+.ReactCrop__drag-bar.ordinal-w {
+  width: 4px;
+  top: 0;
+  bottom: 0;
+}
+

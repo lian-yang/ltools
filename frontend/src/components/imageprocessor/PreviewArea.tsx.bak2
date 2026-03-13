@@ -1,0 +1,481 @@
+import { useCallback, useEffect, useRef, useState, PointerEvent } from 'react';
+import ReactCrop, { Crop, PixelCrop } from 'react-image-crop';
+import 'react-image-crop/dist/ReactCrop.css';
+import { ImageFile, PreviewResult } from './types';
+import { Icon } from '../Icon';
+import { DragAction, DragState, initialDragState, reduceDragState } from './compareSlider';
+
+interface PreviewAreaProps {
+  files: ImageFile[];
+  selectedIndex: number;
+  onSelect: (index: number) => void;
+  previewData: PreviewResult | null;
+  originalPreviewData?: PreviewResult | null;
+  isProcessing: boolean;
+  compareMode?: boolean;
+  cropMode?: boolean;
+  aspectRatio?: string;
+  crop?: Crop;
+  onCropChange?: (crop: Crop) => void;
+  onCropComplete?: (crop: PixelCrop) => void;
+}
+
+export function PreviewArea({
+  files,
+  selectedIndex,
+  onSelect,
+  previewData,
+  originalPreviewData = null,
+  isProcessing,
+  compareMode = false,
+  cropMode = false,
+  aspectRatio,
+  crop,
+  onCropChange,
+  onCropComplete,
+}: PreviewAreaProps): JSX.Element {
+  const [dragState, setDragState] = useState<DragState>(initialDragState);
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [spacePressed, setSpacePressed] = useState(false);
+  const [isPanning, setIsPanning] = useState(false);
+  const [panStart, setPanStart] = useState({ x: 0, y: 0, mouseX: 0, mouseY: 0 });
+  const containerRef = useRef<HTMLDivElement>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
+
+  const sliderPosition = dragState.position;
+
+  // 解析 aspect ratio 字符串为数字
+  const parseAspectRatio = (ratio: string | undefined): number | undefined => {
+    if (!ratio) return undefined;
+    const parts = ratio.split(':');
+    if (parts.length === 2) {
+      const w = parseFloat(parts[0]);
+      const h = parseFloat(parts[1]);
+      if (w > 0 && h > 0) {
+        return w / h;
+      }
+    }
+    return undefined;
+  };
+
+  // 处理裁剪完成，计算正确的坐标
+  const handleCropComplete = useCallback((c: PixelCrop) => {
+    if (!imgRef.current || !previewData || !c.width || !c.height) return;
+
+    // 获取 img 元素的实际渲染尺寸
+    const renderedWidth = imgRef.current.offsetWidth;
+    const renderedHeight = imgRef.current.offsetHeight;
+
+    // 计算缩放比例（原始尺寸 / 渲染尺寸）
+    // 因为 ReactCrop 返回的坐标是相对于渲染图片的，所以要乘以这个比例
+    const scaleX = previewData.width / renderedWidth;
+    const scaleY = previewData.height / renderedHeight;
+
+    // 将裁剪坐标从渲染坐标转换为原始图片坐标
+    const convertedCrop = {
+      x: Math.round(c.x * scaleX),
+      y: Math.round(c.y * scaleY),
+      width: Math.round(c.width * scaleX),
+      height: Math.round(c.height * scaleY),
+    };
+
+    console.log('[Crop Debug]', {
+      rendered: { width: renderedWidth, height: renderedHeight },
+      original: { width: previewData.width, height: previewData.height },
+      scale: { x: scaleX, y: scaleY },
+      cropPixels: c,
+      converted: convertedCrop,
+    });
+
+    // 调用父组件的回调
+    if (onCropComplete) {
+      onCropComplete(convertedCrop as PixelCrop);
+    }
+  }, [previewData, onCropComplete]);
+
+  // 鼠标滚轮缩放
+  const handleWheel = useCallback((e: React.WheelEvent<HTMLDivElement>) => {
+    if (!cropMode || compareMode) return;
+
+    e.preventDefault();
+
+    const delta = e.deltaY > 0 ? 0.9 : 1.1;
+    const newZoom = Math.min(Math.max(zoom * delta, 0.5), 3);
+
+    // 计算以鼠标位置为中心的缩放
+    if (containerRef.current && imgRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left - rect.width / 2;
+      const mouseY = e.clientY - rect.top - rect.height / 2;
+
+      const scale = newZoom / zoom;
+      const newPan = {
+        x: mouseX - (mouseX - pan.x) * scale,
+        y: mouseY - (mouseY - pan.y) * scale,
+      };
+
+      setPan(newPan);
+    }
+
+    setZoom(newZoom);
+  }, [cropMode, compareMode, zoom, pan]);
+
+  // 双击完成裁剪
+  const handleDoubleClick = useCallback(() => {
+    if (!cropMode || compareMode || !crop || !onCropComplete) return;
+
+    // 触发裁剪完成
+    handleCropComplete(crop as PixelCrop);
+
+    console.log('[Crop] Double-click to confirm crop');
+  }, [cropMode, compareMode, crop, onCropComplete, handleCropComplete]);
+
+  // 重置缩放和位置
+  useEffect(() => {
+    if (!cropMode) {
+      setZoom(1);
+      setPan({ x: 0, y: 0 });
+      setSpacePressed(false);
+      setIsPanning(false);
+    }
+  }, [cropMode]);
+
+  // 监听空格键
+  useEffect(() => {
+    if (!cropMode || compareMode) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code === 'Space' && !e.repeat) {
+        e.preventDefault();
+        setSpacePressed(true);
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.code === 'Space') {
+        setSpacePressed(false);
+        setIsPanning(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, [cropMode, compareMode]);
+
+  // 平移拖拽处理
+  const handlePanStart = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (!spacePressed || !cropMode || compareMode) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    setIsPanning(true);
+    setPanStart({
+      x: pan.x,
+      y: pan.y,
+      mouseX: e.clientX,
+      mouseY: e.clientY,
+    });
+
+    if (e.currentTarget.setPointerCapture) {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    }
+  }, [spacePressed, cropMode, compareMode, pan]);
+
+  const handlePanMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isPanning || !spacePressed) return;
+
+    const deltaX = e.clientX - panStart.mouseX;
+    const deltaY = e.clientY - panStart.mouseY;
+
+    setPan({
+      x: panStart.x + deltaX,
+      y: panStart.y + deltaY,
+    });
+  }, [isPanning, spacePressed, panStart]);
+
+  const handlePanEnd = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isPanning) return;
+
+    setIsPanning(false);
+
+    if (e.currentTarget.hasPointerCapture?.(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
+  }, [isPanning]);
+
+  const updateDragState = useCallback((action: DragAction) => {
+    setDragState(prev => reduceDragState(prev, action));
+  }, []);
+
+  const handlePointerDown = useCallback((e: PointerEvent<HTMLDivElement>) => {
+    if (!compareMode || !containerRef.current) return;
+    e.preventDefault();
+    const rect = containerRef.current.getBoundingClientRect();
+    updateDragState({
+      type: 'pointerDown',
+      clientX: e.clientX,
+      rectLeft: rect.left,
+      rectWidth: rect.width,
+    });
+    if (e.currentTarget.setPointerCapture) {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    }
+  }, [compareMode, updateDragState]);
+
+  const handlePointerMove = useCallback((e: PointerEvent<HTMLDivElement>) => {
+    if (!compareMode || !dragState.isDragging || !containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    updateDragState({
+      type: 'pointerMove',
+      clientX: e.clientX,
+      rectLeft: rect.left,
+      rectWidth: rect.width,
+    });
+  }, [compareMode, dragState.isDragging, updateDragState]);
+
+  const handlePointerUp = useCallback((e: PointerEvent<HTMLDivElement>) => {
+    if (!compareMode) return;
+    updateDragState({ type: 'pointerUp' });
+    if (e.currentTarget.hasPointerCapture?.(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
+  }, [compareMode, updateDragState]);
+
+  useEffect(() => {
+    if (!compareMode && dragState.isDragging) {
+      setDragState(prev => ({ ...prev, isDragging: false }));
+    }
+  }, [compareMode, dragState.isDragging]);
+
+  // 双击确认裁剪
+  const handleDoubleClick = useCallback(() => {
+    if (!cropMode || compareMode || !crop || !onCropComplete) return;
+
+    // 触发裁剪完成
+    handleCropComplete(crop as PixelCrop);
+
+    console.log('[Crop] Double-click to confirm crop');
+  }, [cropMode, compareMode, crop, onCropComplete, handleCropComplete]);
+
+  if (files.length === 0) {
+    if (previewData?.dataURL) {
+      return (
+        <div className="glass-heavy rounded-2xl p-4 h-full flex flex-col">
+          <div className="flex-1 relative bg-black/20 rounded-xl overflow-hidden flex items-center justify-center">
+            <img
+              src={previewData.dataURL}
+              alt="Preview"
+              className="max-w-full max-h-full object-contain"
+            />
+            {isProcessing && (
+              <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+              </div>
+            )}
+            <div className="absolute bottom-4 left-4 px-3 py-2 bg-black/60 rounded-lg">
+              <div className="text-xs text-white/60">
+                {previewData.width} × {previewData.height}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="glass-heavy rounded-2xl p-8 h-full flex flex-col items-center justify-center text-center">
+        <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mb-4">
+          <Icon name="photo" className="w-10 h-10 text-white/30" />
+        </div>
+        <h3 className="text-lg font-medium text-white/60 mb-2">暂无图片</h3>
+        <p className="text-sm text-white/40 max-w-xs">
+          拖拽图片到此处，或点击选择文件按钮开始处理
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="glass-heavy rounded-2xl p-4 h-full flex flex-col">
+      {/* 文件列表 */}
+      {files.length > 1 && (
+        <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
+          {files.map((file, index) => (
+            <button
+              key={file.path}
+              onClick={() => onSelect(index)}
+              className={`
+                flex-shrink-0 px-3 py-2 rounded-lg text-left min-w-[120px]
+                transition-all duration-200
+                ${selectedIndex === index
+                  ? 'bg-[#7C3AED]/30 border border-[#A78BFA]/50'
+                  : 'bg-white/5 hover:bg-white/10 border border-transparent'
+                }
+              `}
+            >
+              <div className="text-xs text-white/40 truncate">{file.name}</div>
+              <div className="text-xs text-white/60 mt-1">
+                {file.width} × {file.height}
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* 预览区域 */}
+      <div
+        ref={containerRef}
+        className={`flex-1 relative bg-black/20 rounded-xl overflow-hidden ${
+          compareMode
+            ? 'cursor-ew-resize select-none group'
+            : spacePressed && cropMode
+            ? isPanning ? 'cursor-grabbing' : 'cursor-grab'
+            : cropMode
+            ? 'cursor-crosshair'
+            : 'cursor-default'
+        } ${cropMode && !compareMode ? 'overflow-auto' : ''}`}
+        style={compareMode ? { touchAction: 'none' } : undefined}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+        onWheel={handleWheel}
+        onDoubleClick={handleDoubleClick}
+      >
+        {previewData?.dataURL ? (
+          <>
+            {/* 裁剪模式 */}
+            {cropMode && !compareMode ? (
+              <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
+                <ReactCrop
+                  crop={crop}
+                  onChange={(c) => onCropChange?.(c)}
+                  onComplete={handleCropComplete}
+                  aspect={parseAspectRatio(aspectRatio)}
+                >
+                  <img
+                    ref={imgRef}
+                    src={previewData.dataURL}
+                    alt="Preview"
+                    style={{
+                      maxWidth: '100%',
+                      maxHeight: '100%',
+                      objectFit: 'contain',
+                      transform: `scale(${zoom}) translate(${pan.x / zoom}px, ${pan.y / zoom}px)`,
+                      transformOrigin: 'center center',
+                      transition: 'transform 0.1s ease-out',
+                    }}
+                  />
+                </ReactCrop>
+              </div>
+            ) : (
+              <>
+                {/* 处理后图片 */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <img
+                    src={previewData.dataURL}
+                    alt="Preview"
+                    className="max-w-full max-h-full object-contain"
+                  />
+                </div>
+
+                {/* 对比模式下的原始图片 */}
+                {compareMode && files[selectedIndex] && originalPreviewData?.dataURL && (
+                  <div
+                    className="absolute inset-0 flex items-center justify-center"
+                    style={{
+                      clipPath: `inset(0 ${100 - sliderPosition}% 0 0)`,
+                      WebkitClipPath: `inset(0 ${100 - sliderPosition}% 0 0)`,
+                    }}
+                  >
+                    <img
+                      src={originalPreviewData.dataURL}
+                      alt="Original"
+                      className="max-w-full max-h-full object-contain"
+                    />
+                  </div>
+                )}
+
+                {compareMode && files[selectedIndex] && !originalPreviewData?.dataURL && (
+                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                    <div className="flex flex-col items-center gap-2 text-white/70 text-sm">
+                      <div className="w-6 h-6 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                      正在加载原图...
+                    </div>
+                  </div>
+                )}
+
+                {/* 对比滑块 */}
+                {compareMode && (
+                  <div
+                    className={`absolute top-0 bottom-0 w-0.5 transition-colors ${
+                      dragState.isDragging ? 'bg-white' : 'bg-white/70'
+                    } group-hover:bg-white`}
+                    style={{ left: `${sliderPosition}%` }}
+                  >
+                    <div
+                      className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white shadow-lg flex items-center justify-center transition-transform ${
+                        dragState.isDragging ? 'w-9 h-9 scale-105' : 'w-8 h-8'
+                      } group-hover:w-9 group-hover:h-9 group-hover:scale-105`}
+                    >
+                      <Icon name="folder" className="w-4 h-4 text-gray-800" />
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* 加载中 */}
+            {isProcessing && (
+              <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center">
+            {isProcessing ? (
+              <div className="flex flex-col items-center gap-3">
+                <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                <span className="text-sm text-white/60">处理中...</span>
+              </div>
+            ) : (
+              <span className="text-sm text-white/40">点击处理查看预览</span>
+            )}
+          </div>
+        )}
+
+        {/* 图片信息 */}
+        {files[selectedIndex] && (
+          <div className="absolute bottom-4 left-4 px-3 py-2 bg-black/60 rounded-lg">
+            <div className="text-xs text-white/60">
+              {files[selectedIndex].width} × {files[selectedIndex].height} · {files[selectedIndex].format.toUpperCase()}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 当前选中的文件名 */}
+      {files.length > 0 && (
+        <div className="mt-3 px-3 py-2 bg-white/5 rounded-lg flex items-center justify-between">
+          <div className="flex items-center gap-2 min-w-0">
+            <Icon name="document" className="w-4 h-4 text-white/40 flex-shrink-0" />
+            <span className="text-sm text-white/70 truncate">
+              {files[selectedIndex]?.name || '未选择'}
+            </span>
+          </div>
+          <span className="text-xs text-white/40 flex-shrink-0">
+            {selectedIndex + 1} / {files.length}
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}

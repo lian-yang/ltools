@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Icon } from './Icon';
+import { useToast } from '../hooks/useToast';
+import * as SettingsService from '../../bindings/ltools/internal/settings/service';
 import {
   Select,
   SelectContent,
@@ -13,10 +15,62 @@ import {
  * 包含语言、主题、启动行为等基础设置
  */
 export function GeneralSettings() {
-  const [language, setLanguage] = useState('zh-CN');
-  const [theme, setTheme] = useState('dark');
+  const [language] = useState('zh-CN');
+  const [theme] = useState('dark');
   const [launchAtLogin, setLaunchAtLogin] = useState(false);
+  const [launchAtLoginSupported, setLaunchAtLoginSupported] = useState(true);
+  const [isSettingLaunchAtLogin, setIsSettingLaunchAtLogin] = useState(false);
   const [showInMenu, setShowInMenu] = useState(true);
+  const { info, error: showError } = useToast();
+
+  useEffect(() => {
+    let alive = true;
+
+    const loadLaunchAtLogin = async () => {
+      try {
+        const supported = await SettingsService.IsLaunchAtLoginSupported();
+        if (!alive) return;
+        setLaunchAtLoginSupported(supported);
+        if (!supported) return;
+
+        const enabled = await SettingsService.GetLaunchAtLogin();
+        if (!alive) return;
+        setLaunchAtLogin(enabled);
+      } catch (err) {
+        console.error('[GeneralSettings] Failed to load launch-at-login status:', err);
+      }
+    };
+
+    loadLaunchAtLogin();
+
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const handleLanguageChange = () => {
+    info('正在开发中');
+  };
+
+  const handleThemeChange = () => {
+    info('正在开发中');
+  };
+
+  const handleLaunchAtLoginChange = async (checked: boolean) => {
+    if (!launchAtLoginSupported) return;
+    setIsSettingLaunchAtLogin(true);
+    const previous = launchAtLogin;
+    setLaunchAtLogin(checked);
+    try {
+      await SettingsService.SetLaunchAtLogin(checked);
+    } catch (err: any) {
+      console.error('[GeneralSettings] Failed to set launch-at-login:', err);
+      setLaunchAtLogin(previous);
+      showError(err?.message || '启动项设置失败');
+    } finally {
+      setIsSettingLaunchAtLogin(false);
+    }
+  };
 
   return (
     <div className="space-y-8">
@@ -38,7 +92,7 @@ export function GeneralSettings() {
             <h3 className="text-white font-medium">语言</h3>
             <p className="text-white/40 text-sm mt-0.5">选择应用的显示语言</p>
           </div>
-          <Select value={language} onValueChange={setLanguage}>
+          <Select value={language} onValueChange={handleLanguageChange}>
             <SelectTrigger className="w-40">
               <SelectValue placeholder="选择语言" />
             </SelectTrigger>
@@ -57,7 +111,7 @@ export function GeneralSettings() {
             <h3 className="text-white font-medium">主题</h3>
             <p className="text-white/40 text-sm mt-0.5">选择应用的外观主题</p>
           </div>
-          <Select value={theme} onValueChange={setTheme}>
+          <Select value={theme} onValueChange={handleThemeChange}>
             <SelectTrigger className="w-40">
               <SelectValue placeholder="选择主题" />
             </SelectTrigger>
@@ -80,12 +134,15 @@ export function GeneralSettings() {
             <p className="text-white/80 text-sm">登录时启动</p>
             <p className="text-white/40 text-xs mt-0.5">开机后自动运行 LTools</p>
           </div>
-          <label className="relative inline-flex items-center cursor-pointer">
+          <label
+            className={`relative inline-flex items-center ${launchAtLoginSupported ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'}`}
+          >
             <input
               type="checkbox"
               checked={launchAtLogin}
-              onChange={(e) => setLaunchAtLogin(e.target.checked)}
+              onChange={(e) => handleLaunchAtLoginChange(e.target.checked)}
               className="sr-only peer"
+              disabled={!launchAtLoginSupported || isSettingLaunchAtLogin}
             />
             <div className="w-11 h-6 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#7C3AED]"></div>
           </label>

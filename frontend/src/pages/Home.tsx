@@ -363,19 +363,46 @@ function Home() {
   const { plugins, loading: pluginsLoading } = usePlugins()
   const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null)
 
-  // 过滤和排序已启用的插件
+  // 过滤和排序已启用的插件（与侧边栏菜单保持一致）
   const enabledPlugins = useMemo(() => {
-    return plugins
-      .filter(p => p.state === PluginState.PluginStateEnabled)
-      .sort((a, b) => {
-        // 固定的插件排在前面
-        if (a.pinned && !b.pinned) return -1
-        if (!a.pinned && b.pinned) return 1
-        // 然后按分数排序
-        const scoreA = a.score || 0
-        const scoreB = b.score || 0
-        return scoreB - scoreA
-      })
+    // 过滤：已启用 + 有页面 + 显示在菜单中
+    const filtered = plugins.filter(
+      p => p.state === PluginState.PluginStateEnabled
+        && p.hasPage !== false
+        && p.showInMenu !== false
+    )
+
+    // 分离固定插件和普通插件
+    const pinnedPlugins = filtered.filter(p => p.pinned === true)
+    const normalPlugins = filtered.filter(p => p.pinned !== true)
+
+    // 固定插件排序：按 PinnedAt 降序（最新固定的在前）→ Score 降序 → 名称升序
+    const sortPinnedPlugins = (a: PluginMetadata, b: PluginMetadata) => {
+      if (a.pinnedAt && b.pinnedAt) {
+        const timeDiff = new Date(b.pinnedAt).getTime() - new Date(a.pinnedAt).getTime()
+        if (timeDiff !== 0) return timeDiff
+      } else if (a.pinnedAt) {
+        return -1
+      } else if (b.pinnedAt) {
+        return 1
+      }
+      const scoreDiff = (b.score || 0) - (a.score || 0)
+      if (scoreDiff !== 0) return scoreDiff
+      return a.name.localeCompare(b.name, 'zh-CN')
+    }
+
+    // 普通插件排序：按 Score 降序 → 名称升序
+    const sortNormalPlugins = (a: PluginMetadata, b: PluginMetadata) => {
+      const scoreDiff = (b.score || 0) - (a.score || 0)
+      if (scoreDiff !== 0) return scoreDiff
+      return a.name.localeCompare(b.name, 'zh-CN')
+    }
+
+    // 合并：固定插件在前，普通插件在后
+    return [
+      ...pinnedPlugins.sort(sortPinnedPlugins),
+      ...normalPlugins.sort(sortNormalPlugins),
+    ]
   }, [plugins])
 
   // 加载系统状态

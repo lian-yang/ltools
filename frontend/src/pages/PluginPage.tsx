@@ -23,6 +23,7 @@ import { BookmarkPage } from '../pages/BookmarkPage'
 import IPInfoWidget from '../components/IPInfoWidget'
 import { StickyWidget } from '../components/StickyWidget'
 import { ImageBedWidget } from '../components/ImageBedWidget'
+import { ImageProcessorWidget } from '../components/ImageProcessorWidget'
 import { LocalTranslateWidget } from '../components/LocalTranslateWidget'
 
 /**
@@ -391,6 +392,13 @@ function PluginContent({ pluginId, plugin, pluginIcon, onBack, isActive }: Plugi
               </div>
               <ImageBedWidget />
             </div>
+          </div>
+        )
+
+      case 'imageprocessor.builtin':
+        return (
+          <div className="h-full">
+            <ImageProcessorWidget />
           </div>
         )
 

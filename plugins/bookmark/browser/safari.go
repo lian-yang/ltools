@@ -107,11 +107,13 @@ func isPermissionError(err error) bool {
 type safariBookmarkItem struct {
 	Title           string                 `plist:"Title"`
 	URLString       string                 `plist:"URLString"`
-	BookmarkType    string                 `plist:"BookmarkType"` // "WebBookmarkTypeList" or "WebBookmarkTypeLeaf"
+	BookmarkType    string                 `plist:"BookmarkType"`    // legacy field
+	WebBookmarkType string                 `plist:"WebBookmarkType"` // "WebBookmarkTypeList" or "WebBookmarkTypeLeaf"
 	Children        []safariBookmarkItem   `plist:"Children"`
 	WebBookmarkUUID string                 `plist:"WebBookmarkUUID"`
 	DateAdded       *time.Time             `plist:"DateAdded"`
 	DescendantCount int                    `plist:"DescendantCount"`
+	URIDictionary   map[string]interface{} `plist:"URIDictionary"`
 }
 
 // safariBookmarksRoot Safari 书签根结构
@@ -159,16 +161,30 @@ func (p *SafariParser) Parse() ([]Bookmark, error) {
 func (p *SafariParser) parseItem(item *safariBookmarkItem, folderPath string) []Bookmark {
 	var bookmarks []Bookmark
 
+	bookmarkType := item.BookmarkType
+	if item.WebBookmarkType != "" {
+		bookmarkType = item.WebBookmarkType
+	}
+
 	// 如果是书签（叶子节点）
-	if item.BookmarkType == "WebBookmarkTypeLeaf" && item.URLString != "" {
+	if bookmarkType == "WebBookmarkTypeLeaf" && item.URLString != "" {
 		addedAt := time.Now()
 		if item.DateAdded != nil {
 			addedAt = *item.DateAdded
 		}
 
+		title := item.Title
+		if title == "" && item.URIDictionary != nil {
+			if v, ok := item.URIDictionary["title"]; ok {
+				if s, ok := v.(string); ok {
+					title = s
+				}
+			}
+		}
+
 		bookmarks = append(bookmarks, Bookmark{
 			ID:      generateID(item.URLString),
-			Title:   item.Title,
+			Title:   title,
 			URL:     item.URLString,
 			Folder:  folderPath,
 			Browser: "safari",
@@ -177,7 +193,7 @@ func (p *SafariParser) parseItem(item *safariBookmarkItem, folderPath string) []
 	}
 
 	// 如果是文件夹（列表节点）
-	if item.BookmarkType == "WebBookmarkTypeList" && len(item.Children) > 0 {
+	if bookmarkType == "WebBookmarkTypeList" && len(item.Children) > 0 {
 		// 特殊处理根文件夹名称
 		newPath := folderPath
 		if item.Title != "" && item.Title != "BookmarksBar" && item.Title != "BookmarksMenu" {

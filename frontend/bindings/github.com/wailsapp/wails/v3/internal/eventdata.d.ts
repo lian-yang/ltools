@@ -11,6 +11,9 @@ import type * as plugins$0 from "../../../../../ltools/internal/plugins/models.j
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
 import type * as update$0 from "../../../../../ltools/internal/update/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import type * as imageprocessor$0 from "../../../../../ltools/plugins/imageprocessor/models.js";
 
 declare module "@wailsio/runtime" {
     namespace Events {
@@ -54,6 +57,9 @@ declare module "@wailsio/runtime" {
             "imagebed:deleted": string;
             "imagebed:error": string;
             "imagebed:uploaded": string;
+            "imageprocessor:complete": imageprocessor$0.BatchProgress | null;
+            "imageprocessor:files-dropped": { [_ in string]?: any };
+            "imageprocessor:progress": imageprocessor$0.BatchProgress | null;
             "jsoneditor:error": string;
             "jsoneditor:formatted": string;
             "jsoneditor:validated": boolean;
