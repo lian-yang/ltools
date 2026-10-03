@@ -13,6 +13,7 @@ import { WatermarkPosition } from '../../../bindings/ltools/plugins/imageprocess
 import { GetSystemFonts } from '../../../bindings/ltools/plugins/imageprocessor/imageprocessorservice';
 import { Icon } from '../Icon';
 import { useToast } from '../../hooks/useToast';
+import { Button, Field, Input, Segmented, Textarea } from '../ui';
 import { FontSelector } from './FontSelector';
 
 interface SettingsPanelProps {
@@ -41,6 +42,55 @@ const aspectRatios = [
   { label: '3:4', value: '3:4' },
   { label: '9:16', value: '9:16' },
 ];
+
+/** 滑块行:左标签右数值,下方满宽滑块(与设计系统一致) */
+function SliderRow({
+  label,
+  display,
+  min,
+  max,
+  value,
+  onChange,
+  minLabel,
+  centerLabel,
+  maxLabel,
+}: {
+  label: string;
+  display: string;
+  min: number;
+  max: number;
+  value: number;
+  onChange: (value: number) => void;
+  minLabel?: string;
+  centerLabel?: string;
+  maxLabel?: string;
+}): JSX.Element {
+  return (
+    <div className="hairline-b py-2">
+      <Field horizontal label={label}>
+        <span className="tnum rounded-[5px] bg-surface-1 px-2 py-0.5 font-mono text-[12px] text-text-1">
+          {display}
+        </span>
+      </Field>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        value={value}
+        onChange={(e) => onChange(parseInt(e.target.value))}
+        aria-label={label}
+        className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-surface-4 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-accent [&::-webkit-slider-thumb]:transition-colors"
+      />
+      {(minLabel || maxLabel) && (
+        <div className="tnum mt-1 flex justify-between text-[10.5px] text-text-4">
+          <span>{minLabel}</span>
+          {centerLabel && <span>{centerLabel}</span>}
+          <span>{maxLabel}</span>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function SettingsPanel({
   mode,
@@ -117,384 +167,326 @@ export function SettingsPanel({
   }, [watermarkOptions, onWatermarkChange, showError]);
 
   const renderCompressSettings = () => (
-    <div className="space-y-4">
-      <div>
-        <label className="text-sm text-white/60 mb-2 block">压缩质量: {compressOptions.quality}%</label>
-        <input
-          type="range"
-          min="1"
-          max="100"
-          value={compressOptions.quality}
-          onChange={(e) => onCompressChange({ ...compressOptions, quality: parseInt(e.target.value) })}
-          className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer accent-[#7C3AED]"
-        />
-        <div className="flex justify-between text-xs text-white/40 mt-1">
-          <span>低质量</span>
-          <span>高质量</span>
-        </div>
-      </div>
+    <div>
+      <SliderRow
+        label="压缩质量"
+        display={`${compressOptions.quality}%`}
+        min={1}
+        max={100}
+        value={compressOptions.quality}
+        onChange={(value) => onCompressChange({ ...compressOptions, quality: value })}
+        minLabel="低质量"
+        maxLabel="高质量"
+      />
 
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="text-sm text-white/60 mb-1 block">最大宽度 (px)</label>
-          <input
+      <div className="hairline-b grid grid-cols-2 gap-3 py-3">
+        <Field label="最大宽度 (px)">
+          <Input
             type="number"
             placeholder="不限制"
             value={compressOptions.maxWidth || ''}
             onChange={(e) => onCompressChange({ ...compressOptions, maxWidth: parseInt(e.target.value) || 0 })}
-            className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-[#7C3AED]"
+            className="tnum"
           />
-        </div>
-        <div>
-          <label className="text-sm text-white/60 mb-1 block">最大高度 (px)</label>
-          <input
+        </Field>
+        <Field label="最大高度 (px)">
+          <Input
             type="number"
             placeholder="不限制"
             value={compressOptions.maxHeight || ''}
             onChange={(e) => onCompressChange({ ...compressOptions, maxHeight: parseInt(e.target.value) || 0 })}
-            className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-[#7C3AED]"
+            className="tnum"
           />
-        </div>
+        </Field>
       </div>
 
-      <div>
-        <label className="text-sm text-white/60 mb-2 block">输出格式</label>
-        <div className="flex gap-2">
-          {['', 'jpeg', 'png'].map((fmt) => (
-            <button
-              key={fmt || 'original'}
-              onClick={() => onCompressChange({ ...compressOptions, outputFormat: fmt })}
-              className={`flex-1 px-3 py-2 rounded-lg text-sm transition-colors ${
-                compressOptions.outputFormat === fmt
-                  ? 'bg-[#7C3AED] text-white'
-                  : 'bg-white/5 text-white/60 hover:bg-white/10'
-              }`}
-            >
-              {fmt ? fmt.toUpperCase() : '原格式'}
-            </button>
-          ))}
-        </div>
+      <div className="py-3">
+        <Field horizontal label="输出格式">
+          <Segmented
+            options={[
+              { value: '', label: '原格式' },
+              { value: 'jpeg', label: 'JPEG' },
+              { value: 'png', label: 'PNG' },
+            ]}
+            value={compressOptions.outputFormat}
+            onChange={(value) => onCompressChange({ ...compressOptions, outputFormat: value })}
+          />
+        </Field>
       </div>
     </div>
   );
 
   const renderCropSettings = () => (
-    <div className="space-y-4">
-      <div>
-        <label className="text-sm text-white/60 mb-2 block">裁剪模式</label>
-        <div className="grid grid-cols-3 gap-2">
-          {aspectRatios.map((ratio) => (
-            <button
-              key={ratio.value}
-              onClick={() => onCropChange({ ...cropOptions, aspectRatio: ratio.value })}
-              className={`px-3 py-2 rounded-lg text-sm transition-colors ${
-                cropOptions.aspectRatio === ratio.value
-                  ? 'bg-[#7C3AED] text-white'
-                  : 'bg-white/5 text-white/60 hover:bg-white/10'
-              }`}
-            >
-              {ratio.label}
-            </button>
-          ))}
+    <div>
+      <div className="hairline-b py-3">
+        <label className="field-label">裁剪模式</label>
+        <div className="grid grid-cols-3 gap-1.5">
+          {aspectRatios.map((ratio) => {
+            const active = cropOptions.aspectRatio === ratio.value;
+            return (
+              <button
+                key={ratio.value}
+                onClick={() => onCropChange({ ...cropOptions, aspectRatio: ratio.value })}
+                aria-pressed={active}
+                className={`h-7 rounded-[6px] border text-[12px] font-medium transition-colors duration-150 ${
+                  active
+                    ? 'border-accent/40 bg-accent-subtle text-accent-text'
+                    : 'border-hairline-strong bg-surface-1 text-text-2 hover:bg-surface-2'
+                }`}
+              >
+                {ratio.label}
+              </button>
+            );
+          })}
         </div>
       </div>
 
       {!cropOptions.aspectRatio && (
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="text-sm text-white/60 mb-1 block">X 坐标 (px)</label>
-            <input
+        <div className="hairline-b grid grid-cols-2 gap-3 py-3">
+          <Field label="X 坐标 (px)">
+            <Input
               type="number"
               value={cropOptions.x}
               onChange={(e) => onCropChange({ ...cropOptions, x: parseInt(e.target.value) || 0 })}
-              className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-[#7C3AED]"
+              className="tnum"
             />
-          </div>
-          <div>
-            <label className="text-sm text-white/60 mb-1 block">Y 坐标 (px)</label>
-            <input
+          </Field>
+          <Field label="Y 坐标 (px)">
+            <Input
               type="number"
               value={cropOptions.y}
               onChange={(e) => onCropChange({ ...cropOptions, y: parseInt(e.target.value) || 0 })}
-              className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-[#7C3AED]"
+              className="tnum"
             />
-          </div>
-          <div>
-            <label className="text-sm text-white/60 mb-1 block">宽度 (px)</label>
-            <input
+          </Field>
+          <Field label="宽度 (px)">
+            <Input
               type="number"
               value={cropOptions.width}
               onChange={(e) => onCropChange({ ...cropOptions, width: parseInt(e.target.value) || 0 })}
-              className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-[#7C3AED]"
+              className="tnum"
             />
-          </div>
-          <div>
-            <label className="text-sm text-white/60 mb-1 block">高度 (px)</label>
-            <input
+          </Field>
+          <Field label="高度 (px)">
+            <Input
               type="number"
               value={cropOptions.height}
               onChange={(e) => onCropChange({ ...cropOptions, height: parseInt(e.target.value) || 0 })}
-              className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-[#7C3AED]"
+              className="tnum"
             />
-          </div>
+          </Field>
         </div>
       )}
     </div>
   );
 
   const renderWatermarkSettings = () => (
-    <div className="space-y-4">
+    <div>
       {/* 水印类型 */}
-      <div>
-        <label className="text-sm text-white/60 mb-2 block">水印类型</label>
-        <div className="flex gap-2">
-          {[
-            { value: 'text', label: '文字' },
-            { value: 'image', label: '图片' },
-          ].map((type) => (
-            <button
-              key={type.value}
-              onClick={() => onWatermarkChange({ ...watermarkOptions, type: type.value as 'text' | 'image' })}
-              className={`flex-1 px-3 py-2 rounded-lg text-sm transition-colors ${
-                watermarkOptions.type === type.value
-                  ? 'bg-[#7C3AED] text-white'
-                  : 'bg-white/5 text-white/60 hover:bg-white/10'
-              }`}
-            >
-              {type.label}
-            </button>
-          ))}
-        </div>
+      <div className="hairline-b py-3">
+        <Field horizontal label="水印类型">
+          <Segmented
+            options={[
+              { value: 'text', label: '文字' },
+              { value: 'image', label: '图片' },
+            ]}
+            value={watermarkOptions.type}
+            onChange={(value) => onWatermarkChange({ ...watermarkOptions, type: value as 'text' | 'image' })}
+          />
+        </Field>
       </div>
 
       {/* 水印内容 */}
       {watermarkOptions.type === 'text' ? (
         <>
-          <div>
-            <label className="text-sm text-white/60 mb-1 block">水印文字</label>
-            <input
-              type="text"
-              placeholder="输入水印文字"
-              value={watermarkOptions.text}
-              onChange={(e) => onWatermarkChange({ ...watermarkOptions, text: e.target.value })}
-              className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-[#7C3AED]"
-            />
+          <div className="hairline-b py-3">
+            <Field label="水印文字">
+              <Input
+                type="text"
+                placeholder="输入水印文字"
+                value={watermarkOptions.text}
+                onChange={(e) => onWatermarkChange({ ...watermarkOptions, text: e.target.value })}
+              />
+            </Field>
           </div>
+
           {/* 字体选择 */}
-          <div>
-            <label className="text-sm text-white/60 mb-2 block">字体</label>
-            <FontSelector
-              fonts={fonts}
-              value={watermarkOptions.fontPath || ''}
-              fontFamily={watermarkOptions.fontFamily}
-              onChange={(font) => {
-                if (font) {
-                  onWatermarkChange({
-                    ...watermarkOptions,
-                    fontPath: font.path,
-                    fontFamily: font.family,
-                  });
-                } else {
-                  onWatermarkChange({
-                    ...watermarkOptions,
-                    fontPath: '',
-                    fontFamily: '',
-                  });
-                }
-              }}
-              loading={fontsLoading}
-              disabled={isProcessing}
-            />
-          </div>
-          {/* 字体大小 */}
-          <div>
-            <label className="text-sm text-white/60 mb-2 block">字体大小: {watermarkOptions.fontSize}px</label>
-            <input
-              type="range"
-              min="12"
-              max="120"
-              value={watermarkOptions.fontSize}
-              onChange={(e) => onWatermarkChange({ ...watermarkOptions, fontSize: parseInt(e.target.value) })}
-              className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer accent-[#7C3AED]"
-            />
-            <div className="flex justify-between text-xs text-white/40 mt-1">
-              <span>12</span>
-              <span>120</span>
-            </div>
-          </div>
-          {/* 字体颜色 */}
-          <div>
-            <label className="text-sm text-white/60 mb-2 block">字体颜色</label>
-            <div className="flex items-center gap-3">
-              <div
-                className="w-10 h-10 rounded-lg border-2 border-white/20 cursor-pointer overflow-hidden flex-shrink-0"
-                style={{ backgroundColor: watermarkOptions.fontColor || '#FFFFFF' }}
-                onClick={() => {
-                  const input = document.createElement('input');
-                  input.type = 'color';
-                  input.value = watermarkOptions.fontColor || '#FFFFFF';
-                  input.onchange = (e) => {
-                    const target = e.target as HTMLInputElement;
-                    onWatermarkChange({ ...watermarkOptions, fontColor: target.value });
-                  };
-                  input.click();
+          <div className="hairline-b py-3">
+            <Field label="字体">
+              <FontSelector
+                fonts={fonts}
+                value={watermarkOptions.fontPath || ''}
+                fontFamily={watermarkOptions.fontFamily}
+                onChange={(font) => {
+                  if (font) {
+                    onWatermarkChange({
+                      ...watermarkOptions,
+                      fontPath: font.path,
+                      fontFamily: font.family,
+                    });
+                  } else {
+                    onWatermarkChange({
+                      ...watermarkOptions,
+                      fontPath: '',
+                      fontFamily: '',
+                    });
+                  }
                 }}
-              >
-                <input
-                  type="color"
+                loading={fontsLoading}
+                disabled={isProcessing}
+              />
+            </Field>
+          </div>
+
+          {/* 字体大小 */}
+          <SliderRow
+            label="字体大小"
+            display={`${watermarkOptions.fontSize}px`}
+            min={12}
+            max={120}
+            value={watermarkOptions.fontSize}
+            onChange={(value) => onWatermarkChange({ ...watermarkOptions, fontSize: value })}
+            minLabel="12"
+            maxLabel="120"
+          />
+
+          {/* 字体颜色 */}
+          <div className="hairline-b py-3">
+            <Field horizontal label="字体颜色">
+              <div className="flex items-center gap-2">
+                <label
+                  className="relative block h-7 w-9 shrink-0 cursor-pointer overflow-hidden rounded-[6px] border border-hairline-strong"
+                  style={{ backgroundColor: watermarkOptions.fontColor || '#FFFFFF' }}
+                >
+                  <input
+                    type="color"
+                    value={watermarkOptions.fontColor || '#FFFFFF'}
+                    onChange={(e) => onWatermarkChange({ ...watermarkOptions, fontColor: e.target.value })}
+                    className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                    aria-label="选择字体颜色"
+                  />
+                </label>
+                <Input
+                  type="text"
                   value={watermarkOptions.fontColor || '#FFFFFF'}
                   onChange={(e) => onWatermarkChange({ ...watermarkOptions, fontColor: e.target.value })}
-                  className="w-full h-full opacity-0 cursor-pointer"
+                  className="tnum w-24 font-mono"
+                  placeholder="#FFFFFF"
                 />
               </div>
-              <input
-                type="text"
-                value={watermarkOptions.fontColor || '#FFFFFF'}
-                onChange={(e) => onWatermarkChange({ ...watermarkOptions, fontColor: e.target.value })}
-                className="flex-1 min-w-0 px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm font-mono focus:outline-none focus:border-[#7C3AED]"
-                placeholder="#FFFFFF"
-              />
-            </div>
+            </Field>
           </div>
         </>
       ) : (
-        <div>
-          <label className="text-sm text-white/60 mb-1 block">水印图片</label>
-          <button
-            onClick={handleWatermarkSelect}
-            className="w-full px-3 py-4 bg-white/5 border border-white/10 border-dashed rounded-lg text-white/60 text-sm hover:bg-white/10 transition-colors flex flex-col items-center gap-2"
-          >
-            <Icon name="photo" className="w-6 h-6" />
-            {getFileName(watermarkOptions.imagePath) || '点击选择水印图片'}
-          </button>
-          {/* 缩放比例仅对图片水印有效 */}
-          <div className="mt-3">
-            <label className="text-sm text-white/60 mb-2 block">缩放比例: {Math.round(watermarkOptions.scale * 100)}%</label>
-            <input
-              type="range"
-              min="10"
-              max="100"
-              value={Math.round(watermarkOptions.scale * 100)}
-              onChange={(e) => onWatermarkChange({ ...watermarkOptions, scale: parseInt(e.target.value) / 100 })}
-              className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer accent-[#7C3AED]"
-            />
+        <>
+          <div className="hairline-b py-3">
+            <Field label="水印图片">
+              <button
+                onClick={handleWatermarkSelect}
+                className="flex w-full flex-col items-center gap-1.5 rounded-[6px] border border-dashed border-hairline-strong bg-surface-1 px-3 py-4 text-text-3 transition-colors duration-150 hover:bg-surface-2 hover:text-text-2"
+              >
+                <Icon name="photo" size={18} />
+                <span className="truncate text-[12px]">
+                  {getFileName(watermarkOptions.imagePath) || '点击选择水印图片'}
+                </span>
+              </button>
+            </Field>
           </div>
-        </div>
+
+          {/* 缩放比例仅对图片水印有效 */}
+          <SliderRow
+            label="缩放比例"
+            display={`${Math.round(watermarkOptions.scale * 100)}%`}
+            min={10}
+            max={100}
+            value={Math.round(watermarkOptions.scale * 100)}
+            onChange={(value) => onWatermarkChange({ ...watermarkOptions, scale: value / 100 })}
+            minLabel="10%"
+            maxLabel="100%"
+          />
+        </>
       )}
 
       {/* 水印模式：单个/平铺 */}
-      <div>
-        <label className="text-sm text-white/60 mb-2 block">水印模式</label>
-        <div className="flex gap-2">
-          <button
-            onClick={() => onWatermarkChange({ ...watermarkOptions, position: WatermarkPosition.PositionSingle })}
-            className={`flex-1 px-3 py-2 rounded-lg text-sm transition-colors ${
-              watermarkOptions.position === WatermarkPosition.PositionSingle
-                ? 'bg-[#7C3AED] text-white'
-                : 'bg-white/5 text-white/60 hover:bg-white/10'
-            }`}
-          >
-            单个水印
-          </button>
-          <button
-            onClick={() => onWatermarkChange({ ...watermarkOptions, position: WatermarkPosition.PositionTile })}
-            className={`flex-1 px-3 py-2 rounded-lg text-sm transition-colors ${
-              watermarkOptions.position === WatermarkPosition.PositionTile
-                ? 'bg-[#7C3AED] text-white'
-                : 'bg-white/5 text-white/60 hover:bg-white/10'
-            }`}
-          >
-            平铺水印
-          </button>
-        </div>
+      <div className="hairline-b py-3">
+        <Field horizontal label="水印模式">
+          <Segmented
+            options={[
+              { value: WatermarkPosition.PositionSingle, label: '单个水印' },
+              { value: WatermarkPosition.PositionTile, label: '平铺水印' },
+            ]}
+            value={watermarkOptions.position}
+            onChange={(value) => onWatermarkChange({ ...watermarkOptions, position: value as WatermarkPosition })}
+          />
+        </Field>
       </div>
 
       {/* 旋转角度 */}
-      <div>
-        <label className="text-sm text-white/60 mb-2 block">旋转角度: {watermarkOptions.rotation || 0}°</label>
-        <input
-          type="range"
-          min="-180"
-          max="180"
-          value={watermarkOptions.rotation || 0}
-          onChange={(e) => onWatermarkChange({ ...watermarkOptions, rotation: parseInt(e.target.value) })}
-          className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer accent-[#7C3AED]"
-        />
-        <div className="flex justify-between text-xs text-white/40 mt-1">
-          <span>-180°</span>
-          <span>0°</span>
-          <span>180°</span>
-        </div>
-      </div>
+      <SliderRow
+        label="旋转角度"
+        display={`${watermarkOptions.rotation || 0}°`}
+        min={-180}
+        max={180}
+        value={watermarkOptions.rotation || 0}
+        onChange={(value) => onWatermarkChange({ ...watermarkOptions, rotation: value })}
+        minLabel="-180°"
+        centerLabel="0°"
+        maxLabel="180°"
+      />
 
       {/* 单个水印：X/Y 偏移 */}
       {watermarkOptions.position === WatermarkPosition.PositionSingle && (
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="text-sm text-white/60 mb-1 block">X 偏移: {watermarkOptions.offsetX || 0}px</label>
-            <input
-              type="range"
-              min="-500"
-              max="500"
-              value={watermarkOptions.offsetX || 0}
-              onChange={(e) => onWatermarkChange({ ...watermarkOptions, offsetX: parseInt(e.target.value) })}
-              className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer accent-[#7C3AED]"
-            />
-          </div>
-          <div>
-            <label className="text-sm text-white/60 mb-1 block">Y 偏移: {watermarkOptions.offsetY || 0}px</label>
-            <input
-              type="range"
-              min="-500"
-              max="500"
-              value={watermarkOptions.offsetY || 0}
-              onChange={(e) => onWatermarkChange({ ...watermarkOptions, offsetY: parseInt(e.target.value) })}
-              className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer accent-[#7C3AED]"
-            />
-          </div>
-        </div>
+        <>
+          <SliderRow
+            label="X 偏移"
+            display={`${watermarkOptions.offsetX || 0}px`}
+            min={-500}
+            max={500}
+            value={watermarkOptions.offsetX || 0}
+            onChange={(value) => onWatermarkChange({ ...watermarkOptions, offsetX: value })}
+          />
+          <SliderRow
+            label="Y 偏移"
+            display={`${watermarkOptions.offsetY || 0}px`}
+            min={-500}
+            max={500}
+            value={watermarkOptions.offsetY || 0}
+            onChange={(value) => onWatermarkChange({ ...watermarkOptions, offsetY: value })}
+          />
+        </>
       )}
 
       {/* 平铺模式：间距控制 */}
       {watermarkOptions.position === WatermarkPosition.PositionTile && (
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="text-sm text-white/60 mb-1 block">X 间距: {watermarkOptions.tileSpacingX || 100}px</label>
-            <input
-              type="range"
-              min="50"
-              max="500"
-              value={watermarkOptions.tileSpacingX || 100}
-              onChange={(e) => onWatermarkChange({ ...watermarkOptions, tileSpacingX: parseInt(e.target.value) })}
-              className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer accent-[#7C3AED]"
-            />
-          </div>
-          <div>
-            <label className="text-sm text-white/60 mb-1 block">Y 间距: {watermarkOptions.tileSpacingY || 100}px</label>
-            <input
-              type="range"
-              min="50"
-              max="500"
-              value={watermarkOptions.tileSpacingY || 100}
-              onChange={(e) => onWatermarkChange({ ...watermarkOptions, tileSpacingY: parseInt(e.target.value) })}
-              className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer accent-[#7C3AED]"
-            />
-          </div>
-        </div>
+        <>
+          <SliderRow
+            label="X 间距"
+            display={`${watermarkOptions.tileSpacingX || 100}px`}
+            min={50}
+            max={500}
+            value={watermarkOptions.tileSpacingX || 100}
+            onChange={(value) => onWatermarkChange({ ...watermarkOptions, tileSpacingX: value })}
+          />
+          <SliderRow
+            label="Y 间距"
+            display={`${watermarkOptions.tileSpacingY || 100}px`}
+            min={50}
+            max={500}
+            value={watermarkOptions.tileSpacingY || 100}
+            onChange={(value) => onWatermarkChange({ ...watermarkOptions, tileSpacingY: value })}
+          />
+        </>
       )}
 
       {/* 透明度 */}
-      <div>
-        <label className="text-sm text-white/60 mb-2 block">透明度: {Math.round(watermarkOptions.opacity * 100)}%</label>
-        <input
-          type="range"
-          min="0"
-          max="100"
-          value={Math.round(watermarkOptions.opacity * 100)}
-          onChange={(e) => onWatermarkChange({ ...watermarkOptions, opacity: parseInt(e.target.value) / 100 })}
-          className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer accent-[#7C3AED]"
-        />
-      </div>
+      <SliderRow
+        label="透明度"
+        display={`${Math.round(watermarkOptions.opacity * 100)}%`}
+        min={0}
+        max={100}
+        value={Math.round(watermarkOptions.opacity * 100)}
+        onChange={(value) => onWatermarkChange({ ...watermarkOptions, opacity: value / 100 })}
+      />
     </div>
   );
 
@@ -525,184 +517,167 @@ export function SettingsPanel({
   }, [steganographyOptions, onSteganographyChange, showError]);
 
   const renderSteganographySettings = () => (
-    <div className="space-y-4">
-      <div className="bg-[#22C55E]/10 border border-[#22C55E]/20 rounded-lg p-3">
-        <div className="flex items-start gap-2">
-          <Icon name="lock" className="w-5 h-5 text-[#22C55E] flex-shrink-0 mt-0.5" />
-          <div className="text-sm text-[#22C55E]/80">
-            <p className="mb-1">盲水印使用 DWT+DCT+SVD 算法，</p>
-            <p>抗压缩、抗裁剪，适合版权保护。</p>
+    <div>
+      <div className="hairline-b pb-3 pt-1">
+        <div className="card-inset flex items-start gap-2.5 p-3">
+          <Icon name="lock" size={15} className="mt-0.5 shrink-0 text-text-3" />
+          <div className="text-[11.5px] leading-relaxed text-text-3">
+            盲水印使用 DWT+DCT+SVD 算法，抗压缩、抗裁剪，适合版权保护。
           </div>
         </div>
       </div>
 
-      <div>
-        <label className="text-sm text-white/60 mb-2 block">模式</label>
-        <div className="flex gap-2">
-          {[
-            { value: 'encode', label: '嵌入水印' },
-            { value: 'decode', label: '提取水印' },
-          ].map((m) => (
-            <button
-              key={m.value}
-              onClick={() => onSteganographyChange({ ...steganographyOptions, mode: m.value as 'encode' | 'decode' })}
-              className={`flex-1 px-3 py-2 rounded-lg text-sm transition-colors ${
-                steganographyOptions.mode === m.value
-                  ? 'bg-[#7C3AED] text-white'
-                  : 'bg-white/5 text-white/60 hover:bg-white/10'
-              }`}
-            >
-              {m.label}
-            </button>
-          ))}
-        </div>
+      <div className="hairline-b py-3">
+        <Field horizontal label="模式">
+          <Segmented
+            options={[
+              { value: 'encode', label: '嵌入水印' },
+              { value: 'decode', label: '提取水印' },
+            ]}
+            value={steganographyOptions.mode}
+            onChange={(value) => onSteganographyChange({ ...steganographyOptions, mode: value as 'encode' | 'decode' })}
+          />
+        </Field>
       </div>
 
       {steganographyOptions.mode === 'encode' && (
         <>
-          <div>
-            <label className="text-sm text-white/60 mb-2 block">水印类型</label>
-            <div className="flex gap-2">
-              {[
-                { value: 'text', label: '文本' },
-                { value: 'image', label: '图片' },
-              ].map((t) => (
-                <button
-                  key={t.value}
-                  onClick={() => onSteganographyChange({ ...steganographyOptions, type: t.value as 'text' | 'image' })}
-                  className={`flex-1 px-3 py-2 rounded-lg text-sm transition-colors ${
-                    (steganographyOptions.type || 'text') === t.value
-                      ? 'bg-[#7C3AED] text-white'
-                      : 'bg-white/5 text-white/60 hover:bg-white/10'
-                  }`}
-                >
-                  {t.label}
-                </button>
-              ))}
-            </div>
+          <div className="hairline-b py-3">
+            <Field horizontal label="水印类型">
+              <Segmented
+                options={[
+                  { value: 'text', label: '文本' },
+                  { value: 'image', label: '图片' },
+                ]}
+                value={steganographyOptions.type || 'text'}
+                onChange={(value) => onSteganographyChange({ ...steganographyOptions, type: value as 'text' | 'image' })}
+              />
+            </Field>
           </div>
 
           {(steganographyOptions.type === 'text' || !steganographyOptions.type) && (
-            <div>
-              <label className="text-sm text-white/60 mb-1 block">水印文本</label>
-              <textarea
-                placeholder="输入版权信息或标识..."
-                value={steganographyOptions.message}
-                onChange={(e) => onSteganographyChange({ ...steganographyOptions, message: e.target.value })}
-                rows={3}
-                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-[#7C3AED] resize-none"
-              />
+            <div className="hairline-b py-3">
+              <Field label="水印文本">
+                <Textarea
+                  placeholder="输入版权信息或标识..."
+                  value={steganographyOptions.message}
+                  onChange={(e) => onSteganographyChange({ ...steganographyOptions, message: e.target.value })}
+                  rows={3}
+                  className="resize-none"
+                />
+              </Field>
             </div>
           )}
 
           {steganographyOptions.type === 'image' && (
-            <div>
-              <label className="text-sm text-white/60 mb-1 block">水印图片 (Logo)</label>
-              <button
-                onClick={handleBlindWatermarkSelect}
-                className="w-full px-3 py-4 bg-white/5 border border-white/10 border-dashed rounded-lg text-white/60 text-sm hover:bg-white/10 transition-colors flex flex-col items-center gap-2"
-              >
-                <Icon name="photo" className="w-6 h-6" />
-                {getFileName(steganographyOptions.imagePath) || '点击选择水印图片'}
-              </button>
-              <p className="text-xs text-white/40 mt-1">建议使用 64x64 的黑白 Logo 图片</p>
+            <div className="hairline-b py-3">
+              <Field label="水印图片 (Logo)" hint="建议使用 64x64 的黑白 Logo 图片">
+                <button
+                  onClick={handleBlindWatermarkSelect}
+                  className="flex w-full flex-col items-center gap-1.5 rounded-[6px] border border-dashed border-hairline-strong bg-surface-1 px-3 py-4 text-text-3 transition-colors duration-150 hover:bg-surface-2 hover:text-text-2"
+                >
+                  <Icon name="photo" size={18} />
+                  <span className="truncate text-[12px]">
+                    {getFileName(steganographyOptions.imagePath) || '点击选择水印图片'}
+                  </span>
+                </button>
+              </Field>
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-sm text-white/60 mb-1 block">密码种子 1</label>
-              <input
+          <div className="hairline-b grid grid-cols-2 gap-3 py-3">
+            <Field label="密码种子 1">
+              <Input
                 type="number"
                 placeholder="默认: 12345"
                 value={steganographyOptions.password1 || ''}
                 onChange={(e) => onSteganographyChange({ ...steganographyOptions, password1: parseInt(e.target.value) || 0 })}
-                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-[#7C3AED]"
+                className="tnum"
               />
-            </div>
-            <div>
-              <label className="text-sm text-white/60 mb-1 block">密码种子 2</label>
-              <input
+            </Field>
+            <Field label="密码种子 2">
+              <Input
                 type="number"
                 placeholder="默认: 67890"
                 value={steganographyOptions.password2 || ''}
                 onChange={(e) => onSteganographyChange({ ...steganographyOptions, password2: parseInt(e.target.value) || 0 })}
-                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-[#7C3AED]"
+                className="tnum"
               />
-            </div>
+            </Field>
           </div>
 
-          <div className="bg-white/5 border border-white/10 rounded-lg p-2">
-            <p className="text-xs text-white/40">
-              💡 密码种子用于加密水印，提取时需要使用相同的密码
-            </p>
+          <div className="py-3">
+            <div className="flex items-start gap-2 rounded-[6px] border border-hairline-faint bg-surface-1 px-3 py-2.5">
+              <Icon name="information-circle" size={13} className="mt-0.5 shrink-0 text-text-3" />
+              <p className="text-[11.5px] leading-relaxed text-text-3">
+                密码种子用于加密水印，提取时需要使用相同的密码
+              </p>
+            </div>
           </div>
         </>
       )}
 
       {steganographyOptions.mode === 'decode' && (
         <>
-          <div>
-            <label className="text-sm text-white/60 mb-2 block">水印类型</label>
-            <div className="flex gap-2">
-              {[
-                { value: 'text', label: '文本' },
-                { value: 'image', label: '图片' },
-              ].map((t) => (
-                <button
-                  key={t.value}
-                  onClick={() => onSteganographyChange({ ...steganographyOptions, type: t.value as 'text' | 'image' })}
-                  className={`flex-1 px-3 py-2 rounded-lg text-sm transition-colors ${
-                    (steganographyOptions.type || 'text') === t.value
-                      ? 'bg-[#7C3AED] text-white'
-                      : 'bg-white/5 text-white/60 hover:bg-white/10'
-                  }`}
-                >
-                  {t.label}
-                </button>
-              ))}
-            </div>
+          <div className="hairline-b py-3">
+            <Field horizontal label="水印类型">
+              <Segmented
+                options={[
+                  { value: 'text', label: '文本' },
+                  { value: 'image', label: '图片' },
+                ]}
+                value={steganographyOptions.type || 'text'}
+                onChange={(value) => onSteganographyChange({ ...steganographyOptions, type: value as 'text' | 'image' })}
+              />
+            </Field>
           </div>
 
           {(steganographyOptions.type === 'text' || !steganographyOptions.type) && (
-            <div>
-              <label className="text-sm text-white/60 mb-1 block">提取的水印内容</label>
-              <textarea
-                readOnly
-                value={steganographyOptions.message}
-                placeholder="点击「开始处理」提取水印..."
-                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-[#7C3AED] min-h-[80px] resize-none"
-              />
+            <div className="hairline-b py-3">
+              <Field label="提取的水印内容">
+                <Textarea
+                  readOnly
+                  value={steganographyOptions.message}
+                  placeholder="点击「开始处理」提取水印..."
+                  className="min-h-[80px] resize-none"
+                />
+              </Field>
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-sm text-white/60 mb-1 block">密码种子 1</label>
-              <input
+          <div className="hairline-b grid grid-cols-2 gap-3 py-3">
+            <Field label="密码种子 1">
+              <Input
                 type="number"
                 placeholder="默认: 12345"
                 value={steganographyOptions.password1 || ''}
                 onChange={(e) => onSteganographyChange({ ...steganographyOptions, password1: parseInt(e.target.value) || 0 })}
-                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-[#7C3AED]"
+                className="tnum"
               />
-            </div>
-            <div>
-              <label className="text-sm text-white/60 mb-1 block">密码种子 2</label>
-              <input
+            </Field>
+            <Field label="密码种子 2">
+              <Input
                 type="number"
                 placeholder="默认: 67890"
                 value={steganographyOptions.password2 || ''}
                 onChange={(e) => onSteganographyChange({ ...steganographyOptions, password2: parseInt(e.target.value) || 0 })}
-                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-[#7C3AED]"
+                className="tnum"
               />
-            </div>
+            </Field>
           </div>
 
-          <div className="bg-[#F59E0B]/10 border border-[#F59E0B]/20 rounded-lg p-2">
-            <p className="text-xs text-[#F59E0B]/80">
-              ⚠️ 提取水印需要使用嵌入时相同的密码种子
-            </p>
+          <div className="py-3">
+            <div
+              className="flex items-start gap-2 rounded-[6px] px-3 py-2.5 text-[11.5px] leading-relaxed"
+              style={{
+                background: 'rgba(255,159,10,0.08)',
+                border: '1px solid rgba(255,159,10,0.18)',
+                color: 'var(--color-warning-text)',
+              }}
+            >
+              <Icon name="exclamation-circle" size={13} className="mt-0.5 shrink-0" />
+              <span>提取水印需要使用嵌入时相同的密码种子</span>
+            </div>
           </div>
         </>
       )}
@@ -710,29 +685,35 @@ export function SettingsPanel({
   );
 
   const renderFaviconSettings = () => (
-    <div className="space-y-4">
-      <div className="bg-[#A78BFA]/10 border border-[#A78BFA]/20 rounded-lg p-3">
-        <div className="flex items-start gap-2">
-          <Icon name="information-circle" className="w-5 h-5 text-[#A78BFA] flex-shrink-0 mt-0.5" />
-          <div className="text-sm text-[#A78BFA]/80">
-            <p className="mb-2">将自动生成以下标准 favicon 文件：</p>
-            <ul className="list-disc list-inside space-y-1 text-xs">
-              <li>android-chrome-192x192.png</li>
-              <li>android-chrome-512x512.png</li>
-              <li>apple-touch-icon.png (180×180)</li>
-              <li>favicon-16x16.png</li>
-              <li>favicon-32x32.png</li>
-              <li>favicon.ico (48×48)</li>
-              <li>site.webmanifest</li>
-            </ul>
+    <div>
+      <div className="hairline-b pb-3 pt-1">
+        <div className="card-inset p-3">
+          <div className="flex items-start gap-2.5">
+            <Icon name="information-circle" size={15} className="mt-0.5 shrink-0 text-text-3" />
+            <div className="min-w-0 text-[11.5px] leading-relaxed text-text-3">
+              <p className="mb-1.5">将自动生成以下标准 favicon 文件：</p>
+              <ul className="list-inside list-disc space-y-0.5 font-mono text-[11px]">
+                <li>android-chrome-192x192.png</li>
+                <li>android-chrome-512x512.png</li>
+                <li>apple-touch-icon.png (180×180)</li>
+                <li>favicon-16x16.png</li>
+                <li>favicon-32x32.png</li>
+                <li>favicon.ico (48×48)</li>
+                <li>site.webmanifest</li>
+              </ul>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="bg-white/5 border border-white/10 rounded-lg p-3">
-        <div className="flex items-start gap-2 mb-2">
-          <Icon name="document" className="w-4 h-4 text-white/60 flex-shrink-0 mt-0.5" />
-          <p className="text-sm text-white/60">处理完成后，将显示 HTML 链接标签，方便您复制到网站头部。</p>
+      <div className="pt-3">
+        <div className="card-inset p-3">
+          <div className="flex items-start gap-2.5">
+            <Icon name="document" size={14} className="mt-0.5 shrink-0 text-text-3" />
+            <p className="text-[11.5px] leading-relaxed text-text-3">
+              处理完成后，将显示 HTML 链接标签，方便您复制到网站头部。
+            </p>
+          </div>
         </div>
       </div>
     </div>
@@ -759,44 +740,35 @@ export function SettingsPanel({
   const canPreview = ['compress', 'crop'].includes(mode);
 
   return (
-    <div className="glass-heavy rounded-2xl p-4 h-full flex flex-col">
-      <h3 className="text-lg font-semibold text-[#FAF5FF] mb-4 flex items-center gap-2">
-        <Icon name="cog-6-tooth" className="w-5 h-5 text-[#A78BFA]" />
-        处理设置
-      </h3>
+    <div className="card flex h-full flex-col p-4">
+      <h3 className="section-title">处理设置</h3>
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="min-h-0 flex-1 overflow-y-auto">
         {renderSettings()}
       </div>
 
-      <div className="mt-4 pt-4 border-t border-white/10 space-y-2">
+      <div className="hairline-t mt-2 space-y-2 pt-3">
         {canPreview && (
-          <button
+          <Button
+            variant="secondary"
+            icon="eye"
+            className="w-full"
             onClick={onPreview}
             disabled={isProcessing || filesCount === 0}
-            className="w-full px-4 py-2 bg-white/10 hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-white font-medium transition-colors flex items-center justify-center gap-2"
           >
-            <Icon name="eye" className="w-4 h-4" />
             预览效果
-          </button>
+          </Button>
         )}
-        <button
+        <Button
+          variant="primary"
+          icon="play"
+          className="w-full"
           onClick={onProcess}
+          loading={isProcessing}
           disabled={isProcessing || filesCount === 0}
-          className="w-full px-4 py-2 bg-[#7C3AED] hover:bg-[#6D28D9] disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-white font-medium transition-colors flex items-center justify-center gap-2"
         >
-          {isProcessing ? (
-            <>
-              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              处理中...
-            </>
-          ) : (
-            <>
-              <Icon name="play" className="w-4 h-4" />
-              开始处理 {filesCount > 0 && `(${filesCount})`}
-            </>
-          )}
-        </button>
+          开始处理{filesCount > 0 && <span className="tnum">&nbsp;({filesCount})</span>}
+        </Button>
       </div>
     </div>
   );

@@ -2,6 +2,8 @@
 
 此文件为 Claude Code (claude.ai/code) 在此代码仓库中工作时提供指导。
 
+> 前端部分于 2026-10-03 对照源码、依赖锁文件及生产构建核对。UI 已采用 v2「精密仪器」设计系统；重写记录见 `frontend/REWRITE_PROGRESS.md`，其中历史验收记录不能代替当前版本的运行验证。
+
 ## 项目概述
 
 **LTools** 是一个基于 **Wails v3** (alpha) 的插件化跨平台桌面工具箱应用。类似于 uTools 的设计理念，通过插件架构提供统一的工具集中心。
@@ -13,10 +15,10 @@
 - 系统托盘集成，后台运行
 
 ### 核心技术栈
-- **后端**：Go 1.25+ 与 Wails v3 框架
-- **前端**：React 18.2 + TypeScript 5.2 + Vite 5 + TailwindCSS 4
+- **后端**：Go 1.25.2 与 Wails v3.0.0-alpha.74（以 `go.mod` 为准）
+- **前端**：React 18 + TypeScript 5 + React Router 7 + Vite 6 + TailwindCSS 4（实际版本以 `frontend/package-lock.json` 为准）
 - **构建系统**：Task (taskfiles) + Wails CLI
-- **全局快捷键**：robotn/gohook 库
+- **全局快捷键**：Windows 使用 `golang.design/x/hotkey`；其他桌面平台使用 robotn/gohook
 
 ## 开发命令
 
@@ -31,8 +33,8 @@ wails3 dev -config ./build/config.yml -port 9245
 task build
 wails3 build
 
-# 仅运行前端开发服务器（端口 9245）
-cd frontend && npm run dev
+# 仅运行前端开发服务器（显式指定 Wails 使用的端口）
+cd frontend && npm run dev -- --port 9245 --strictPort
 ```
 
 ### 前端构建
@@ -40,7 +42,11 @@ cd frontend && npm run dev
 cd frontend
 npm run build          # 生产构建
 npm run build:dev      # 开发构建（无压缩）
+npx tsc --noEmit       # 仅 TypeScript 检查
+npm run dev:mock       # 浏览器 mock 模式入口，支持部分服务，见下文
 ```
+
+直接执行 `npm run dev` / `npm run dev:mock` 不固定为 9245；端口参数由 `task dev` 的前端任务传入。需要固定端口时加 `-- --port 9245 --strictPort`。
 
 ### 服务器模式（无头 HTTP 服务器）
 ```bash
@@ -83,19 +89,24 @@ ltools/
 │   ├── datetime/        # 日期时间显示
 │   ├── jsoneditor/      # JSON 编辑器
 │   ├── processmanager/  # 进程管理器
-│   ├── screenshot/      # 截图工具
+│   ├── screenshot2/     # 截图、标注与贴图工具
 │   └── sysinfo/         # 系统信息
+│                        # 另含看板、便签、书签、密码库、音乐、图片处理等插件
 ├── frontend/            # React + TypeScript 前端
 │   ├── src/
-│   │   ├── router/           # React Router v6 路由系统
+│   │   ├── router/           # React Router v7 路由系统
 │   │   │   ├── routes/       # 路由配置
 │   │   │   ├── guards/       # 路由守卫（插件生命周期）
 │   │   │   └── layouts/      # 布局组件
 │   │   ├── pages/            # 页面组件
 │   │   ├── windows/          # 独立窗口组件
 │   │   ├── hooks/            # 自定义 Hooks
-│   │   └── components/       # UI 组件
+│   │   ├── plugins/          # 插件加载、权限与 usePlugins/usePlugin/useDateTime
+│   │   ├── dev/              # 浏览器 mock transport
+│   │   └── components/       # 工具组件；ui/ 为共享 UI Kit
 │   ├── bindings/             # 自动生成的 Wails 绑定（请勿编辑）
+│   ├── DESIGN.md             # 前端设计规范（UI 改动前必读）
+│   ├── REWRITE_PROGRESS.md   # 重写记录与当前核对结论
 │   └── dist/                 # 构建后的前端资源
 ├── build/              # 构建配置
 │   ├── config.yml      # 应用配置
@@ -125,8 +136,9 @@ Wails v3 使用**基于服务的架构**。后端功能通过服务暴露给前�
 
 4. **从前端调用**：导入并使用生成的绑定
    ```typescript
-   import { MyService } from './bindings'
-   await MyService.DoSomething("hello")
+   // 路径相对于 frontend/src 中的文件，按实际生成的服务目录导入。
+   import * as CalculatorService from '../bindings/ltools/plugins/calculator/calculatorservice'
+   await CalculatorService.Evaluate('1 + 2')
    ```
 
 ## 插件系统架构
@@ -271,18 +283,17 @@ app.RegisterService(application.NewService(service))
 
 **调试日志：** `~/Library/Application Support/ltools/logs/clipboard-debug.log` (macOS) 或 `~/.config/ltools/logs/clipboard-debug.log` (Linux)
 
-### Screenshot 插件 (`plugins/screenshot/`)
+### Screenshot2 插件 (`plugins/screenshot2/`)
 屏幕捕获和标注（微信风格）
 
 **组件：**
 - `capture.go`：屏幕捕获功能
-- `window_service.go`：独立编辑器窗口
+- `window_manager.go`：截图覆盖层及窗口管理
+- `pin_window.go`：贴图窗口
 - 平台特定窗口管理
 
 **发出的事件：**
-- `screenshot:started`、`screenshot:captured`
-- `screenshot:saved`、`screenshot:copied`
-- `screenshot:cancelled`、`screenshot:error`
+- 使用 `screenshot2:*` 事件命名空间，具体事件及载荷以服务和窗口管理实现为准
 
 ### System Info 插件 (`plugins/sysinfo/`)
 系统硬件和运行时信息
@@ -362,6 +373,7 @@ Events.On('myevent:data', (ev: { data: string }) => {
 
 ### 默认快捷键
 - `Cmd+5` / `Ctrl+5`：打开全局搜索
+- 设置 → 快捷键 → 全局搜索：可录制替换组合、恢复默认；保存后立即注册，启动时仅在没有用户配置时添加默认组合。
 - `Cmd+Shift+S` / `Ctrl+Shift+S`：截图
 
 ### 全局热键实现
@@ -377,51 +389,59 @@ Events.On('myevent:data', (ev: { data: string }) => {
 
 ## 前端架构
 
+### 当前基线与验证边界
+
+- UI 重写已落到源码；2026-10-03 复核 `tsc` 与 Vite 生产构建通过。构建仍提示 `PluginPage` 大分包及图片处理绑定同时被静态/动态导入。
+- 搜索采用 uTools 风格大输入框与分组结果：仅搜索命中的应用使用 100×100 方形格和真实应用图标；最近使用、插件与文件为文字行。右上角应用图标可点击返回主界面；失去窗口焦点自动隐藏。支持中文、完整拼音、首字母、模糊匹配、方向键、IME、字面量高亮、防抖与过期响应丢弃。
+- Windows 图标通过系统 ExtractIconExW 提取 exe/ico 资源，编码为 PNG data URI；已验证非空图像、资源索引和环境变量路径。没有可用图标时显示通用图案。
+- 浏览器 mock 回归已验证搜索布局、390px 无溢出、键盘导航、文件展开/收起、三种主题、快捷键保存与恢复、Markdown XSS 与公式。Windows 原生验收通过真实中文应用、拼音/首字母、ChatGPT、图标、失焦隐藏、主界面入口和正常 Node 退出；完整逐页验收仍待补。
+- 文件结果放在最后，按匹配度排序，默认显示 5 项。索引扫描常用用户目录、重定向目录、OneDrive 及 Windows Search，受 30 秒扫描时限和 100000 条上限约束，不等同于 SwiftList 的全盘 USN/MFT 索引。
+- Windows 应用枚举使用 Unicode 注册表和 Get-StartApps；Store 应用可通过 AppsFolder 启动并提取 Shell 图标。本机探测 215 个应用、214 个真实 PNG 图标。
+- Windows 辅助命令使用 `processutil.Background` 隐藏控制台，音乐服务正常退出时停止并回收 Node；不保证强制结束父进程时的清理。
+- 全局 WebView 不得设置 `--disable-web-security` 或证书绕过参数。Ollama 检测通过后端 `DetectOllamaModels` 完成；音乐使用同源音频/图片代理，Range/图片专项测试通过。原生验证跨源 iframe 与 CORS 读取被阻止。
+- 真实后端、多窗口、系统权限、音频播放及歌词滚动需在 `task dev` 下验证；纯前端构建不证明这些功能可用。
+
 ### 技术栈
 
 **核心：**
-- React 18.2 + TypeScript 5.2
-- React Router v6 路由管理
-- Vite 5 构建工具
+- React 18 + TypeScript 5
+- React Router v7 路由管理（源码中部分 v6 注释尚未更新）
+- Vite 6 构建工具
 - TailwindCSS 4 样式
 - `@wailsio/runtime` Go 绑定
+
+2026-10-03 锁文件版本：React 18.3.1、TypeScript 5.9.3、React Router 7.18.4、Vite 6.4.3、TailwindCSS 4.1.18、`@wailsio/runtime` 3.0.0-alpha.79。不要用 `package.json` 中的最低版本当作实际安装版本。
 
 **开发配置：**
 - 路径别名（`@/*` → `./src/*`）
 - TypeScript 严格模式
 - 热模块替换
 
-### 设计系统 (`frontend/src/styles.css`)
+### 设计系统 v2「精密仪器」
 
-**主题：** 玻璃态 + 深色开发者主题
+**UI 改动前先读 `frontend/DESIGN.md`**；`docs/DESIGN_SYSTEM.md` 是速览，`frontend/src/styles.css` 是 token 与组件类实现。
 
-**色彩方案：**
-- 主色：#7C3AED (Violet 紫色)
-- 背景：#0D0F1A (深色)
-- 文本：#FAF5FF (灰白色)
-- 成功：#22C55E、警告：#F59E0B、错误：#EF4444
-
-**玻璃效果：**
-```css
-.glass          /* 基础玻璃：60% 不透明度，12px 模糊 */
-.glass-light    /* 轻量玻璃：40% 不透明度，8px 模糊 */
-.glass-heavy    /* 重度玻璃：85% 不透明度，20px 模糊 */
-```
-
-**字体：**
-- 标题：Space Grotesk
-- 正文：DM Sans
-- 自定义滚动条样式
+- 表面：`surface-0..4` 五档石墨色阶，不透明结构层与 1px `hairline` 边框。
+- 强调色：钴蓝 `#0A84FF`，只用于主操作、选中态和焦点；成功/警告/错误使用语义色。
+- 文本：`text-text-1..4` 四档，禁止回到 `text-white/*`、紫色渐变、发光阴影与 emoji 图标。
+- 字体：系统 UI 字体栈，无 Google Fonts 外链；代码用 `font-mono`，动态数字用 `tnum`。
+- 密度与圆角：13px 基准字号、19px 页面标题、4px 间距网格；控件 6px、卡片 9px、模态 12px。
+- 动效：120/180/240ms、`--ease-out`、按压反馈与 `prefers-reduced-motion`；不新增 `transition-all` 或 hover 位移辉光。
+- 阴影和模糊仅用于悬浮层。搜索窗保留毛玻璃；模态遮罩、截图浮动工具栏也有模糊，不能宣称全应用只有一处。
+- `.glass` / `.glass-light` / `.glass-heavy` 是旧类名的**兼容别名**，现已映射到新表面 token，`backdrop-filter: none`；不是旧玻璃主题的入口。
 
 ### 组件架构
 
 **核心组件：**
-1. `Icon.tsx`：SVG 图标系统（基于 Heroicons）
-2. `PluginMarket.tsx`：插件发现和管理
-3. `SearchWindow.tsx`：全局搜索界面
-4. `Settings.tsx`：应用设置
-5. `Toast.tsx`：通知系统
-6. `PermissionDialog.tsx`：权限请求
+1. `components/ui/index.tsx`：共享 UI Kit，17 个原语（Button、IconButton、Card、Field、Toggle、Badge、KeyCap、Segmented、Modal、EmptyState、Spinner、Skeleton、ProgressBar 等）
+2. `Icon.tsx`：项目内维护的 lucide 风格 SVG 图标表，配合 `getPluginIconName()` 使用；当前没有 `lucide-react` 依赖
+3. `PluginMarket.tsx`：插件发现和管理
+4. `SearchWindow.tsx` / `SearchWindow.css`：全局搜索界面
+5. `Settings.tsx` / `SettingsNav.tsx`：应用设置与分类导航
+6. `Toast.tsx` / `contexts/ToastContext.tsx`：通知系统
+7. `PermissionDialog.tsx`：权限请求
+
+按钮、表单、状态反馈优先复用 UI Kit；选择器用 `components/ui/select.tsx`。图标用现有 `Icon`，不要在页面里另建图标体系。
 
 **插件小部件：**
 - `DateTimeWidget.tsx`：实时时钟显示
@@ -429,8 +449,10 @@ Events.On('myevent:data', (ev: { data: string }) => {
 - `ClipboardWidget.tsx`：剪贴板历史查看器
 - `JSONEditorWidget.tsx`：基于 Monaco 的 JSON 编辑器
 - `ProcessManagerWidget.tsx`：进程列表界面
-- `ScreenshotWidget.tsx`：截图控制
+- `Screenshot2Widget.tsx` / `components/Screenshot2/`：截图控制、覆盖层与标注
 - `SystemInfoWidget.tsx`：系统统计显示
+
+另含 `kanban/`、`vault/`、`imageprocessor/` 子模块，以及书签、便签、图床、IP 信息、本地翻译、密码生成与音乐播放器；音乐主实现位于 `widgets/MusicPlayerWidget.tsx`。
 
 **自定义 Hooks：**
 - `usePlugins()`：插件列表、启用/禁用、搜索
@@ -441,7 +463,7 @@ Events.On('myevent:data', (ev: { data: string }) => {
 
 ### 路由和导航
 
-**技术栈：** React Router v6
+**技术栈：** React Router v7
 
 **路由架构：**
 ```
@@ -465,6 +487,9 @@ frontend/src/router/
 - 搜索窗口：`/search`
 - 截图覆盖层：`/screenshot2-overlay`
 - 贴图窗口：`/pin-window?id={windowId}`
+- 便签窗口：`/sticky-window?id={noteId}`
+- 翻译窗口：`/localtranslate-window`
+- 音乐窗口：`/music-player`
 
 **布局结构：**
 - `MainLayout`：侧边栏 + Outlet 嵌套路由
@@ -473,11 +498,30 @@ frontend/src/router/
 **导航系统：**
 - `Sidebar` 组件使用 `useNavigate` 和 `useLocation`
 - 动态插件菜单项从启用的插件自动生成
-- 插件视图缓存通过组件结构保持状态
+- `PluginPage` 按当前 `pluginId` 渲染单个 `PluginContent`；虽然有 `isActive`/`hidden` 与 KeepAlive 注释，当前调用始终传 `true`，没有多插件缓存容器。不要依赖切页后状态自动保留。
+- 普通工具复用 `StandardPluginLayout`；看板、Markdown、密码库、书签、IP 信息等使用专用布局，不是全部插件统一套标准布局。
 
 **插件生命周期守卫：**
 - `PluginGuard` 统一管理插件的 enter/leave 回调
 - 支持 `registerPluginLifecycle()` 注册自定义处理函数
+
+### 绑定与浏览器 mock
+
+- 实际绑定目录为 **`frontend/bindings/`**，不在 `frontend/src/bindings/`。Vite 插件、TypeScript include 和组件导入均指向该目录。
+- 从仓库根运行 `task common:generate:bindings` 或 `wails3 generate bindings -clean=true -ts`；不要从 `frontend/` 执行根目录生成命令，以免写到嵌套目录。
+- 生成文件不能手改；服务方法、枚举、模型和调用 ID 以 Go 服务重新生成的结果为准。
+- `npm run dev:mock` 加载 `.env.mock` 中的 `VITE_MOCK=1`；`main.tsx` 只在 `DEV && VITE_MOCK === '1'` 时加载 `src/dev/mockTransport.ts`。仅设 `MOCK=1` 不会启用。
+- mock 用 TypeScript AST 从生成绑定解析 `methodID` 到命名空间服务方法，当前生成绑定为 319 个方法；未知方法显式报错。搜索/设置和部分工具有 handler，音乐 `ServiceLX` 提供空数据状态；不能用 mock 证明真实音频、后端或系统集成可用。
+
+### 已知待办
+
+- 完成 `frontend/QA_PAGES.md` 的逐页及原生功能验收；浏览器回归范围见上文。
+- `GeneralSettings` 的语言切换仍提示“正在开发中”；主题已支持深色、浅色、跟随系统，持久化并跨窗口同步。Monaco 和 Markdown 预览代码高亮跟随主题。
+- Markdown 预览使用 raw → sanitize → KaTeX(trust=false) → highlight；HTML 导出再次经 Go bluemonday 清洗并添加禁用脚本/框架 CSP。安全及脚注/公式兼容测试通过，修改策略时必须保留这些回归检查。
+- `TunnelWidget` 已改为依赖稳定的 toast 回调，避免重复订阅。
+- `go test ./...` 仍有既有失败：图片处理测试缺少 `writeTestPNGWithSize`，插件管理测试的注册后状态预期与实现不一致。Markdown 与搜索快捷键专项测试通过。
+- `music-note` / `shuffle` / `crop` / `compress` 图标尚未收录，README 截图仍需核对更新。
+- 图片批处理 `startTime` 是 Go `Unix()` 秒，前端乘 1000；处理结果 `duration` 是毫秒。当前耗时单位匹配，无需仅因单位疑虑改动。
 
 ## 多窗口管理
 
@@ -487,6 +531,7 @@ frontend/src/router/
 2. **搜索窗口**：无边框、始终置顶的搜索（Spotlight/Alfred 风格）
 3. **截图覆盖层**：全屏截图和标注工具
 4. **贴图窗口**：悬浮图片显示窗口
+5. **便签、翻译、音乐窗口**：各自独立的工具界面
 
 ### 窗口通信
 - 基于事件的消息传递
@@ -502,7 +547,7 @@ info:
   productName: "LTools"
   productIdentifier: "com.ltools.app"
   description: "多功能开发工具集"
-  version: "0.1.0"
+  version: "0.1.5"
 
 dev_mode:
   log_level: warn
@@ -526,7 +571,7 @@ dev_mode:
 
 ### 开发模式配置
 - 开发模式行为在 `build/config.yml` 的 `dev_mode` 部分配置
-- Vite 开发服务器运行在端口 9245（可通过 `WAILS_VITE_PORT` 环境变量配置）
+- `task dev` 的前端任务默认传入端口 9245（可通过 `WAILS_VITE_PORT` 配置）；直接运行 Vite 脚本需自行指定端口
 - 文件监视忽略：`.git`、`node_modules`、`frontend`、`bin`
 
 ### 平台特定说明
@@ -552,7 +597,7 @@ dev_mode:
 - 调试日志用于故障排除
 
 ### 性能考虑
-- 插件状态缓存
+- 不假设插件视图已有 KeepAlive 缓存；切页时需明确状态与事件的生命周期
 - 事件防抖（默认 1000ms）
 - 骨架屏加载
 - 重型组件懒加载
@@ -560,6 +605,9 @@ dev_mode:
 ## 文档资源
 
 **项目文档：**
+- `frontend/DESIGN.md`：当前前端设计规范（UI 改动前必读）
+- `frontend/REWRITE_PROGRESS.md`：重写记录与当前核对结论
+- `frontend/QA_PAGES.md`：浏览器页面验收清单
 - `docs/design/plugin-system.md`：插件架构设计
 - `docs/DESIGN_SYSTEM.md`：UI/UX 设计系统
 - `docs/WAILS_WINDOW_BEHAVIOR.md`：窗口管理

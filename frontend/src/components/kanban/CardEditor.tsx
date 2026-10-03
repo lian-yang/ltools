@@ -3,6 +3,7 @@ import DatePicker, { registerLocale } from 'react-datepicker';
 import { zhCN } from 'date-fns/locale/zh-CN';
 import { Card, Label, Priority, ChecklistItem, CardUpdate } from '../../../bindings/ltools/plugins/kanban/models';
 import { Icon } from '../Icon';
+import { Button, IconButton, Input, Textarea } from '../ui';
 import 'react-datepicker/dist/react-datepicker.css';
 
 // 注册中文语言包
@@ -22,14 +23,14 @@ interface CardEditorProps {
 }
 
 const priorityOptions: { value: Priority; label: string; color: string }[] = [
-  { value: Priority.PriorityHigh, label: '高', color: '#EF4444' },
-  { value: Priority.PriorityMedium, label: '中', color: '#F59E0B' },
-  { value: Priority.PriorityLow, label: '低', color: '#22C55E' },
+  { value: Priority.PriorityHigh, label: '高', color: 'var(--color-error-text)' },
+  { value: Priority.PriorityMedium, label: '中', color: 'var(--color-warning-text)' },
+  { value: Priority.PriorityLow, label: '低', color: 'var(--color-success-text)' },
 ];
 
 const labelColors = [
-  '#EF4444', '#F59E0B', '#22C55E', '#3B82F6', '#8B5CF6',
-  '#EC4899', '#06B6D4', '#84CC16', '#F97316', '#6366F1',
+  '#FF453A', '#FF9F0A', '#30D158', '#0A84FF', '#BF5AF2',
+  '#FF375F', '#64D2FF', '#32D74B', '#FF9F0A', '#5E5CE6',
 ];
 
 export function CardEditor({
@@ -48,7 +49,7 @@ export function CardEditor({
   const [description, setDescription] = useState(card.description || '');
   const [priority, setPriority] = useState<Priority>(card.priority || Priority.PriorityMedium);
   const [dueDate, setDueDate] = useState<Date | null>(
-    card.dueDate ? new Date(card.dueDate) : null
+    card.dueDate ? new Date(card.dueDate as string | Date) : null
   );
   const [newChecklistText, setNewChecklistText] = useState('');
   const [showLabelPicker, setShowLabelPicker] = useState(false);
@@ -65,7 +66,7 @@ export function CardEditor({
     setTitle(card.title);
     setDescription(card.description || '');
     setPriority(card.priority || Priority.PriorityMedium);
-    setDueDate(card.dueDate ? new Date(card.dueDate) : null);
+    setDueDate(card.dueDate ? new Date(card.dueDate as string | Date) : null);
     setSelectedLabels(card.labels || []);
     setChecklists(card.checklists || []);
   }, [card]);
@@ -79,7 +80,8 @@ export function CardEditor({
     };
 
     if (dueDate) {
-      updates.dueDate = dueDate;
+      // Go 端 *time.Time 期望 RFC3339 字符串
+      updates.dueDate = dueDate.toISOString();
     }
 
     onSave(updates);
@@ -152,94 +154,80 @@ export function CardEditor({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-[999] flex items-center justify-center">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="scrim absolute inset-0" onClick={onClose} />
 
       {/* Dialog */}
       <div
-        className="relative glass-heavy rounded-xl w-[560px] max-w-[95vw] max-h-[90vh] overflow-hidden flex flex-col animate-scale-in"
+        className="glass-heavy animate-scale-in relative flex max-h-[90vh] w-[560px] max-w-[95vw] flex-col overflow-hidden"
         onKeyDown={handleKeyDown}
       >
-        {/* Fixed Header - 使用绝对定位 */}
-        <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4 border-b border-white/10 bg-[#0D0F1A]/95 backdrop-blur-md rounded-t-xl">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={onClose}
-              className="p-2 -ml-2 rounded-lg hover:bg-white/10 text-white/60 hover:text-white transition-colors"
-              title="返回"
-            >
-              <Icon name="arrow-left" size={20} />
-            </button>
-            <h3 className="text-lg font-semibold text-white">编辑卡片</h3>
+        {/* Fixed Header */}
+        <div className="hairline-b flex shrink-0 items-center justify-between px-4 py-3">
+          <div className="flex items-center gap-2.5">
+            <IconButton name="arrow-left" label="返回" size="sm" onClick={onClose} />
+            <h3 className="text-[14px] font-semibold text-text-1">编辑卡片</h3>
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={onDelete}
-              className="p-2 rounded-lg hover:bg-[#EF4444]/10 text-white/40 hover:text-[#EF4444] transition-colors"
-              title="删除卡片"
-            >
-              <Icon name="trash" size={18} />
-            </button>
-          </div>
+          <IconButton name="trash" label="删除卡片" size="sm" onClick={onDelete} />
         </div>
 
-        {/* Content - 添加顶部 padding 为头部留出空间 */}
-        <div className="flex-1 overflow-y-auto p-5 pt-[72px] space-y-5 scrollbar-thin">
+        {/* Content */}
+        <div className="flex-1 space-y-5 overflow-y-auto p-5">
           {/* Title */}
           <div>
-            <label className="block text-sm font-medium text-white/70 mb-2">标题</label>
-            <input
+            <label className="field-label">标题</label>
+            <Input
               ref={titleRef}
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-[#7C3AED] focus:ring-1 focus:ring-[#7C3AED]/50 transition-all"
-              placeholder="输入卡片标题..."
+              placeholder="输入卡片标题…"
             />
           </div>
 
           {/* Description */}
           <div>
-            <label className="block text-sm font-medium text-white/70 mb-2">描述</label>
-            <textarea
+            <label className="field-label">描述</label>
+            <Textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
-              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-[#7C3AED] focus:ring-1 focus:ring-[#7C3AED]/50 transition-all resize-none"
-              placeholder="添加详细描述..."
+              className="resize-none"
+              placeholder="添加详细描述…"
             />
           </div>
 
-          {/* Priority & Due Date - Two Column Layout */}
+          {/* Priority & Due Date */}
           <div className="grid grid-cols-2 gap-4">
             {/* Priority */}
             <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">优先级</label>
+              <label className="field-label">优先级</label>
               <div className="flex gap-2">
-                {priorityOptions.map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => setPriority(option.value)}
-                    className={`flex-1 px-2 py-2 rounded-lg border-2 transition-all ${
-                      priority === option.value ? '' : 'border-white/10 hover:border-white/20'
-                    }`}
-                    style={{
-                      borderColor: priority === option.value ? option.color : undefined,
-                      backgroundColor: priority === option.value ? `${option.color}15` : 'transparent',
-                      color: priority === option.value ? option.color : 'rgba(255,255,255,0.5)',
-                    }}
-                  >
-                    <span className="text-sm font-medium">{option.label}</span>
-                  </button>
-                ))}
+                {priorityOptions.map((option) => {
+                  const active = priority === option.value;
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setPriority(option.value)}
+                      className="flex-1 rounded-[6px] border px-2 py-1.5 text-[12px] font-medium transition-colors duration-150"
+                      style={{
+                        borderColor: active ? option.color : 'var(--color-hairline-strong)',
+                        backgroundColor: active ? 'rgba(255,255,255,0.04)' : 'transparent',
+                        color: active ? option.color : 'var(--color-text-3)',
+                      }}
+                    >
+                      {option.label}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
             {/* Due Date with DatePicker */}
             <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">截止日期</label>
+              <label className="field-label">截止日期</label>
               <DatePicker
                 selected={dueDate}
                 onChange={(date: Date | null) => setDueDate(date)}
@@ -250,27 +238,25 @@ export function CardEditor({
                 customInput={
                   <button
                     type="button"
-                    className={`w-full px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-left transition-all hover:border-white/20 focus:outline-none focus:border-[#7C3AED] focus:ring-1 focus:ring-[#7C3AED]/50 ${
-                      dueDate ? 'text-white' : 'text-white/40'
+                    className={`input flex h-8 items-center justify-between text-left ${
+                      dueDate ? 'text-text-1' : 'text-text-4'
                     }`}
                   >
-                    <div className="flex items-center justify-between">
-                      <span className="flex items-center gap-2">
-                        <Icon name="calendar" size={16} className={dueDate ? 'text-[#7C3AED]' : 'text-white/40'} />
-                        {formatDateDisplay(dueDate)}
+                    <span className="flex items-center gap-1.5">
+                      <Icon name="calendar" size={13} color={dueDate ? 'var(--color-accent-text)' : 'var(--color-text-4)'} />
+                      {formatDateDisplay(dueDate)}
+                    </span>
+                    {dueDate && (
+                      <span
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDueDate(null);
+                        }}
+                        className="text-text-4 transition-colors hover:text-text-2"
+                      >
+                        <Icon name="close" size={12} />
                       </span>
-                      {dueDate && (
-                        <span
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setDueDate(null);
-                          }}
-                          className="text-white/40 hover:text-white/60"
-                        >
-                          <Icon name="close" size={14} />
-                        </span>
-                      )}
-                    </div>
+                    )}
                   </button>
                 }
                 popperClassName="kanban-datepicker-popper"
@@ -280,26 +266,26 @@ export function CardEditor({
 
           {/* Labels */}
           <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="text-sm font-medium text-white/70">标签</label>
+            <div className="mb-2 flex items-center justify-between">
+              <label className="text-[12px] font-medium text-text-2">标签</label>
               <button
                 type="button"
                 onClick={() => setShowLabelPicker(!showLabelPicker)}
-                className="text-xs text-[#7C3AED] hover:text-[#8B5CF6] transition-colors"
+                className="text-[11.5px] text-accent-text transition-colors hover:text-accent-hover"
               >
                 {showLabelPicker ? '收起' : '管理标签'}
               </button>
             </div>
 
             {/* Selected Labels */}
-            <div className="flex flex-wrap gap-1.5 mb-2 min-h-[28px]">
+            <div className="mb-2 flex min-h-[28px] flex-wrap gap-1.5">
               {selectedLabels.map(labelId => {
                 const label = labels.find(l => l.id === labelId);
                 if (!label) return null;
                 return (
                   <span
                     key={label.id}
-                    className="px-2.5 py-1 rounded-lg text-xs font-medium cursor-pointer transition-all hover:opacity-80"
+                    className="cursor-pointer rounded-[5px] px-2 py-0.5 text-[11px] font-medium transition-opacity hover:opacity-80"
                     style={{
                       backgroundColor: `${label.color}20`,
                       color: label.color,
@@ -311,80 +297,74 @@ export function CardEditor({
                 );
               })}
               {selectedLabels.length === 0 && (
-                <span className="text-xs text-white/30 py-1">点击管理标签添加</span>
+                <span className="py-1 text-[11.5px] text-text-4">点击管理标签添加</span>
               )}
             </div>
 
             {/* Label Picker */}
             {showLabelPicker && (
-              <div className="bg-white/5 rounded-xl p-4 space-y-3 border border-white/5">
+              <div className="card-inset space-y-3 p-3.5">
                 {/* Existing Labels */}
                 <div className="flex flex-wrap gap-1.5">
-                  {labels.map(label => (
-                    <button
-                      key={label.id}
-                      type="button"
-                      onClick={() => handleToggleLabel(label.id)}
-                      className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
-                        selectedLabels.includes(label.id) ? 'ring-2 ring-white/30 scale-105' : 'opacity-50 hover:opacity-75'
-                      }`}
-                      style={{
-                        backgroundColor: `${label.color}20`,
-                        color: label.color,
-                      }}
-                    >
-                      {label.name}
-                    </button>
-                  ))}
+                  {labels.map(label => {
+                    const selected = selectedLabels.includes(label.id);
+                    return (
+                      <button
+                        key={label.id}
+                        type="button"
+                        onClick={() => handleToggleLabel(label.id)}
+                        className={`rounded-[5px] px-2 py-0.5 text-[11px] font-medium transition-opacity ${
+                          selected ? 'ring-1 ring-white/40' : 'opacity-50 hover:opacity-80'
+                        }`}
+                        style={{
+                          backgroundColor: `${label.color}20`,
+                          color: label.color,
+                        }}
+                      >
+                        {label.name}
+                      </button>
+                    );
+                  })}
                 </div>
 
                 {/* New Label Form */}
                 {showNewLabel ? (
-                  <div className="space-y-3 pt-2 border-t border-white/5">
-                    <input
+                  <div className="hairline-t space-y-2.5 pt-3">
+                    <Input
                       type="text"
                       value={newLabelName}
                       onChange={(e) => setNewLabelName(e.target.value)}
                       placeholder="标签名称"
-                      className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder-white/30 focus:outline-none focus:border-[#7C3AED]"
                     />
-                    <div className="flex gap-2 flex-wrap">
+                    <div className="flex flex-wrap gap-2">
                       {labelColors.map(color => (
                         <button
                           key={color}
                           type="button"
                           onClick={() => setNewLabelColor(color)}
-                          className={`w-7 h-7 rounded-lg transition-all ${
-                            newLabelColor === color ? 'ring-2 ring-white/50 scale-110' : 'hover:scale-105'
+                          className={`h-6 w-6 rounded-[6px] transition-transform ${
+                            newLabelColor === color ? 'scale-110 ring-2 ring-white/50' : 'hover:scale-105'
                           }`}
                           style={{ backgroundColor: color }}
                         />
                       ))}
                     </div>
                     <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={handleCreateLabel}
-                        className="px-4 py-1.5 bg-[#7C3AED] rounded-lg text-sm text-white hover:bg-[#6D28D9] transition-colors"
-                      >
+                      <Button type="button" variant="primary" size="sm" onClick={handleCreateLabel}>
                         创建
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setShowNewLabel(false)}
-                        className="px-4 py-1.5 bg-white/5 rounded-lg text-sm text-white/60 hover:text-white transition-colors"
-                      >
+                      </Button>
+                      <Button type="button" variant="ghost" size="sm" onClick={() => setShowNewLabel(false)}>
                         取消
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 ) : (
                   <button
                     type="button"
                     onClick={() => setShowNewLabel(true)}
-                    className="text-xs text-[#7C3AED] hover:text-[#8B5CF6] transition-colors flex items-center gap-1"
+                    className="flex items-center gap-1 text-[11.5px] text-accent-text transition-colors hover:text-accent-hover"
                   >
-                    <Icon name="plus" size={12} />
+                    <Icon name="plus" size={11} />
                     新建标签
                   </button>
                 )}
@@ -394,10 +374,10 @@ export function CardEditor({
 
           {/* Checklist */}
           <div>
-            <label className="block text-sm font-medium text-white/70 mb-2">
+            <label className="field-label">
               子任务
               {checklists.length > 0 && (
-                <span className="ml-2 text-xs text-white/40">
+                <span className="tnum ml-2 text-[11px] text-text-4">
                   ({checklists.filter(c => c.completed).length}/{checklists.length})
                 </span>
               )}
@@ -405,36 +385,38 @@ export function CardEditor({
 
             {/* Checklist Items */}
             {checklists.length > 0 && (
-              <div className="space-y-1.5 mb-3 bg-white/5 rounded-xl p-3">
+              <div className="card-inset mb-2.5 space-y-0.5 p-2.5">
                 {checklists.map((item: ChecklistItem) => (
                   <div
                     key={item.id}
-                    className="flex items-center gap-3 group py-1"
+                    className="group flex items-center gap-2.5 py-1"
                   >
                     <button
                       type="button"
                       onClick={() => handleToggleChecklist(item.id, !item.completed)}
-                      className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${
-                        item.completed
-                          ? 'bg-[#22C55E] border-[#22C55E]'
-                          : 'border-white/20 hover:border-[#7C3AED]'
-                      }`}
+                      className="flex h-4 w-4 shrink-0 items-center justify-center rounded-[4px] border transition-colors duration-150"
+                      style={{
+                        borderColor: item.completed ? 'var(--color-success)' : 'var(--color-hairline-strong)',
+                        background: item.completed ? 'var(--color-success)' : 'transparent',
+                      }}
+                      aria-label={item.completed ? '取消完成' : '标记完成'}
                     >
                       {item.completed && (
-                        <Icon name="check" size={12} className="text-white" />
+                        <Icon name="check" size={10} color="#0b0d11" />
                       )}
                     </button>
-                    <span className={`flex-1 text-sm transition-all ${
-                      item.completed ? 'text-white/40 line-through' : 'text-white'
+                    <span className={`min-w-0 flex-1 select-text text-[12.5px] transition-colors ${
+                      item.completed ? 'text-text-4 line-through' : 'text-text-1'
                     }`}>
                       {item.text}
                     </span>
                     <button
                       type="button"
                       onClick={() => handleRemoveChecklist(item.id)}
-                      className="p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-white/10 text-white/40 hover:text-[#EF4444] transition-all"
+                      className="icon-btn icon-btn-sm opacity-0 transition-opacity duration-150 group-hover:opacity-100"
+                      title="删除子任务"
                     >
-                      <Icon name="close" size={14} />
+                      <Icon name="close" size={11} />
                     </button>
                   </div>
                 ))}
@@ -443,101 +425,93 @@ export function CardEditor({
 
             {/* Add Checklist Item */}
             <div className="flex gap-2">
-              <input
+              <Input
                 type="text"
                 value={newChecklistText}
                 onChange={(e) => setNewChecklistText(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleAddChecklist()}
-                placeholder="添加子任务..."
-                className="flex-1 px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder-white/30 focus:outline-none focus:border-[#7C3AED] transition-colors"
+                placeholder="添加子任务…"
               />
-              <button
+              <Button
                 type="button"
+                variant="secondary"
                 onClick={handleAddChecklist}
                 disabled={!newChecklistText.trim()}
-                className="px-4 py-2 bg-[#7C3AED]/20 border border-[#7C3AED]/30 rounded-lg text-sm text-[#7C3AED] hover:bg-[#7C3AED]/30 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
                 添加
-              </button>
+              </Button>
             </div>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end gap-3 p-4 border-t border-white/10 bg-[#0D0F1A]/80">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-5 py-2.5 rounded-xl bg-white/5 text-white/60 hover:bg-white/10 hover:text-white transition-colors"
-          >
+        <div className="hairline-t flex shrink-0 justify-end gap-2 px-4 py-3">
+          <Button variant="ghost" onClick={onClose}>
             取消
-          </button>
-          <button
-            type="button"
-            onClick={handleSave}
-            className="px-5 py-2.5 rounded-xl bg-[#7C3AED] text-white hover:bg-[#6D28D9] transition-colors shadow-lg shadow-[#7C3AED]/25"
-          >
+          </Button>
+          <Button variant="primary" onClick={handleSave}>
             保存更改
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* Custom DatePicker Styles */}
       <style>{`
         .kanban-datepicker-popper {
-          z-index: 100 !important;
+          z-index: 1000 !important;
         }
         .react-datepicker {
-          background: rgba(13, 15, 26, 0.95) !important;
-          border: 1px solid rgba(255, 255, 255, 0.1) !important;
-          border-radius: 12px !important;
-          backdrop-filter: blur(20px);
-          font-family: 'DM Sans', sans-serif !important;
+          background: var(--color-surface-3) !important;
+          border: 1px solid var(--color-hairline-strong) !important;
+          border-radius: 10px !important;
+          font-family: var(--font-ui) !important;
+          box-shadow: var(--shadow-pop) !important;
         }
         .react-datepicker__header {
-          background: rgba(124, 58, 237, 0.1) !important;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
-          border-radius: 12px 12px 0 0 !important;
+          background: var(--color-surface-2) !important;
+          border-bottom: 1px solid var(--color-hairline) !important;
+          border-radius: 10px 10px 0 0 !important;
         }
         .react-datepicker__current-month {
-          color: #FAF5FF !important;
+          color: var(--color-text-1) !important;
           font-weight: 600 !important;
           padding: 8px 0 !important;
         }
         .react-datepicker__day-name {
-          color: rgba(250, 245, 255, 0.5) !important;
-          width: 32px !important;
-          line-height: 32px !important;
+          color: var(--color-text-3) !important;
+          width: 30px !important;
+          line-height: 30px !important;
         }
         .react-datepicker__day {
-          color: rgba(250, 245, 255, 0.8) !important;
-          width: 32px !important;
-          line-height: 32px !important;
-          border-radius: 8px !important;
+          color: var(--color-text-2) !important;
+          width: 30px !important;
+          line-height: 30px !important;
+          border-radius: 6px !important;
           margin: 2px !important;
         }
         .react-datepicker__day:hover {
-          background: rgba(124, 58, 237, 0.3) !important;
-          color: #fff !important;
+          background: rgba(255, 255, 255, 0.08) !important;
+          color: var(--color-text-1) !important;
         }
         .react-datepicker__day--selected {
-          background: #7C3AED !important;
+          background: var(--color-accent) !important;
           color: #fff !important;
         }
         .react-datepicker__day--keyboard-selected {
-          background: rgba(124, 58, 237, 0.3) !important;
+          background: var(--color-accent-subtle) !important;
+          color: var(--color-accent-text) !important;
         }
         .react-datepicker__day--today {
-          border: 1px solid #7C3AED !important;
+          border: 1px solid var(--color-accent) !important;
         }
         .react-datepicker__navigation-icon::before {
-          border-color: #FAF5FF !important;
+          border-color: var(--color-text-2) !important;
         }
         .react-datepicker__navigation {
           top: 12px !important;
         }
         .react-datepicker__navigation:hover *::before {
-          border-color: #7C3AED !important;
+          border-color: var(--color-accent-text) !important;
         }
       `}</style>
     </div>

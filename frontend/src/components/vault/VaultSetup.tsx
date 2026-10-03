@@ -1,10 +1,18 @@
 import React, { useState } from 'react';
 import * as VaultService from '../../../bindings/ltools/plugins/vault/vaultservice';
 import { Icon } from '../Icon';
+import { Button, Input, ProgressBar } from '../ui';
 
 interface VaultSetupProps {
   onComplete: () => void;
 }
+
+const strengthLevels = [
+  { max: 2, text: '弱', tone: 'error' as const },
+  { max: 3, text: '中等', tone: 'warning' as const },
+  { max: 4, text: '强', tone: 'success' as const },
+  { max: 5, text: '非常强', tone: 'success' as const },
+];
 
 const VaultSetup: React.FC<VaultSetupProps> = ({ onComplete }) => {
   const [masterPassword, setMasterPassword] = useState('');
@@ -14,8 +22,8 @@ const VaultSetup: React.FC<VaultSetupProps> = ({ onComplete }) => {
   const [error, setError] = useState('');
 
   // 密码强度检查
-  const getPasswordStrength = (password: string): { level: number; text: string; color: string } => {
-    if (!password) return { level: 0, text: '', color: '' };
+  const getPasswordStrength = (password: string): { level: number; text: string; tone: 'error' | 'warning' | 'success' } => {
+    if (!password) return { level: 0, text: '', tone: 'error' };
 
     let score = 0;
     if (password.length >= 8) score++;
@@ -24,10 +32,8 @@ const VaultSetup: React.FC<VaultSetupProps> = ({ onComplete }) => {
     if (/\d/.test(password)) score++;
     if (/[^a-zA-Z0-9]/.test(password)) score++;
 
-    if (score <= 2) return { level: 1, text: '弱', color: 'bg-red-500' };
-    if (score <= 3) return { level: 2, text: '中等', color: 'bg-yellow-500' };
-    if (score <= 4) return { level: 3, text: '强', color: 'bg-green-500' };
-    return { level: 4, text: '非常强', color: 'bg-green-600' };
+    const found = strengthLevels.find((s) => score <= s.max) ?? strengthLevels[strengthLevels.length - 1];
+    return { level: score, text: found.text, tone: found.tone };
   };
 
   const strength = getPasswordStrength(masterPassword);
@@ -65,60 +71,46 @@ const VaultSetup: React.FC<VaultSetupProps> = ({ onComplete }) => {
   };
 
   return (
-    <div className="flex items-center justify-center h-full">
-      <div className="w-full max-w-md p-8 glass rounded-2xl">
+    <div className="flex h-full items-center justify-center">
+      <div className="card w-full max-w-[400px] p-7">
         {/* 头部 */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/20 mb-4">
-            <Icon name="shield" className="w-8 h-8 text-primary" />
+        <div className="mb-6 text-center">
+          <div className="mx-auto mb-3.5 flex h-12 w-12 items-center justify-center rounded-[12px] border border-hairline bg-surface-2">
+            <Icon name="shield" size={22} color="var(--color-accent-text)" />
           </div>
-          <h1 className="text-2xl font-bold text-white mb-2">创建密码保险库</h1>
-          <p className="text-gray-400">
-            设置一个主密码来保护您的所有密码
-          </p>
+          <h1 className="text-[17px] font-semibold text-text-1">创建密码保险库</h1>
+          <p className="mt-1 text-[12px] text-text-3">设置一个主密码来保护您的所有密码</p>
         </div>
 
         {/* 表单 */}
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-4">
           {/* 主密码 */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              主密码
-            </label>
+            <label className="field-label">主密码</label>
             <div className="relative">
-              <input
+              <Input
                 type={showPassword ? 'text' : 'password'}
                 value={masterPassword}
                 onChange={(e) => setMasterPassword(e.target.value)}
-                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg
-                         text-white placeholder-gray-400 focus:outline-none focus:border-primary
-                         pr-12"
+                className="h-9 pr-10"
                 placeholder="输入主密码"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+                className="icon-btn absolute right-1 top-1 h-7 w-7"
+                aria-label={showPassword ? '隐藏密码' : '显示密码'}
               >
-                <Icon name={showPassword ? 'eye-off' : 'eye'} className="w-5 h-5" />
+                <Icon name={showPassword ? 'eye-off' : 'eye'} size={14} />
               </button>
             </div>
 
             {/* 密码强度指示器 */}
             {masterPassword && (
               <div className="mt-2">
-                <div className="flex gap-1 mb-1">
-                  {[1, 2, 3, 4].map((level) => (
-                    <div
-                      key={level}
-                      className={`h-1 flex-1 rounded-full transition-colors ${
-                        level <= strength.level ? strength.color : 'bg-gray-700'
-                      }`}
-                    />
-                  ))}
-                </div>
-                <p className="text-xs text-gray-400">
-                  密码强度: <span className="text-white">{strength.text}</span>
+                <ProgressBar value={(strength.level / 5) * 100} tone={strength.tone} />
+                <p className="mt-1 text-[11px] text-text-3">
+                  密码强度:<span className="text-text-1">{strength.text}</span>
                 </p>
               </div>
             )}
@@ -126,60 +118,46 @@ const VaultSetup: React.FC<VaultSetupProps> = ({ onComplete }) => {
 
           {/* 确认密码 */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              确认密码
-            </label>
-            <input
+            <label className="field-label">确认密码</label>
+            <Input
               type={showPassword ? 'text' : 'password'}
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg
-                       text-white placeholder-gray-400 focus:outline-none focus:border-primary"
+              className="h-9"
               placeholder="再次输入主密码"
             />
           </div>
 
           {/* 错误信息 */}
           {error && (
-            <div className="p-3 bg-red-500/20 border border-red-500/30 rounded-lg text-red-400 text-sm">
+            <div className="rounded-[6px] px-3 py-2 text-[12px]" style={{ background: 'rgba(255,69,58,0.12)', color: 'var(--color-error-text)' }}>
               {error}
             </div>
           )}
 
           {/* 提示 */}
-          <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-            <div className="flex gap-3">
-              <Icon name="warning" className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" />
-              <div className="text-sm text-gray-300">
-                <p className="font-medium text-yellow-500 mb-1">重要提示</p>
-                <p>
-                  主密码是访问您所有密码的唯一方式。如果忘记主密码，将无法恢复您的数据。
-                  请务必牢记您的主密码。
-                </p>
+          <div className="rounded-[7px] px-3.5 py-3" style={{ background: 'rgba(255,159,10,0.08)', border: '1px solid rgba(255,159,10,0.18)' }}>
+            <div className="flex gap-2.5">
+              <Icon name="warning" size={14} color="var(--color-warning-text)" className="mt-0.5 shrink-0" />
+              <div className="text-[11.5px] leading-relaxed text-text-2">
+                <p className="mb-0.5 font-medium" style={{ color: 'var(--color-warning-text)' }}>重要提示</p>
+                <p>主密码是访问您所有密码的唯一方式。如果忘记主密码,将无法恢复您的数据。请务必牢记。</p>
               </div>
             </div>
           </div>
 
           {/* 提交按钮 */}
-          <button
+          <Button
             type="submit"
-            disabled={loading || !masterPassword || !confirmPassword}
-            className="w-full py-3 bg-primary hover:bg-primary/80 disabled:bg-gray-600
-                     disabled:cursor-not-allowed rounded-lg text-white font-medium
-                     transition-colors flex items-center justify-center gap-2"
+            variant="primary"
+            size="lg"
+            className="w-full"
+            loading={loading}
+            disabled={!masterPassword || !confirmPassword}
+            icon="shield"
           >
-            {loading ? (
-              <>
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                <span>创建中...</span>
-              </>
-            ) : (
-              <>
-                <Icon name="shield" className="w-5 h-5" />
-                <span>创建保险库</span>
-              </>
-            )}
-          </button>
+            {loading ? '创建中…' : '创建保险库'}
+          </Button>
         </form>
       </div>
     </div>

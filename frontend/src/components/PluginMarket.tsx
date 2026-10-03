@@ -1,11 +1,41 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo, type KeyboardEvent } from 'react';
 import { usePlugins } from '../plugins/usePlugins';
 import { searchPlugins } from '../plugins/PluginLoader';
 import { PluginMetadata, PluginState, PluginType } from '../../bindings/ltools/internal/plugins';
 import { Icon } from './Icon';
 import { useToast } from '../hooks/useToast';
 import { ToastContainer } from './Toast';
-import { getPluginIcon } from '../utils/pluginHelpers';
+import { getPluginIconName } from '../utils/pluginHelpers';
+import {
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  IconButton,
+  Input,
+  PageHeader,
+  Segmented,
+  Skeleton,
+  type BadgeTone,
+  type SegmentedOption,
+} from './ui';
+
+/**
+ * 插件状态 → 徽章（文案 + 色调）
+ */
+const STATE_BADGES: Partial<Record<PluginState, { label: string; tone: BadgeTone }>> = {
+  [PluginState.PluginStateEnabled]: { label: '已启用', tone: 'success' },
+  [PluginState.PluginStateDisabled]: { label: '已禁用', tone: 'neutral' },
+  [PluginState.PluginStateError]: { label: '错误', tone: 'error' },
+  [PluginState.PluginStateInstalled]: { label: '已安装', tone: 'neutral' },
+};
+
+const TYPE_LABELS: Record<PluginType, string> = {
+  [PluginType.$zero]: '未知',
+  [PluginType.PluginTypeBuiltIn]: '内置',
+  [PluginType.PluginTypeWeb]: 'Web',
+  [PluginType.PluginTypeNative]: '原生',
+};
 
 /**
  * 插件卡片组件
@@ -19,156 +49,103 @@ interface PluginCardProps {
 
 function PluginCard({ plugin, onEnable, onDisable, isLoading }: PluginCardProps): JSX.Element {
   const isEnabled = plugin.state === PluginState.PluginStateEnabled;
-  const displayIcon = getPluginIcon(plugin);
-
-  // 获取状态样式
-  const getStatusStyles = () => {
-    switch (plugin.state) {
-      case PluginState.PluginStateEnabled:
-        return 'bg-[#22C55E]/10 text-[#22C55E] border-[#22C55E]/20';
-      case PluginState.PluginStateDisabled:
-        return 'bg-[#F59E0B]/10 text-[#F59E0B] border-[#F59E0B]/20';
-      case PluginState.PluginStateError:
-        return 'bg-[#EF4444]/10 text-[#EF4444] border-[#EF4444]/20';
-      default:
-        return 'bg-white/5 text-white/50 border-white/10';
-    }
-  };
-
-  // 获取状态文本
-  const getStatusText = () => {
-    switch (plugin.state) {
-      case PluginState.PluginStateEnabled:
-        return '已启用';
-      case PluginState.PluginStateDisabled:
-        return '已禁用';
-      case PluginState.PluginStateError:
-        return '错误';
-      default:
-        return '未知';
-    }
-  };
-
-  // 获取插件类型徽章样式
-  const getTypeBadge = () => {
-    switch (plugin.type) {
-      case PluginType.PluginTypeBuiltIn:
-        return { label: '内置', className: 'bg-[#7C3AED]/10 text-[#A78BFA] border-[#7C3AED]/20' };
-      case PluginType.PluginTypeWeb:
-        return { label: 'Web', className: 'bg-[#3B82F6]/10 text-[#60A5FA] border-[#3B82F6]/20' };
-      case PluginType.PluginTypeNative:
-        return { label: '原生', className: 'bg-[#22C55E]/10 text-[#22C55E] border-[#22C55E]/20' };
-      default:
-        return { label: '未知', className: 'bg-white/5 text-white/50 border-white/10' };
-    }
-  };
-
-  const typeBadge = getTypeBadge();
+  const stateBadge =
+    STATE_BADGES[plugin.state] ?? { label: '未知', tone: 'neutral' as BadgeTone };
+  const typeLabel = TYPE_LABELS[plugin.type] ?? '未知';
 
   return (
-    <div className="glass-light rounded-xl p-5 hover-lift transition-all duration-200 group">
-      {/* 头部 */}
-      <div className="flex items-start gap-4 mb-4">
-        {/* 图标 */}
-        <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-[#7C3AED]/20 to-[#A78BFA]/20 flex items-center justify-center text-2xl flex-shrink-0" title={displayIcon}>
-          {displayIcon}
+    <Card hover className="flex flex-col p-4">
+      {/* 头部：图标 + 名称/元信息 + 状态徽章 */}
+      <div className="flex items-start gap-3">
+        <div className="card-inset flex h-10 w-10 shrink-0 items-center justify-center">
+          <Icon name={getPluginIconName(plugin)} size={20} className="text-text-2" />
         </div>
-
-        {/* 信息 */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0">
-              <h3 className="text-lg font-semibold text-white truncate">
-                {plugin.name}
-              </h3>
-              <p className="text-sm text-white/40">
-                v{plugin.version} · by {plugin.author}
-              </p>
-            </div>
-
-            {/* 状态徽章 */}
-            <div className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusStyles()} flex-shrink-0`}>
-              {getStatusText()}
-            </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="min-w-0 truncate text-[13px] font-semibold text-text-1" title={plugin.name}>
+              {plugin.name}
+            </h3>
+            <Badge tone={stateBadge.tone} className="shrink-0">
+              {stateBadge.label}
+            </Badge>
           </div>
+          <p
+            className="tnum mt-0.5 truncate text-[12px] text-text-3"
+            title={`v${plugin.version} · by ${plugin.author}`}
+          >
+            v{plugin.version} · {plugin.author}
+          </p>
         </div>
       </div>
 
       {/* 描述 */}
-      <p className="text-sm text-white/60 mb-4 line-clamp-2">
+      <p className="mt-3 line-clamp-2 min-h-[36px] text-[12px] leading-normal text-text-2">
         {plugin.description}
       </p>
 
-      {/* 关键词 */}
-      {plugin.keywords && plugin.keywords.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-4">
-          {plugin.keywords.slice(0, 3).map((keyword, index) => (
-            <span
-              key={index}
-              className="px-2.5 py-1 rounded-md bg-[#7C3AED]/10 text-[#A78BFA] text-xs border border-[#7C3AED]/20"
-            >
-              {keyword}
-            </span>
+      {/* 权限 */}
+      {plugin.permissions && plugin.permissions.length > 0 && (
+        <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+          <span className="text-[11px] text-text-4">权限</span>
+          {plugin.permissions.map((permission, i) => (
+            <Badge key={`${permission}-${i}`} tone="neutral">
+              {permission}
+            </Badge>
           ))}
         </div>
       )}
 
-      {/* 权限 */}
-      {plugin.permissions && plugin.permissions.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-4">
-          <span className="text-xs text-white/40">权限:</span>
-          {plugin.permissions.map((permission, index) => (
-            <span
-              key={index}
-              className="px-2 py-0.5 rounded bg-[#F59E0B]/10 text-[#F59E0B] text-xs border border-[#F59E0B]/20"
-            >
-              {permission}
-            </span>
+      {/* 关键词 */}
+      {plugin.keywords && plugin.keywords.length > 0 && (
+        <div className="mt-2.5 flex flex-wrap gap-1.5">
+          {plugin.keywords.slice(0, 3).map((keyword, i) => (
+            <Badge key={`${keyword}-${i}`} tone="neutral">
+              {keyword}
+            </Badge>
           ))}
         </div>
       )}
 
       {/* 底部操作栏 */}
-      <div className="flex items-center justify-between pt-4 border-t border-white/10">
-        {/* 类型徽章 */}
-        <span className={`px-3 py-1 rounded-md text-xs font-medium border ${typeBadge.className}`}>
-          {typeBadge.label}
-        </span>
-
-        {/* 操作按钮 */}
-        <div className="flex items-center gap-3">
+      <div className="hairline-t mt-3 flex items-center justify-between gap-2 pt-3">
+        <Badge tone="neutral">{typeLabel}</Badge>
+        <div className="flex items-center gap-1.5">
           {plugin.homepage && (
             <a
               href={plugin.homepage}
               target="_blank"
               rel="noopener noreferrer"
-              className="p-2 rounded-lg text-white/40 hover:text-white/80 hover:bg-white/5 transition-all duration-200 clickable"
+              className="icon-btn"
               title="查看主页"
+              aria-label="查看主页"
             >
-              <Icon name="external-link" size={16} />
+              <Icon name="external-link" size={15} />
             </a>
           )}
-
           {isEnabled ? (
-            <button
-              className="px-4 py-2 rounded-lg bg-[#F59E0B]/10 text-[#F59E0B] border border-[#F59E0B]/20 hover:bg-[#F59E0B]/20 transition-all duration-200 text-sm font-medium clickable disabled:opacity-50 disabled:cursor-not-allowed"
+            <Button
+              size="sm"
+              variant="secondary"
               onClick={() => onDisable(plugin.id)}
               disabled={isLoading}
+              loading={isLoading}
             >
-              {isLoading ? '处理中...' : '禁用'}
-            </button>
+              禁用
+            </Button>
           ) : (
-            <button
-              className="px-4 py-2 rounded-lg bg-[#7C3AED] text-white hover:bg-[#6D28D9] transition-all duration-200 text-sm font-medium clickable hover-lift disabled:opacity-50 disabled:cursor-not-allowed"
+            <Button
+              size="sm"
+              variant="primary"
               onClick={() => onEnable(plugin.id)}
               disabled={isLoading}
+              loading={isLoading}
             >
-              {isLoading ? '处理中...' : '启用'}
-            </button>
+              启用
+            </Button>
           )}
         </div>
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -190,7 +167,7 @@ function SearchBar({ onSearch, resultCount }: SearchBarProps): JSX.Element {
     onSearch(keywords);
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       handleSearch();
     }
@@ -202,49 +179,45 @@ function SearchBar({ onSearch, resultCount }: SearchBarProps): JSX.Element {
   };
 
   return (
-    <div className="glass-light rounded-xl p-4 mb-6">
-      <div className="flex gap-3">
-        {/* 搜索图标 */}
-        <div className="flex items-center justify-center w-10 text-white/40">
-          <Icon name="search" size={20} />
+    <div className="mb-4">
+      <div className="flex items-center gap-2">
+        {/* 搜索输入框（search 图标前缀 + 清除按钮） */}
+        <div className="relative min-w-0 flex-1">
+          <Icon
+            name="search"
+            size={15}
+            className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-text-4"
+          />
+          <Input
+            type="text"
+            className="pr-9 pl-8"
+            placeholder="搜索插件（支持关键词、名称、描述）"
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            onKeyDown={handleKeyDown}
+          />
+          {searchText && (
+            <IconButton
+              name="close"
+              label="清空搜索"
+              size="sm"
+              className="absolute right-1.5 top-1/2 -translate-y-1/2"
+              onClick={handleClear}
+            />
+          )}
         </div>
 
-        {/* 输入框 */}
-        <input
-          type="text"
-          className="flex-1 bg-transparent text-white placeholder-white/30 focus:outline-none"
-          placeholder="搜索插件（支持关键词、名称、描述）..."
-          value={searchText}
-          onChange={(e) => setSearchText(e.target.value)}
-          onKeyPress={handleKeyPress}
-        />
-
-        {/* 清除按钮 */}
-        {searchText && (
-          <button
-            className="p-2 rounded-lg text-white/40 hover:text-white/80 hover:bg-white/5 transition-all duration-200 clickable"
-            onClick={handleClear}
-          >
-            <Icon name="x-circle" size={18} />
-          </button>
-        )}
-
         {/* 搜索按钮 */}
-        <button
-          className="px-5 py-2 rounded-lg bg-[#7C3AED] text-white hover:bg-[#6D28D9] transition-all duration-200 text-sm font-medium clickable"
-          onClick={handleSearch}
-        >
+        <Button variant="primary" icon="search" onClick={handleSearch}>
           搜索
-        </button>
+        </Button>
       </div>
 
       {/* 结果统计 */}
       {resultCount > 0 && (
-        <div className="mt-3 pt-3 border-t border-white/10">
-          <p className="text-sm text-white/40">
-            找到 <span className="text-[#A78BFA] font-medium">{resultCount}</span> 个插件
-          </p>
-        </div>
+        <p className="mt-2 text-[12px] text-text-3">
+          找到 <span className="tnum font-medium text-text-2">{resultCount}</span> 个插件
+        </p>
       )}
     </div>
   );
@@ -253,6 +226,22 @@ function SearchBar({ onSearch, resultCount }: SearchBarProps): JSX.Element {
 /**
  * 插件过滤器组件
  */
+type TypeFilterValue = PluginType | 'all';
+type StateFilterValue = PluginState | 'all';
+
+const TYPE_OPTIONS: SegmentedOption<TypeFilterValue>[] = [
+  { value: 'all', label: '全部' },
+  { value: PluginType.PluginTypeBuiltIn, label: '内置' },
+  { value: PluginType.PluginTypeWeb, label: 'Web' },
+  { value: PluginType.PluginTypeNative, label: '原生' },
+];
+
+const STATE_OPTIONS: SegmentedOption<StateFilterValue>[] = [
+  { value: 'all', label: '全部' },
+  { value: PluginState.PluginStateEnabled, label: '已启用' },
+  { value: PluginState.PluginStateDisabled, label: '已禁用' },
+];
+
 interface PluginFiltersProps {
   onFilterType: (type: PluginType | null) => void;
   onFilterState: (state: PluginState | null) => void;
@@ -262,89 +251,25 @@ interface PluginFiltersProps {
 
 function PluginFilters({ onFilterType, onFilterState, currentType, currentState }: PluginFiltersProps): JSX.Element {
   return (
-    <div className="glass-light rounded-xl p-4 flex flex-wrap gap-3 mb-6">
+    <div className="mb-5 flex flex-wrap items-center gap-x-5 gap-y-2">
       {/* 类型过滤器 */}
       <div className="flex items-center gap-2">
-        <span className="text-sm text-white/40">类型:</span>
-        <div className="flex gap-2">
-          <button
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 clickable ${
-              !currentType
-                ? 'bg-[#7C3AED] text-white'
-                : 'bg-white/5 text-white/60 hover:bg-white/10 border border-white/10'
-            }`}
-            onClick={() => onFilterType(null)}
-          >
-            全部
-          </button>
-          <button
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 clickable ${
-              currentType === PluginType.PluginTypeBuiltIn
-                ? 'bg-[#7C3AED]/20 text-[#A78BFA] border border-[#7C3AED]/30'
-                : 'bg-white/5 text-white/60 hover:bg-white/10 border border-white/10'
-            }`}
-            onClick={() => onFilterType(PluginType.PluginTypeBuiltIn)}
-          >
-            内置
-          </button>
-          <button
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 clickable ${
-              currentType === PluginType.PluginTypeWeb
-                ? 'bg-[#3B82F6]/20 text-[#60A5FA] border border-[#3B82F6]/30'
-                : 'bg-white/5 text-white/60 hover:bg-white/10 border border-white/10'
-            }`}
-            onClick={() => onFilterType(PluginType.PluginTypeWeb)}
-          >
-            Web
-          </button>
-          <button
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 clickable ${
-              currentType === PluginType.PluginTypeNative
-                ? 'bg-[#22C55E]/20 text-[#22C55E] border border-[#22C55E]/30'
-                : 'bg-white/5 text-white/60 hover:bg-white/10 border border-white/10'
-            }`}
-            onClick={() => onFilterType(PluginType.PluginTypeNative)}
-          >
-            原生
-          </button>
-        </div>
+        <span className="text-[12px] text-text-3">类型</span>
+        <Segmented<TypeFilterValue>
+          options={TYPE_OPTIONS}
+          value={currentType ?? 'all'}
+          onChange={(value) => onFilterType(value === 'all' ? null : value)}
+        />
       </div>
 
       {/* 状态过滤器 */}
       <div className="flex items-center gap-2">
-        <span className="text-sm text-white/40">状态:</span>
-        <div className="flex gap-2">
-          <button
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 clickable ${
-              !currentState
-                ? 'bg-[#7C3AED] text-white'
-                : 'bg-white/5 text-white/60 hover:bg-white/10 border border-white/10'
-            }`}
-            onClick={() => onFilterState(null)}
-          >
-            全部
-          </button>
-          <button
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 clickable ${
-              currentState === PluginState.PluginStateEnabled
-                ? 'bg-[#22C55E]/20 text-[#22C55E] border border-[#22C55E]/30'
-                : 'bg-white/5 text-white/60 hover:bg-white/10 border border-white/10'
-            }`}
-            onClick={() => onFilterState(PluginState.PluginStateEnabled)}
-          >
-            已启用
-          </button>
-          <button
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 clickable ${
-              currentState === PluginState.PluginStateDisabled
-                ? 'bg-[#F59E0B]/20 text-[#F59E0B] border border-[#F59E0B]/30'
-                : 'bg-white/5 text-white/60 hover:bg-white/10 border border-white/10'
-            }`}
-            onClick={() => onFilterState(PluginState.PluginStateDisabled)}
-          >
-            已禁用
-          </button>
-        </div>
+        <span className="text-[12px] text-text-3">状态</span>
+        <Segmented<StateFilterValue>
+          options={STATE_OPTIONS}
+          value={currentState ?? 'all'}
+          onChange={(value) => onFilterState(value === 'all' ? null : value)}
+        />
       </div>
     </div>
   );
@@ -355,21 +280,37 @@ function PluginFilters({ onFilterType, onFilterState, currentType, currentState 
  */
 function PluginCardSkeleton(): JSX.Element {
   return (
-    <div className="glass-light rounded-xl p-5">
-      <div className="flex items-start gap-4 mb-4">
-        <div className="w-12 h-12 rounded-lg skeleton" />
-        <div className="flex-1">
-          <div className="h-5 w-3/4 skeleton mb-2" />
-          <div className="h-4 w-1/2 skeleton" />
+    <div className="card p-4">
+      <div className="flex items-start gap-3">
+        <Skeleton className="h-10 w-10 rounded-[9px]" />
+        <div className="min-w-0 flex-1">
+          <Skeleton className="h-4 w-2/3" />
+          <Skeleton className="mt-1.5 h-3 w-1/2" />
         </div>
       </div>
-      <div className="h-4 w-full skeleton mb-2" />
-      <div className="h-4 w-2/3 skeleton mb-4" />
-      <div className="flex gap-2 mb-4">
-        <div className="h-6 w-16 skeleton" />
-        <div className="h-6 w-20 skeleton" />
+      <Skeleton className="mt-3 h-3 w-full" />
+      <Skeleton className="mt-1.5 h-3 w-2/3" />
+      <div className="hairline-t mt-4 flex items-center justify-between pt-3">
+        <Skeleton className="h-5 w-12" />
+        <Skeleton className="h-[27px] w-14" />
       </div>
-      <div className="h-px bg-white/10" />
+    </div>
+  );
+}
+
+function MarketSkeleton(): JSX.Element {
+  return (
+    <div aria-busy="true">
+      <div className="mb-5">
+        <Skeleton className="h-5 w-24" />
+        <Skeleton className="mt-2 h-3 w-44" />
+      </div>
+      <Skeleton className="mb-4 h-8" />
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <PluginCardSkeleton key={`plugin-skeleton-${i}`} />
+        ))}
+      </div>
     </div>
   );
 }
@@ -443,52 +384,38 @@ export function PluginMarket(): JSX.Element {
 
   // 加载状态
   if (loading) {
-    return (
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-white mb-2">插件市场</h1>
-          <p className="text-white/40">加载中...</p>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <PluginCardSkeleton key={i} />
-          ))}
-        </div>
-      </div>
-    );
+    return <MarketSkeleton />;
   }
 
   // 错误状态
   if (error) {
     return (
-      <div className="max-w-2xl mx-auto text-center py-12">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[#EF4444]/10 mb-4">
-          <Icon name="exclamation-circle" size={32} color="#EF4444" />
-        </div>
-        <h2 className="text-xl font-semibold text-white mb-2">加载失败</h2>
-        <p className="text-white/60 mb-6">{error.message}</p>
-        <button
-          className="px-6 py-3 rounded-lg bg-[#7C3AED] text-white hover:bg-[#6D28D9] transition-all duration-200 font-medium clickable hover-lift"
-          onClick={() => window.location.reload()}
-        >
-          重新加载
-        </button>
-      </div>
+      <EmptyState
+        icon="exclamation-circle"
+        title="加载失败"
+        description={error.message}
+        className="min-h-[calc(100vh-200px)]"
+        action={
+          <Button variant="primary" icon="refresh" onClick={() => window.location.reload()}>
+            重新加载
+          </Button>
+        }
+      />
     );
   }
 
   // 正常状态
   return (
-    <div className="max-w-7xl mx-auto">
+    <div>
       {/* Toast 通知容器 */}
       <ToastContainer toasts={toasts} onRemove={removeToast} />
+
       {/* 页头 */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-white mb-2">插件市场</h1>
-        <p className="text-white/40">
-          浏览和管理所有可用插件
-        </p>
-      </div>
+      <PageHeader
+        title="插件市场"
+        description="浏览和管理所有可用插件"
+        actions={<span className="tnum text-[12px] text-text-3">{plugins.length} 个插件</span>}
+      />
 
       {/* 搜索栏 */}
       <SearchBar
@@ -504,30 +431,25 @@ export function PluginMarket(): JSX.Element {
         currentState={filterState}
       />
 
-      {/* 插件列表 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {displayedPlugins.map((plugin) => (
-          <PluginCard
-            key={plugin.id}
-            plugin={plugin}
-            onEnable={handleEnable}
-            onDisable={handleDisable}
-            isLoading={processingId === plugin.id}
-          />
-        ))}
-      </div>
-
-      {/* 空状态 */}
-      {displayedPlugins.length === 0 && (
-        <div className="text-center py-16">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-white/5 mb-4">
-            <Icon name="search" size={28} color="rgba(255,255,255,0.3)" />
-          </div>
-          <h3 className="text-lg font-medium text-white mb-2">没有找到匹配的插件</h3>
-          <p className="text-white/40 text-sm">
-            {hasSearched ? '尝试使用不同的关键词搜索' : '尝试调整过滤器条件'}
-          </p>
+      {/* 插件列表 / 空状态 */}
+      {displayedPlugins.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+          {displayedPlugins.map((plugin) => (
+            <PluginCard
+              key={plugin.id}
+              plugin={plugin}
+              onEnable={handleEnable}
+              onDisable={handleDisable}
+              isLoading={processingId === plugin.id}
+            />
+          ))}
         </div>
+      ) : (
+        <EmptyState
+          icon="search"
+          title="没有找到匹配的插件"
+          description={hasSearched ? '尝试使用不同的关键词搜索' : '尝试调整过滤器条件'}
+        />
       )}
     </div>
   );

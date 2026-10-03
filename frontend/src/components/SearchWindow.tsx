@@ -1,556 +1,308 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Icon } from './Icon';
 import { Events } from '@wailsio/runtime';
 import * as SearchWindowService from '../../bindings/ltools/internal/plugins/searchwindowservice';
 import * as AppLauncherService from '../../bindings/ltools/plugins/applauncher/applauncherservice';
 import { usePlugins } from '../plugins/usePlugins';
-import { getPluginIcon, getPluginIconName } from '../utils/pluginHelpers';
-import { PluginState, PluginMetadata } from '../../bindings/ltools/internal/plugins';
+import { PluginState } from '../../bindings/ltools/internal/plugins';
 import './SearchWindow.css';
 
-/**
- * 插件图标组件 - 优先使用专业 SVG 图标，fallback 到 emoji
- * 与首页 Home.tsx 保持一致
- */
-function PluginIcon({
-  plugin,
-  size = 'normal'
-}: {
-  plugin: PluginMetadata
-  size?: 'small' | 'normal'
-}) {
-  const iconName = getPluginIconName(plugin)
-  const emoji = getPluginIcon(plugin)
-
-  const iconSize = size === 'small' ? 20 : 28
-  const emojiSize = size === 'small' ? 'text-lg' : 'text-2xl'
-
-  if (iconName) {
-    return (
-      <Icon
-        name={iconName}
-        size={iconSize}
-        className="text-[#A78BFA]"
-      />
-    )
-  }
-
-  return (
-    <span className={emojiSize} role="img" aria-label={plugin.name}>
-      {emoji}
-    </span>
-  )
-}
-
-/**
- * 解码 Unicode 转义字符
- * 将 \uXXXX 转换为实际字符
- */
-function decodeUnicode(str: string): string {
-  return str.replace(/\\u[\dA-Fa-f]{4}/g, (match) => {
-    const code = parseInt(match.slice(2), 16);
-    return String.fromCharCode(code);
-  });
-}
-
-/**
- * 搜索结果接口
- */
 interface SearchResult {
   pluginId?: string;
   appId?: string;
   name: string;
   description: string;
   icon: string;
-  matchedFields?: string[];
-  type: string; // "plugin", "app", or "file"
-  path?: string;          // 文件/目录路径
-  isDirectory?: boolean;  // 是否为目录
+  type: string;
+  path?: string;
 }
 
-/**
- * 高亮搜索匹配文本
- */
+function decodeUnicode(str: string): string {
+  return str.replace(/\\u[\dA-Fa-f]{4}/g, match =>
+    String.fromCharCode(parseInt(match.slice(2), 16)));
+}
+
 function highlightMatch(text: string, query: string): JSX.Element {
-  if (!query) return <>{text}</>;
-
-  const regex = new RegExp(`(${query})`, 'gi');
-  const parts = text.split(regex);
-
-  return (
-    <>
-      {parts.map((part, index) =>
-        regex.test(part) ? (
-          <mark key={index} className="bg-[#7C3AED]/30 text-[#A78BFA] rounded px-0.5">
-            {part}
-          </mark>
-        ) : (
-          <span key={index}>{part}</span>
-        )
-      )}
-    </>
-  );
+  const needle = query.trim().toLocaleLowerCase();
+  if (!needle) return <>{text}</>;
+  const lower = text.toLocaleLowerCase();
+  const parts: React.ReactNode[] = [];
+  let offset = 0;
+  let match = lower.indexOf(needle);
+  while (match !== -1) {
+    parts.push(text.slice(offset, match));
+    parts.push(<mark key={match}>{text.slice(match, match + needle.length)}</mark>);
+    offset = match + needle.length;
+    match = lower.indexOf(needle, offset);
+  }
+  parts.push(text.slice(offset));
+  return <>{parts}</>;
 }
 
-/**
- * 搜索窗口主组件
- */
-export function SearchWindow() {
-  // 窗口固定大小，使用固定的每页显示数量
-  const ITEMS_PER_PAGE = 8; // 4x2 网格布局
+function ResultIcon({ icon }: { icon: string }) {
+  const [failed, setFailed] = useState(false);
+  useEffect(() => setFailed(false), [icon]);
+  if (!failed && /^data:image\/(?:png|jpeg|gif|webp|x-icon|vnd\.microsoft\.icon);base64,/i.test(icon)) {
+    return <img src={icon} alt="" draggable={false} onError={() => setFailed(true)} />;
+  }
+  return <span className="search-app-icon-fallback" aria-hidden="true"><Icon name="grid" size={25} /></span>;
+}
 
+function SectionHeader({ title, count, action }: { title: string; count?: number; action?: React.ReactNode }) {
+  return <div className="search-section-header"><h2>{title}{count !== undefined && <span className="search-section-count">{count}</span>}</h2>{action}</div>;
+}
+
+export function SearchWindow() {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [showAllPlugins, setShowAllPlugins] = useState(false);
+  const [showAllFiles, setShowAllFiles] = useState(false);
+  const [indexedFiles, setIndexedFiles] = useState<SearchResult[]>([]);
+  const [fileIndexing, setFileIndexing] = useState(false);
+  const [fileLimited, setFileLimited] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const resultsRef = useRef<HTMLDivElement>(null);
+  const requestRef = useRef(0);
+  const { plugins, loading: pluginsLoading, error: pluginsError } = usePlugins();
+  const searchQuery = query.trim();
 
-  // 分页状态
-  const [currentPage, setCurrentPage] = useState(0);
+  const enabledPlugins = useMemo(() => plugins.filter(p =>
+    p.state === PluginState.PluginStateEnabled), [plugins]);
+  const recentPlugins = useMemo(() => enabledPlugins.filter(p => p.lastUsedAt)
+    .sort((a, b) => new Date(b.lastUsedAt || 0).getTime() - new Date(a.lastUsedAt || 0).getTime())
+    .slice(0, 8), [enabledPlugins]);
+  const displayedPlugins = showAllPlugins ? enabledPlugins : recentPlugins;
+  const appResults = useMemo(() => results.filter(r => r.type === 'app'), [results]);
+  const otherResults = useMemo(() => results.filter(r => r.type !== 'app' && r.type !== 'file'), [results]);
+  const fileResults = useMemo(() => {
+    const seen = new Set<string>();
+    return [...results.filter(r => r.type === 'file'), ...indexedFiles].filter(result => {
+      const key = result.path || result.name;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [results, indexedFiles]);
+  const displayedFiles = useMemo(() => showAllFiles ? fileResults : fileResults.slice(0, 5), [fileResults, showAllFiles]);
+  const orderedResults = useMemo(() => searchQuery
+    ? [...appResults, ...otherResults, ...displayedFiles]
+    : displayedPlugins.map(p => ({ pluginId: p.id, name: p.name, description: p.description,
+      icon: '', type: 'plugin' })), [searchQuery, appResults, otherResults, displayedPlugins, displayedFiles]);
 
-  // 获取插件列表
-  const { plugins } = usePlugins();
+  const updateQuery = (value: string) => {
+    requestRef.current++;
+    setQuery(value);
+    setResults([]);
+    setIndexedFiles([]);
+    setShowAllFiles(false);
+    setFileIndexing(false);
+    setFileLimited(false);
+    setSelectedIndex(0);
+    setError('');
+    setLoading(Boolean(value.trim()));
+  };
 
-  // 过滤已启用的插件
-  const enabledPlugins = plugins.filter(p =>
-    p.state === PluginState.PluginStateEnabled
-  );
-
-  // 计算总页数
-  const totalPages = Math.ceil(enabledPlugins.length / ITEMS_PER_PAGE);
-
-  // 自动聚焦输入框
   useEffect(() => {
-    const unsubscribeOpened = Events.On('search:opened', (ev: any) => {
-      const queryParam = ev.data as string;
-      console.log('[SearchWindow] Search opened event received, query:', queryParam);
-
-      // 立即设置查询参数，不要延迟
-      if (queryParam) {
-        setQuery(queryParam);
-      } else {
-        setQuery('');
-        setResults([]);
-      }
-      setSelectedIndex(0);
-      setCurrentPage(0); // 重置到第一页
-
-      // 聚焦输入框
-      setTimeout(() => {
-        inputRef.current?.focus();
-      }, 50);
+    const focus = () => inputRef.current?.focus();
+    const offOpened = Events.On('search:opened', (event: { data: string }) => {
+      updateQuery(event.data || '');
+      setShowAllPlugins(false);
+      focus();
     });
-
-    const unsubscribeClosed = Events.On('search:closed', () => {
-      console.log('[SearchWindow] Search closed event received');
-      setQuery('');
-      setResults([]);
-      setSelectedIndex(0);
-      setCurrentPage(0); // 重置到第一页
-    });
-
-    // Initial focus
-    inputRef.current?.focus();
-
-    return () => {
-      unsubscribeOpened();
-      unsubscribeClosed();
-    };
+    const offClosed = Events.On('search:closed', () => updateQuery(''));
+    focus();
+    return () => { offOpened(); offClosed(); };
   }, []);
 
-  // 滚轮切换页面
   useEffect(() => {
-    const handleWheel = (e: Event) => {
-      // 只有在没有搜索输入时才启用滚轮翻页
-      if (query || loading || enabledPlugins.length === 0) return;
-
-      const wheelEvent = e as WheelEvent;
-      // 防抖处理
-      e.preventDefault();
-
-      // 垂直滚轮或水平滚轮都可以切换页面
-      const delta = wheelEvent.deltaY !== 0 ? wheelEvent.deltaY : wheelEvent.deltaX;
-
-      if (delta > 0) {
-        // 向下/向右滚动，下一页
-        setCurrentPage(prev => Math.min(prev + 1, totalPages - 1));
-      } else if (delta < 0) {
-        // 向上/向左滚动，上一页
-        setCurrentPage(prev => Math.max(prev - 1, 0));
+    const request = ++requestRef.current;
+    if (!searchQuery) { setLoading(false); return; }
+    const timer = setTimeout(async () => {
+      const responses = await Promise.allSettled([
+        SearchWindowService.Search(searchQuery), AppLauncherService.Search(searchQuery),
+        SearchWindowService.SearchFiles(searchQuery),
+      ]);
+      if (request !== requestRef.current) return;
+      const combined: SearchResult[] = [];
+      if (responses[0].status === 'fulfilled') {
+        for (const item of responses[0].value ?? []) {
+          if (!item) continue;
+          combined.push({ ...item, name: decodeUnicode(item.name || ''),
+            description: decodeUnicode(item.description || '') });
+        }
       }
-    };
+      if (responses[1].status === 'fulfilled') {
+        for (const item of responses[1].value ?? []) {
+          if (!item) continue;
+          combined.push({ appId: item.id, name: decodeUnicode(item.name || ''),
+            description: decodeUnicode(item.description || ''), icon: item.iconData || '', type: 'app' });
+        }
+      }
+      if (responses[2].status === 'fulfilled') {
+        const response = responses[2].value;
+        setIndexedFiles((response.results || []).filter((item): item is NonNullable<typeof item> => !!item));
+        setFileIndexing(response.indexing);
+        setFileLimited(response.limited);
+      }
+      const seen = new Set<string>();
+      setResults(combined.filter(item => {
+        const key = `${item.type}:${item.appId || item.pluginId || item.path || item.name}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      }));
+      setError(responses.some(response => response.status === 'rejected')
+        ? '部分搜索服务暂不可用，请重试' : '');
+      setLoading(false);
+    }, 150);
+    return () => { clearTimeout(timer); requestRef.current++; };
+  }, [query]);
 
-    const searchResultsEl = document.querySelector('.search-results');
-    searchResultsEl?.addEventListener('wheel', handleWheel, { passive: false });
+  useEffect(() => {
+    if (!fileIndexing || !searchQuery) return;
+    const request = requestRef.current;
+    let active = true;
+    const timer = setInterval(async () => {
+      try {
+        const response = await SearchWindowService.SearchFiles(searchQuery);
+        if (!active || request !== requestRef.current) return;
+        setIndexedFiles((response.results || []).filter((item): item is NonNullable<typeof item> => !!item));
+        setFileIndexing(response.indexing);
+        setFileLimited(response.limited);
+      } catch { if (active) setFileIndexing(false); }
+    }, 1000);
+    return () => { active = false; clearInterval(timer); };
+  }, [fileIndexing, searchQuery]);
 
-    return () => {
-      searchResultsEl?.removeEventListener('wheel', handleWheel);
-    };
-  }, [query, loading, enabledPlugins.length, totalPages]);
-
-  // 页面切换函数
-  const goToPage = useCallback((page: number) => {
-    if (page >= 0 && page < totalPages) {
-      setCurrentPage(page);
+  const openItem = async (result: SearchResult) => {
+    try {
+      if (result.type === 'app' && result.appId) await SearchWindowService.OpenApp(result.appId);
+      else if (result.type === 'plugin' && result.pluginId) await SearchWindowService.OpenPlugin(result.pluginId);
+      else if (result.type === 'file' && result.path) await SearchWindowService.OpenPath(result.path);
+    } catch {
+      setError('打开失败，请重试');
     }
-  }, [totalPages]);
+  };
 
-  // 搜索功能（防抖 150ms）
-  const performSearch = useCallback(async (searchQuery: string) => {
-    if (!searchQuery || searchQuery.trim() === '') {
-      setResults([]);
-      setSelectedIndex(0);
+  useEffect(() => { setSelectedIndex(0); }, [showAllPlugins, orderedResults.length]);
+  useEffect(() => {
+    resultsRef.current?.querySelector<HTMLElement>(`[data-result-index="${selectedIndex}"]`)
+      ?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }, [selectedIndex]);
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.nativeEvent.isComposing || event.keyCode === 229) return;
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      if (query) updateQuery('');
+      else SearchWindowService.Hide().catch(() => setError('关闭窗口失败'));
       return;
     }
-
-    setLoading(true);
-    try {
-      console.log('[SearchWindow] Searching for:', searchQuery);
-
-      // 同时调用插件搜索和应用搜索
-      const [pluginResults, appResults] = await Promise.all([
-        SearchWindowService.Search(searchQuery),
-        AppLauncherService.Search(searchQuery).catch(() => [])
-      ]);
-
-      console.log('[SearchWindow] Plugin results:', pluginResults);
-      console.log('[SearchWindow] App results:', appResults);
-
-      // 转换插件结果格式，并解码 Unicode 转义字符
-      const searchResults: SearchResult[] = pluginResults.map((item: any) => ({
-        pluginId: item.pluginId,
-        appId: item.appId,
-        name: decodeUnicode(item.name || ''),
-        description: decodeUnicode(item.description || ''),
-        icon: item.icon || '',
-        matchedFields: item.matchedFields || [],
-        type: item.type || 'plugin',
-        path: item.path,          // 文件/目录路径
-        isDirectory: item.isDirectory,  // 是否为目录
-      }));
-
-      // 转换应用结果格式，并解码 Unicode 转义字符
-      const appResultsFormatted: SearchResult[] = appResults.map((item: any) => {
-        // 使用 iconData，如果没有则使用默认图标
-        const icon = item.iconData || '🚀';
-        console.log('[SearchWindow] App icon for', item.name, ':', icon.substring(0, 50) + '...');
-        return {
-          appId: item.id,
-          name: decodeUnicode(item.name || ''),
-          description: decodeUnicode(item.description || ''),
-          icon: icon,
-          type: 'app',
-        };
-      });
-
-      // 合并结果
-      const allResults = [...searchResults, ...appResultsFormatted];
-
-      console.log('[SearchWindow] Total results:', allResults.length);
-      setResults(allResults);
-      setSelectedIndex(Math.min(selectedIndex, Math.max(0, allResults.length - 1)));
-    } catch (error) {
-      console.error('[SearchWindow] Search failed:', error);
-      setResults([]);
-    } finally {
-      setLoading(false);
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      if (!loading && orderedResults[selectedIndex]) void openItem(orderedResults[selectedIndex]);
+      return;
     }
-  }, []);
-
-  // 防抖搜索
-  useEffect(() => {
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
+    if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key) || loading || !orderedResults.length) return;
+    // Left/right remain caret controls for text rows. App tiles navigate spatially.
+    const onApps = Boolean(searchQuery) && selectedIndex < appResults.length;
+    if (!onApps && ['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+    event.preventDefault();
+    let step = 1;
+    if (onApps && ['ArrowUp', 'ArrowDown'].includes(event.key)) {
+      const grid = resultsRef.current?.querySelector<HTMLElement>('.search-app-grid');
+      const first = grid?.firstElementChild as HTMLElement | null;
+      step = grid && first ? Math.max(1, Math.floor((grid.clientWidth + 8) / (first.offsetWidth + 8))) : 1;
     }
-
-    searchTimeoutRef.current = setTimeout(() => {
-      performSearch(query);
-    }, 150);
-
-    return () => {
-      if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current);
-      }
-    };
-  }, [query, performSearch]);
-
-  // 键盘导航
-  useEffect(() => {
-    const handleKeyDown = async (e: KeyboardEvent) => {
-      switch (e.key) {
-        case 'ArrowDown':
-          e.preventDefault();
-          setSelectedIndex(prev => Math.min(prev + 1, results.length - 1));
-          break;
-        case 'ArrowUp':
-          e.preventDefault();
-          setSelectedIndex(prev => Math.max(prev - 1, 0));
-          break;
-        case 'ArrowLeft':
-          // 在默认视图下，左箭头切换到上一页
-          if (!query && !loading && enabledPlugins.length > 0) {
-            e.preventDefault();
-            setCurrentPage(prev => Math.max(prev - 1, 0));
-          }
-          break;
-        case 'ArrowRight':
-          // 在默认视图下，右箭头切换到下一页
-          if (!query && !loading && enabledPlugins.length > 0) {
-            e.preventDefault();
-            setCurrentPage(prev => Math.min(prev + 1, totalPages - 1));
-          }
-          break;
-        case 'Enter':
-          e.preventDefault();
-          if (results.length > 0 && selectedIndex >= 0 && selectedIndex < results.length) {
-            await openItem(results[selectedIndex]);
-          }
-          break;
-        case 'Escape':
-          e.preventDefault();
-          // 如果有搜索内容，清空搜索；如果为空，关闭窗口
-          if (query.trim() !== '') {
-            setQuery('');
-            setResults([]);
-            setSelectedIndex(0);
-          } else {
-            try {
-              await SearchWindowService.Hide();
-            } catch (error) {
-              console.error('[SearchWindow] Failed to hide window:', error);
-            }
-          }
-          break;
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [results, selectedIndex, query, loading, enabledPlugins.length, totalPages]);
-
-  // 打开插件
-  const openPlugin = async (pluginId: string) => {
-    console.log('[SearchWindow] Opening plugin:', pluginId);
-    try {
-      await SearchWindowService.OpenPlugin(pluginId);
-      // 窗口会在 OpenPlugin 后自动隐藏
-    } catch (error) {
-      console.error('[SearchWindow] Failed to open plugin:', error);
-    }
+    const direction = ['ArrowUp', 'ArrowLeft'].includes(event.key) ? -1 : 1;
+    setSelectedIndex(index => Math.max(0, Math.min(orderedResults.length - 1, index + step * direction)));
   };
 
-  // 打开应用
-  const openApp = async (appId: string) => {
-    console.log('[SearchWindow] Opening app:', appId);
-    try {
-      await SearchWindowService.OpenApp(appId);
-      // 窗口会在 OpenApp 后自动隐藏
-    } catch (error) {
-      console.error('[SearchWindow] Failed to open app:', error);
-    }
-  };
-
-  // 打开文件/目录路径
-  const openPath = async (path: string) => {
-    console.log('[SearchWindow] Opening path:', path);
-    try {
-      await SearchWindowService.OpenPath(path);
-      // 窗口会在 OpenPath 后自动隐藏
-    } catch (error) {
-      console.error('[SearchWindow] Failed to open path:', error);
-    }
-  };
-
-  // 打开结果项（插件、应用或文件路径）
-  const openItem = async (result: SearchResult) => {
-    if (result.type === 'app' && result.appId) {
-      await openApp(result.appId);
-    } else if (result.type === 'plugin' && result.pluginId) {
-      await openPlugin(result.pluginId);
-    } else if (result.type === 'file' && result.path) {
-      await openPath(result.path);
-    }
-  };
-
-  // 点击结果项
-  const handleResultClick = (result: SearchResult) => {
-    openItem(result);
-  };
-
-  // 获取匹配字段名称
-  const getMatchedFieldLabel = (field: string): string => {
-    const labels: Record<string, string> = {
-      name: '名称',
-      description: '描述',
-      keyword: '关键词',
-      author: '作者',
-    };
-    return labels[field] || field;
-  };
+  const renderRow = (result: SearchResult, index: number) => (
+    <button key={result.pluginId || result.path || result.name} type="button"
+      id={`search-result-${index}`} role="option" aria-selected={selectedIndex === index}
+      className={`search-text-row ${selectedIndex === index ? 'is-selected' : ''}`}
+      data-result-index={index} title={result.description || result.path}
+      onMouseEnter={() => setSelectedIndex(index)} onClick={() => void openItem(result)}>
+      <span className="search-row-name">{highlightMatch(result.name, searchQuery)}</span>
+      <span className="search-row-description">{result.description || result.path}</span>
+      <span className="search-row-arrow" aria-hidden="true"><Icon name="arrow-right" size={16} /></span>
+    </button>
+  );
 
   return (
     <div className="search-window">
-      {/* 窗口头部 - 可拖动区域 */}
-      <div className="search-window-header" data-wails-draggable>
-        <div className="search-header-content">
-          <Icon name="search" size={18} color="#A78BFA" />
-          <input
-            ref={inputRef}
-            type="text"
-            className="search-input"
-            placeholder="搜索插件..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            data-wails-drag-draggable="false"
-          />
-          <button
-            className="close-button"
-            onClick={() => {
-              setQuery('');
-              setResults([]);
-              setSelectedIndex(0);
-              inputRef.current?.focus();
-            }}
-            data-wails-drag-draggable="false"
-            title="清空搜索"
-          >
-            <Icon name="x-circle" size={18} color="rgba(255,255,255,0.5)" />
-          </button>
-        </div>
+      <header className="search-window-header" data-wails-draggable>
+        <input ref={inputRef} className="search-input" type="text" autoComplete="off" spellCheck={false}
+          placeholder="搜索应用、功能或文件" aria-label="全局搜索"
+          role="combobox" aria-autocomplete="list" aria-expanded={orderedResults.length > 0}
+          aria-controls="search-result-list" aria-activedescendant={!loading && orderedResults[selectedIndex]
+            ? `search-result-${selectedIndex}` : undefined}
+          data-wails-drag-draggable="false" value={query}
+          onChange={event => updateQuery(event.target.value)} onKeyDown={handleKeyDown} />
+        {query && <button className="search-clear" type="button" title="清空搜索" aria-label="清空搜索"
+          data-wails-drag-draggable="false" onClick={() => { updateQuery(''); inputRef.current?.focus(); }}>
+          <Icon name="close" size={18} />
+        </button>}
+        <button type="button" className="search-brand" title="打开 LTools" aria-label="打开 LTools"
+          data-wails-drag-draggable="false" onClick={() => {
+            void SearchWindowService.OpenMainWindow().catch(() => setError('打开主界面失败'));
+          }}><img src="/app-icon.png" alt="" draggable={false} /></button>
+      </header>
+      <div className="search-results" ref={resultsRef} id="search-result-list" role="listbox" aria-label="搜索结果" aria-busy={loading || pluginsLoading}>
+        {error && <p className="search-error" role="alert">{error}</p>}
+        {loading ? <div className="search-state" role="status"><span className="spinner" />搜索中</div>
+          : searchQuery ? <>
+            {appResults.length > 0 && <section>
+              <SectionHeader title="应用" count={appResults.length} />
+              <div className="search-app-grid">
+                {appResults.map((result, index) => <button key={result.appId || result.name} type="button"
+                  id={`search-result-${index}`} role="option" aria-selected={selectedIndex === index}
+                  className={`search-app-tile ${selectedIndex === index ? 'is-selected' : ''}`}
+                  data-result-index={index} title={result.description || result.name}
+                  onMouseEnter={() => setSelectedIndex(index)} onClick={() => void openItem(result)}>
+                  <span className="search-app-icon"><ResultIcon icon={result.icon} /></span>
+                  <span className="search-app-name">{highlightMatch(result.name, searchQuery)}</span>
+                </button>)}
+              </div>
+            </section>}
+            {otherResults.length > 0 && <section>
+              <SectionHeader title="功能" count={otherResults.length} />
+              <div className="search-text-list">{otherResults.map((result, index) => renderRow(result, appResults.length + index))}</div>
+            </section>}
+            <section className="search-file-section">
+              <SectionHeader title="文件" count={fileResults.length} action={fileResults.length > 5 &&
+                <button type="button" className="search-expand" aria-expanded={showAllFiles}
+                  onClick={() => setShowAllFiles(value => !value)}>
+                  {showAllFiles ? '收起' : `展开 (${fileResults.length}${fileLimited ? '+' : ''})`}
+                </button>} />
+              {displayedFiles.length > 0
+                ? <div className="search-text-list">{displayedFiles.map((result, index) => renderRow(result, appResults.length + otherResults.length + index))}</div>
+                : <div className="search-file-empty">{fileIndexing ? '正在索引文件' : '没有匹配的文件'}</div>}
+              {fileIndexing && displayedFiles.length > 0 && <div className="search-file-empty" role="status">正在更新文件索引</div>}
+            </section>
+            {!results.length && !indexedFiles.length && !fileIndexing && !error && <div className="search-state">未找到匹配的结果</div>}
+          </> : <section>
+            <SectionHeader title={showAllPlugins ? '全部插件' : '最近使用'} action={
+              <button type="button" className="search-expand" aria-expanded={showAllPlugins}
+                onClick={() => setShowAllPlugins(value => !value)}>
+                {showAllPlugins ? '收起' : `展开 (${enabledPlugins.length})`}
+              </button>} />
+            {pluginsLoading ? <div className="search-state" role="status"><span className="spinner" /></div>
+              : pluginsError ? <p className="search-error" role="alert">插件加载失败，请重新打开窗口</p>
+              : orderedResults.length ? <div className="search-text-list">{orderedResults.map(renderRow)}</div>
+              : <div className="search-state">暂无最近使用记录</div>}
+          </section>}
       </div>
-
-      {/* 搜索结果列表 */}
-      <div className="search-results">
-        {loading && (
-          <div className="search-loading">
-            <div className="loading-spinner" />
-            <p className="text-white/50 text-sm">搜索中...</p>
-          </div>
-        )}
-
-        {/* 默认插件卡片视图 - 分页模式 */}
-        {!query && !loading && enabledPlugins.length > 0 && (
-          <div className="plugin-launchpad">
-            <div className="plugin-pages-container">
-              <div
-                className="plugin-pages-slider"
-                style={{
-                  transform: `translateX(-${currentPage * 100}%)`,
-                  transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                }}
-              >
-                {Array.from({ length: totalPages }).map((_, pageIndex) => (
-                  <div key={pageIndex} className="plugin-page">
-                    <div className="plugin-grid">
-                      {enabledPlugins
-                        .slice(pageIndex * ITEMS_PER_PAGE, (pageIndex + 1) * ITEMS_PER_PAGE)
-                        .map((plugin) => (
-                          <div
-                            key={plugin.id}
-                            className="plugin-card"
-                            onClick={() => openPlugin(plugin.id)}
-                          >
-                            <div className="plugin-card-icon">
-                              <PluginIcon plugin={plugin} size="normal" />
-                            </div>
-                            <div className="plugin-card-name">{plugin.name}</div>
-                          </div>
-                        ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* 页面指示器 */}
-            {totalPages > 1 && (
-              <div className="page-indicators">
-                {Array.from({ length: totalPages }).map((_, index) => (
-                  <button
-                    key={index}
-                    className={`page-dot ${index === currentPage ? 'page-dot-active' : ''}`}
-                    onClick={() => goToPage(index)}
-                    aria-label={`Page ${index + 1}`}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {!loading && query && results.length === 0 && (
-          <div className="search-empty">
-            <Icon name="search" size={48} color="rgba(167, 139, 250, 0.2)" />
-            <p className="text-white/40 mt-3">未找到匹配的结果</p>
-            <p className="text-white/30 text-sm mt-1">尝试其他关键词</p>
-          </div>
-        )}
-
-        {!loading && query && results.length > 0 && (
-          <div className="results-list">
-            {results.map((result, index) => (
-              <div
-                key={result.pluginId || result.appId || result.path}
-                className={`result-item ${
-                  index === selectedIndex ? 'result-item-selected' : ''
-                }`}
-                onClick={() => handleResultClick(result)}
-                onMouseEnter={() => setSelectedIndex(index)}
-              >
-                <div className="result-icon">
-                  {result.type === 'app' && typeof result.icon === 'string' && result.icon.startsWith('data:') ? (
-                    <img src={result.icon} alt={result.name} className="w-8 h-8 rounded" />
-                  ) : (
-                    result.icon
-                  )}
-                </div>
-                <div className="result-content">
-                  <div className="result-name">
-                    {highlightMatch(result.name, query)}
-                  </div>
-                  <div className="result-description">
-                    {highlightMatch(result.description, query)}
-                  </div>
-                  {result.matchedFields && result.matchedFields.length > 0 && (
-                    <div className="result-match-info">
-                      {result.matchedFields.map(field => (
-                        <span key={field} className="match-badge">
-                          {getMatchedFieldLabel(field)}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  <div className="result-type-badge">
-                    {result.type === 'app' ? '应用' : result.type === 'file' ? (result.isDirectory ? '文件夹' : '文件') : '插件'}
-                  </div>
-                </div>
-                {index === selectedIndex && (
-                  <div className="result-indicator">
-                    <Icon name="chevron-right" size={16} color="#A78BFA" />
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* 状态栏 */}
-      {results.length > 0 && (
-        <div className="search-statusbar">
-          <div className="statusbar-info">
-            <span className="statusbar-count">
-              找到 {results.length} 个结果
-            </span>
-          </div>
-          <div className="statusbar-shortcuts">
-            <span className="shortcut-hint-inline">
-              ↑↓ 导航 • Enter 打开 • Esc 关闭
-            </span>
-          </div>
-        </div>
-      )}
+      {!loading && orderedResults[selectedIndex] && <footer className="search-window-footer">
+        <span className="search-footer-name">{orderedResults[selectedIndex].name}</span>
+        <button type="button" className="search-open" onClick={() => void openItem(orderedResults[selectedIndex])}>
+          打开<Icon name="arrow-right" size={15} />
+        </button>
+      </footer>}
     </div>
   );
 }

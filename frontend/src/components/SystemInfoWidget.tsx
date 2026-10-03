@@ -1,189 +1,182 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Events } from '@wailsio/runtime';
 import { SysInfoService, SystemInfo } from '../../bindings/ltools/plugins/sysinfo';
-import { Icon } from './Icon';
+import { Icon, type IconName } from './Icon';
+import { Button, EmptyState, ProgressBar, Skeleton } from './ui';
 
 /**
- * 系统信息卡片组件
+ * 系统信息小部件 — 紧凑指标网格 + 语义色进度条
  */
-interface InfoCardProps {
-  icon: string;
-  title: string;
-  value: string | number;
-  subtitle?: string;
-  color?: string;
+
+type ProgressTone = 'accent' | 'warning' | 'error';
+
+/** 按阈值映射进度条色调(>errorAt 红,>warningAt 橙,其余蓝) */
+function toneFor(v: number, errorAt: number, warningAt: number): ProgressTone {
+  if (v > errorAt) return 'error';
+  if (v > warningAt) return 'warning';
+  return 'accent';
 }
 
-function InfoCard({ icon, title, value, subtitle, color = '#A78BFA' }: InfoCardProps): JSX.Element {
-  return (
-    <div className="glass-light rounded-xl p-4 hover:bg-white/5 transition-all duration-200">
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: `${color}15` }}>
-          <Icon name={icon as any} size={18} color={color} />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-xs text-white/40 uppercase tracking-wide mb-1">{title}</p>
-          <p className="text-base font-semibold text-white tabular-nums truncate">{value}</p>
-          {subtitle && (
-            <p className="text-xs text-white/30 mt-0.5">{subtitle}</p>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
+const TONE_TEXT: Record<ProgressTone, string> = {
+  accent: 'text-text-1',
+  warning: 'text-warning-text',
+  error: 'text-error-text',
+};
 
-/**
- * CPU 使用率组件
- */
-interface CPUUsageProps {
-  usage: number;
-  cores: number;
-  modelName?: string;
-}
-
-function CPUUsage({ usage, cores, modelName }: CPUUsageProps): JSX.Element {
-  return (
-    <div className="glass-light rounded-xl p-4">
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-[#7C3AED]/10 flex items-center justify-center">
-            <Icon name="cpu" size={18} color="#7C3AED" />
-          </div>
-          <div>
-            <p className="text-xs text-white/40 uppercase tracking-wide">CPU 使用率</p>
-            <p className="text-base font-semibold text-white tabular-nums">{usage.toFixed(1)}%</p>
-          </div>
-        </div>
-        <div className="text-right">
-          <p className={`text-xl font-bold tabular-nums ${
-            usage > 80 ? 'text-[#EF4444]' : usage > 60 ? 'text-[#F59E0B]' : 'text-[#7C3AED]'
-          }`}>
-            {usage.toFixed(0)}%
-          </p>
-        </div>
-      </div>
-      {/* 进度条 */}
-      <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden mb-2">
-        <div
-          className={`h-full rounded-full transition-all duration-500 ${
-            usage > 80 ? 'bg-[#EF4444]' : usage > 60 ? 'bg-[#F59E0B]' : 'bg-[#7C3AED]'
-          }`}
-          style={{ width: `${Math.min(usage, 100)}%` }}
-        />
-      </div>
-      {modelName && (
-        <p className="text-xs text-white/30 truncate">{modelName}</p>
-      )}
-      <p className="text-xs text-white/20 mt-0.5">{cores} 核心</p>
-    </div>
-  );
-}
-
-/**
- * 内存信息组件
- */
-interface MemoryInfoProps {
-  used: string;
+interface DiskInfo {
+  path: string;
   total: string;
+  used: string;
+  free: string;
   usedPercent: number;
-  swapUsed?: string;
-  swapTotal?: string;
-  swapUsedPercent?: number;
 }
 
-function MemoryInfo({ used, total, usedPercent, swapUsed, swapTotal, swapUsedPercent }: MemoryInfoProps): JSX.Element {
+interface NetIfaceInfo {
+  name: string;
+  addrs: string[];
+  bytesSent: number;
+  bytesRecv: number;
+  packetsSent: number;
+  packetsRecv: number;
+}
+
+/**
+ * 卡片内区块标题
+ */
+function CardHead({ icon, title }: { icon: IconName; title: string }): JSX.Element {
   return (
-    <div className="glass-light rounded-xl p-4">
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-[#22C55E]/10 flex items-center justify-center">
-            <Icon name="memory" size={18} color="#22C55E" />
-          </div>
-          <div>
-            <p className="text-xs text-white/40 uppercase tracking-wide">内存使用</p>
-            <p className="text-base font-semibold text-white tabular-nums">{used} / {total}</p>
-          </div>
-        </div>
-        <div className="text-right">
-          <p className={`text-xl font-bold tabular-nums ${
-            usedPercent > 80 ? 'text-[#EF4444]' : usedPercent > 60 ? 'text-[#F59E0B]' : 'text-[#22C55E]'
-          }`}>
-            {usedPercent.toFixed(0)}%
-          </p>
-        </div>
+    <div className="mb-3 flex items-center gap-2.5">
+      <div className="card-inset flex h-7 w-7 shrink-0 items-center justify-center">
+        <Icon name={icon} size={14} className="text-text-2" />
       </div>
-      {/* 进度条 */}
-      <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden mb-2">
-        <div
-          className={`h-full rounded-full transition-all duration-500 ${
-            usedPercent > 80 ? 'bg-[#EF4444]' : usedPercent > 60 ? 'bg-[#F59E0B]' : 'bg-[#22C55E]'
-          }`}
-          style={{ width: `${usedPercent}%` }}
-        />
+      <span className="truncate text-[12px] font-medium text-text-2">{title}</span>
+    </div>
+  );
+}
+
+/**
+ * 紧凑指标卡:11px 标签 + 20px 等宽数值
+ */
+function MetricCard({
+  icon,
+  label,
+  value,
+  sub,
+}: {
+  icon: IconName;
+  label: string;
+  value: string | number;
+  sub?: string;
+}): JSX.Element {
+  return (
+    <div className="card p-3.5">
+      <div className="flex items-center gap-1.5 text-[11px] text-text-3">
+        <Icon name={icon} size={12} className="shrink-0" />
+        <span className="truncate">{label}</span>
       </div>
-      {/* Swap 信息 */}
-      {swapTotal && swapUsed && (
-        <div className="pt-2 border-t border-white/5">
-          <div className="flex items-center justify-between mb-1.5">
-            <p className="text-xs text-white/30">Swap 使用</p>
-            <p className="text-xs text-white/40 tabular-nums">{swapUsed} / {swapTotal}</p>
-          </div>
-          <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
-            <div
-              className={`h-full rounded-full transition-all duration-500 ${
-                swapUsedPercent && swapUsedPercent > 50 ? 'bg-[#F59E0B]' : 'bg-[#3B82F6]'
-              }`}
-              style={{ width: `${swapUsedPercent || 0}%` }}
-            />
-          </div>
-        </div>
+      <p
+        className="tnum mt-1.5 truncate font-mono text-[20px] font-semibold leading-tight text-text-1"
+        title={String(value)}
+      >
+        {value}
+      </p>
+      {sub && (
+        <p className="mt-0.5 truncate text-[11px] text-text-4" title={sub}>
+          {sub}
+        </p>
       )}
     </div>
   );
 }
 
 /**
- * 磁盘使用组件
+ * 使用率卡(CPU / 内存通用):大数值 + ProgressBar + 元信息
  */
-interface DiskUsageProps {
-  disks: Array<{
-    path: string;
-    total: string;
-    used: string;
-    free: string;
-    usedPercent: number;
-  }>;
+function UsageCard({
+  icon,
+  label,
+  percent,
+  valueText,
+  footer,
+  errorAt = 80,
+  warningAt = 60,
+  children,
+}: {
+  icon: IconName;
+  label: string;
+  percent: number;
+  valueText?: string;
+  footer?: string;
+  errorAt?: number;
+  warningAt?: number;
+  children?: ReactNode;
+}): JSX.Element {
+  const tone = toneFor(percent, errorAt, warningAt);
+  return (
+    <div className="card p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <div className="card-inset flex h-7 w-7 shrink-0 items-center justify-center">
+            <Icon name={icon} size={14} className="text-text-2" />
+          </div>
+          <span className="truncate text-[12px] font-medium text-text-2">{label}</span>
+        </div>
+        <span className={`tnum shrink-0 font-mono text-[20px] font-semibold leading-none ${TONE_TEXT[tone]}`}>
+          {percent.toFixed(1)}%
+        </span>
+      </div>
+      <ProgressBar value={percent} tone={tone} className="mt-2.5" />
+      {valueText && (
+        <p className="tnum mt-2 truncate font-mono text-[12px] text-text-1" title={valueText}>
+          {valueText}
+        </p>
+      )}
+      {footer && (
+        <p className="mt-0.5 truncate text-[11px] text-text-3" title={footer}>
+          {footer}
+        </p>
+      )}
+      {children}
+    </div>
+  );
 }
 
-function DiskUsage({ disks }: DiskUsageProps): JSX.Element | null {
-  if (disks.length === 0) return null;
+/**
+ * 负载平均值卡
+ */
+function LoadCard({
+  load1,
+  load5,
+  load15,
+  cores,
+}: {
+  load1: number;
+  load5: number;
+  load15: number;
+  cores: number;
+}): JSX.Element {
+  const loadTextClass = (load: number) => {
+    const ratio = load / cores;
+    if (ratio > 2) return 'text-error-text';
+    if (ratio > 1) return 'text-warning-text';
+    return 'text-success-text';
+  };
+
+  const items: Array<[string, number]> = [
+    ['1 分钟', load1],
+    ['5 分钟', load5],
+    ['15 分钟', load15],
+  ];
 
   return (
-    <div className="glass-light rounded-xl p-4 flex flex-col">
-      <h3 className="text-sm font-medium text-white/60 mb-3 flex items-center gap-2 flex-shrink-0">
-        <Icon name="disk" size={14} color="#A78BFA" />
-        磁盘使用情况
-      </h3>
-      <div className="space-y-3 overflow-y-auto max-h-40 pr-1 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent hover:scrollbar-thumb-white/20">
-        {disks.map((disk, index) => (
-          <div key={index} className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <p className="text-xs text-white/40 font-medium">{disk.path}</p>
-              <p className="text-xs text-white/60 tabular-nums">{disk.used} / {disk.total}</p>
-            </div>
-            <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
-              <div
-                className={`h-full rounded-full transition-all duration-500 ${
-                  disk.usedPercent > 90 ? 'bg-[#EF4444]' : disk.usedPercent > 75 ? 'bg-[#F59E0B]' : 'bg-[#3B82F6]'
-                }`}
-                style={{ width: `${disk.usedPercent}%` }}
-              />
-            </div>
-            <p className="text-xs text-right" style={{
-              color: disk.usedPercent > 90 ? '#EF4444' : disk.usedPercent > 75 ? '#F59E0B' : 'rgba(255,255,255,0.3)'
-            }}>
-              {disk.usedPercent.toFixed(1)}% 已使用 · {disk.free} 可用
+    <div className="card p-4">
+      <CardHead icon="server" title={`系统负载 (${cores} 核心)`} />
+      <div className="grid grid-cols-3 gap-3">
+        {items.map(([label, value]) => (
+          <div key={label}>
+            <p className="text-[11px] text-text-3">{label}</p>
+            <p className={`tnum mt-0.5 font-mono text-[16px] font-semibold leading-tight ${loadTextClass(value)}`}>
+              {value.toFixed(2)}
             </p>
           </div>
         ))}
@@ -193,65 +186,37 @@ function DiskUsage({ disks }: DiskUsageProps): JSX.Element | null {
 }
 
 /**
- * 负载平均值组件
+ * 磁盘使用卡
  */
-interface LoadAvgProps {
-  load1: number;
-  load5: number;
-  load15: number;
-  cores: number;
-}
-
-function LoadAvg({ load1, load5, load15, cores }: LoadAvgProps): JSX.Element {
-  const getLoadColor = (load: number) => {
-    const ratio = load / cores;
-    if (ratio > 2) return 'text-[#EF4444]';
-    if (ratio > 1) return 'text-[#F59E0B]';
-    return 'text-[#22C55E]';
-  };
+function DiskCard({ disks }: { disks: DiskInfo[] }): JSX.Element | null {
+  if (disks.length === 0) return null;
 
   return (
-    <div className="glass-light rounded-xl p-4">
-      <h3 className="text-sm font-medium text-white/60 mb-3 flex items-center gap-2">
-        <Icon name="server" size={14} color="#A78BFA" />
-        系统负载 ({cores} 核心)
-      </h3>
-      <div className="grid grid-cols-3 gap-3">
-        <div className="text-center">
-          <p className="text-xs text-white/30 mb-1">1 分钟</p>
-          <p className={`text-base font-semibold tabular-nums ${getLoadColor(load1)}`}>
-            {load1.toFixed(2)}
-          </p>
-        </div>
-        <div className="text-center">
-          <p className="text-xs text-white/30 mb-1">5 分钟</p>
-          <p className={`text-base font-semibold tabular-nums ${getLoadColor(load5)}`}>
-            {load5.toFixed(2)}
-          </p>
-        </div>
-        <div className="text-center">
-          <p className="text-xs text-white/30 mb-1">15 分钟</p>
-          <p className={`text-base font-semibold tabular-nums ${getLoadColor(load15)}`}>
-            {load15.toFixed(2)}
-          </p>
-        </div>
+    <div className="card p-4">
+      <CardHead icon="disk" title="磁盘使用情况" />
+      <div className="max-h-44 space-y-3 overflow-y-auto pr-1">
+        {disks.map((disk) => {
+          const tone = toneFor(disk.usedPercent, 90, 75);
+          return (
+            <div key={disk.path} className="min-w-0">
+              <div className="flex items-center justify-between gap-2">
+                <span className="truncate font-mono text-[12px] text-text-1" title={disk.path}>
+                  {disk.path}
+                </span>
+                <span className="tnum shrink-0 font-mono text-[11.5px] text-text-2">
+                  {disk.used} / {disk.total}
+                </span>
+              </div>
+              <ProgressBar value={disk.usedPercent} tone={tone} className="mt-1.5" />
+              <p className="tnum mt-1 text-right text-[11px] text-text-3">
+                <span className={TONE_TEXT[tone]}>{disk.usedPercent.toFixed(1)}%</span> 已使用 · {disk.free} 可用
+              </p>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
-}
-
-/**
- * 网络接口组件
- */
-interface NetworkInfoProps {
-  interfaces: Array<{
-    name: string;
-    addrs: string[];
-    bytesSent: number;
-    bytesRecv: number;
-    packetsSent: number;
-    packetsRecv: number;
-  }>;
 }
 
 function formatBytes(bytes: number): string {
@@ -262,33 +227,33 @@ function formatBytes(bytes: number): string {
   return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`;
 }
 
-function NetworkInfo({ interfaces }: NetworkInfoProps): JSX.Element | null {
+/**
+ * 网络接口卡
+ */
+function NetworkCard({ interfaces }: { interfaces: NetIfaceInfo[] }): JSX.Element | null {
   if (interfaces.length === 0) return null;
 
   return (
-    <div className="glass-light rounded-xl p-4 flex flex-col">
-      <h3 className="text-sm font-medium text-white/60 mb-3 flex items-center gap-2 flex-shrink-0">
-        <Icon name="network" size={14} color="#A78BFA" />
-        网络接口
-      </h3>
-      <div className="space-y-2 overflow-y-auto max-h-40 pr-1 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent hover:scrollbar-thumb-white/20">
-        {interfaces.map((iface, index) => (
-          <div key={index} className="p-2.5 rounded-lg bg-white/5">
-            <div className="flex items-center justify-between mb-1.5">
-              <p className="text-sm font-medium text-white">{iface.name}</p>
+    <div className="card p-4">
+      <CardHead icon="network" title="网络接口" />
+      <div className="max-h-44 space-y-1.5 overflow-y-auto pr-1">
+        {interfaces.map((iface) => (
+          <div key={iface.name} className="card-inset px-3 py-2">
+            <div className="flex items-center justify-between gap-2">
+              <span className="truncate text-[12.5px] font-medium text-text-1" title={iface.name}>
+                {iface.name}
+              </span>
               {iface.addrs.length > 0 && (
-                <p className="text-xs text-white/40">{iface.addrs[0]}</p>
+                <span className="shrink-0 font-mono text-[11px] text-text-3">{iface.addrs[0]}</span>
               )}
             </div>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <div>
-                <span className="text-white/30">上传:</span>{' '}
-                <span className="text-white/60 tabular-nums">{formatBytes(iface.bytesSent)}</span>
-              </div>
-              <div>
-                <span className="text-white/30">下载:</span>{' '}
-                <span className="text-white/60 tabular-nums">{formatBytes(iface.bytesRecv)}</span>
-              </div>
+            <div className="mt-1 flex items-center gap-4 text-[11px] text-text-3">
+              <span>
+                上传 <span className="tnum font-mono text-text-2">{formatBytes(iface.bytesSent)}</span>
+              </span>
+              <span>
+                下载 <span className="tnum font-mono text-text-2">{formatBytes(iface.bytesRecv)}</span>
+              </span>
             </div>
           </div>
         ))}
@@ -302,8 +267,8 @@ function NetworkInfo({ interfaces }: NetworkInfoProps): JSX.Element | null {
  */
 export function SystemInfoWidget(): JSX.Element {
   const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null);
-  const [diskInfo, setDiskInfo] = useState<Array<any>>([]);
-  const [networkInfo, setNetworkInfo] = useState<Array<any>>([]);
+  const [diskInfo, setDiskInfo] = useState<DiskInfo[]>([]);
+  const [networkInfo, setNetworkInfo] = useState<NetIfaceInfo[]>([]);
   const [loadAvg, setLoadAvg] = useState<{ load1: number; load5: number; load15: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
@@ -318,17 +283,12 @@ export function SystemInfoWidget(): JSX.Element {
         SysInfoService.GetLoadAverage().catch(() => null),
       ]);
       setSystemInfo(info);
-      setDiskInfo(disks);
-      setNetworkInfo(network.filter((n: any) => n.name !== 'total'));
+      setDiskInfo(disks as DiskInfo[]);
+      setNetworkInfo(network.filter((n: any) => n.name !== 'total') as NetIfaceInfo[]);
       if (load && 'load1' in load) {
         setLoadAvg(load as { load1: number; load5: number; load15: number });
       }
       setLastUpdate(new Date());
-      console.log('[SysInfo] Data updated:', {
-        cpu: info?.cpuUsage,
-        memory: info?.memoryUsed,
-        timestamp: new Date().toISOString(),
-      });
     } catch (err) {
       console.error('Failed to load system info:', err);
     } finally {
@@ -338,26 +298,20 @@ export function SystemInfoWidget(): JSX.Element {
 
   // 初始化
   useEffect(() => {
-    console.log('[SysInfo] Component mounted, loading initial data...');
     loadSystemInfo();
   }, []);
 
   // 监听系统信息更新事件
   useEffect(() => {
-    console.log('[SysInfo] Setting up event listeners...');
-
-    const unsubUpdated = Events.On('sysinfo:updated', (data) => {
-      console.log('[SysInfo] Received sysinfo:updated event:', data);
+    const unsubUpdated = Events.On('sysinfo:updated', () => {
       loadSystemInfo();
     });
 
-    const unsubCpu = Events.On('sysinfo:cpu', (data) => {
-      console.log('[SysInfo] Received sysinfo:cpu event:', data);
+    const unsubCpu = Events.On('sysinfo:cpu', () => {
       loadSystemInfo();
     });
 
     return () => {
-      console.log('[SysInfo] Cleaning up event listeners...');
       unsubUpdated?.();
       unsubCpu?.();
     };
@@ -373,16 +327,15 @@ export function SystemInfoWidget(): JSX.Element {
     }
   };
 
-  // 获取操作系统图标和名称
-  const getOSInfo = () => {
-    const os = systemInfo?.os || 'unknown';
-    const osMap: Record<string, { name: string; icon: string; color: string }> = {
-      'darwin': { name: 'macOS', icon: 'cube', color: '#A78BFA' },
-      'windows': { name: 'Windows', icon: 'cube', color: '#3B82F6' },
-      'linux': { name: 'Linux', icon: 'cube', color: '#F59E0B' },
-      'freebsd': { name: 'FreeBSD', icon: 'cube', color: '#EF4444' },
+  // 获取操作系统名称
+  const getOSName = (os: string) => {
+    const osMap: Record<string, string> = {
+      'darwin': 'macOS',
+      'windows': 'Windows',
+      'linux': 'Linux',
+      'freebsd': 'FreeBSD',
     };
-    return osMap[os] || { name: os.toUpperCase(), icon: 'cube', color: '#6B7280' };
+    return osMap[os] || os.toUpperCase();
   };
 
   // 获取架构名称
@@ -398,118 +351,124 @@ export function SystemInfoWidget(): JSX.Element {
 
   if (loading) {
     return (
-      <div className="glass-light rounded-xl p-8 text-center">
-        <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-white/5 animate-pulse">
-          <Icon name="refresh" size={20} color="rgba(255,255,255,0.3)" />
+      <div className="space-y-3" aria-busy="true">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          {[0, 1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-[86px] rounded-[9px]" />
+          ))}
         </div>
-        <p className="text-white/40 mt-4">加载系统信息中...</p>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+          <Skeleton className="h-[128px] rounded-[9px]" />
+          <Skeleton className="h-[128px] rounded-[9px]" />
+        </div>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+          <Skeleton className="h-[96px] rounded-[9px]" />
+          <Skeleton className="h-[96px] rounded-[9px]" />
+          <Skeleton className="h-[96px] rounded-[9px]" />
+        </div>
       </div>
     );
   }
 
-  const osInfo = getOSInfo();
-  const cores = systemInfo?.cpus || 1;
+  // 主数据加载失败的错误态
+  if (!systemInfo) {
+    return (
+      <EmptyState
+        icon="exclamation-circle"
+        title="系统信息加载失败"
+        description="无法获取系统信息,请重试"
+        action={
+          <Button variant="primary" icon="refresh" onClick={loadSystemInfo}>
+            重新加载
+          </Button>
+        }
+      />
+    );
+  }
+
+  const cores = systemInfo.cpus || 1;
+  const osName = getOSName(systemInfo.os || 'unknown');
+  const osSub = [systemInfo.platformVersion, getArchName(systemInfo.arch || '')]
+    .filter(Boolean)
+    .join(' · ');
 
   return (
-    <div className="space-y-4">
-      {/* 操作系统和架构信息 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <InfoCard
-          icon={osInfo.icon}
-          title="操作系统"
-          value={systemInfo?.platform || osInfo.name}
-          subtitle={`${systemInfo?.platformVersion || ''} · ${getArchName(systemInfo?.arch || '')}`}
-          color={osInfo.color}
-        />
-        <InfoCard
+    <div className="space-y-3">
+      {/* 指标卡:操作系统 / 运行时间 / 进程数 / Go 版本 */}
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <MetricCard icon="cube" label="操作系统" value={systemInfo.platform || osName} sub={osSub || undefined} />
+        <MetricCard
           icon="clock"
-          title="系统运行时间"
-          value={systemInfo?.hostUptime || 'Unknown'}
-          subtitle={`自 ${systemInfo?.bootTime ? new Date(systemInfo.bootTime * 1000).toLocaleDateString('zh-CN') : ''} 启动`}
-          color="#F59E0B"
+          label="系统运行时间"
+          value={systemInfo.hostUptime || 'Unknown'}
+          sub={systemInfo.bootTime ? `自 ${new Date(systemInfo.bootTime * 1000).toLocaleDateString('zh-CN')} 启动` : undefined}
         />
-      </div>
-
-      {/* CPU 使用率 */}
-      {systemInfo?.cpuUsage !== undefined && (
-        <CPUUsage
-          usage={systemInfo.cpuUsage}
-          cores={cores}
-          modelName={systemInfo.cpuModelName}
-        />
-      )}
-
-      {/* 负载平均值 */}
-      {loadAvg && systemInfo && (
-        <LoadAvg
-          load1={loadAvg.load1}
-          load5={loadAvg.load5}
-          load15={loadAvg.load15}
-          cores={cores}
-        />
-      )}
-
-      {/* 内存信息 */}
-      {systemInfo && (
-        <MemoryInfo
-          used={systemInfo.memoryUsed}
-          total={systemInfo.memoryTotal}
-          usedPercent={systemInfo.memoryUsedPercent || 0}
-          swapUsed={systemInfo.swapUsed}
-          swapTotal={systemInfo.swapTotal}
-          swapUsedPercent={systemInfo.swapUsedPercent}
-        />
-      )}
-
-      {/* 磁盘和网络 - 左右布局 */}
-      {(diskInfo.length > 0 || networkInfo.length > 0) && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {diskInfo.length > 0 && <DiskUsage disks={diskInfo} />}
-          {networkInfo.length > 0 && <NetworkInfo interfaces={networkInfo} />}
-        </div>
-      )}
-
-      {/* 进程数 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <InfoCard
-          icon="chip"
-          title="运行进程"
-          value={systemInfo?.procCount || 0}
-          subtitle="当前活动进程数"
-          color="#3B82F6"
-        />
-        <InfoCard
+        <MetricCard icon="chip" label="运行进程" value={systemInfo.procCount || 0} sub="当前活动进程数" />
+        <MetricCard
           icon="document"
-          title="Go 版本"
-          value={systemInfo?.goVersion || 'Unknown'}
-          subtitle={`GOMAXPROCS: ${systemInfo?.goMaxProcs || 0}`}
-          color="#7C3AED"
+          label="Go 版本"
+          value={systemInfo.goVersion || 'Unknown'}
+          sub={`GOMAXPROCS: ${systemInfo.goMaxProcs || 0}`}
         />
       </div>
 
-      {/* 操作按钮 */}
-      <div className="flex gap-2">
-        <button
-          className="flex-1 px-3 py-2 rounded-lg bg-[#7C3AED] text-white hover:bg-[#6D28D9] transition-all duration-200 text-sm font-medium clickable flex items-center justify-center gap-2"
-          onClick={loadSystemInfo}
+      {/* CPU / 内存 */}
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        {systemInfo.cpuUsage !== undefined && (
+          <UsageCard
+            icon="cpu"
+            label="CPU 使用率"
+            percent={systemInfo.cpuUsage}
+            valueText={systemInfo.cpuModelName || undefined}
+            footer={`${cores} 核心`}
+          />
+        )}
+        <UsageCard
+          icon="memory"
+          label="内存使用"
+          percent={systemInfo.memoryUsedPercent || 0}
+          valueText={`${systemInfo.memoryUsed} / ${systemInfo.memoryTotal}`}
+          errorAt={80}
+          warningAt={60}
         >
-          <Icon name="refresh" size={14} />
-          刷新信息
-        </button>
-        <button
-          className="flex-1 px-3 py-2 rounded-lg bg-[#EF4444]/10 text-[#EF4444] hover:bg-[#EF4444]/20 transition-all duration-200 text-sm font-medium clickable border border-[#EF4444]/20 flex items-center justify-center gap-2"
-          onClick={handleForceGC}
-        >
-          <Icon name="refresh" size={14} />
-          强制垃圾回收
-        </button>
+          {systemInfo.swapTotal && systemInfo.swapUsed && (
+            <div className="hairline-t mt-3 pt-3">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[11px] text-text-3">Swap 使用</span>
+                <span className="tnum shrink-0 font-mono text-[11.5px] text-text-2">
+                  {systemInfo.swapUsed} / {systemInfo.swapTotal}
+                </span>
+              </div>
+              <ProgressBar
+                value={systemInfo.swapUsedPercent || 0}
+                tone={(systemInfo.swapUsedPercent || 0) > 50 ? 'warning' : 'accent'}
+                className="mt-1.5"
+              />
+            </div>
+          )}
+        </UsageCard>
       </div>
 
-      {/* 最后更新时间 */}
-      <div className="text-center">
-        <p className="text-xs text-white/20">
+      {/* 负载 / 磁盘 / 网络 */}
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+        {loadAvg && (
+          <LoadCard load1={loadAvg.load1} load5={loadAvg.load5} load15={loadAvg.load15} cores={cores} />
+        )}
+        <DiskCard disks={diskInfo} />
+        <NetworkCard interfaces={networkInfo} />
+      </div>
+
+      {/* 操作按钮 + 最后更新时间 */}
+      <div className="flex flex-wrap items-center gap-2 pt-1">
+        <Button variant="secondary" icon="refresh" onClick={loadSystemInfo}>
+          刷新信息
+        </Button>
+        <Button variant="danger" icon="trash" onClick={handleForceGC}>
+          强制垃圾回收
+        </Button>
+        <span className="tnum ml-auto text-[11px] text-text-4">
           最后更新: {lastUpdate.toLocaleString('zh-CN')}
-        </p>
+        </span>
       </div>
     </div>
   );

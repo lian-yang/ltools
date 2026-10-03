@@ -1,5 +1,4 @@
 import { useSearchParams } from 'react-router-dom';
-import { Icon } from './Icon';
 import { SettingsNav, SettingsCategory } from './SettingsNav';
 import { GeneralSettings } from './GeneralSettings';
 import { ShortcutsSettings } from './ShortcutsSettings';
@@ -15,7 +14,7 @@ interface SettingsProps {
 
 /**
  * 设置页面组件
- * 左侧导航 + 右侧内容区域的二级菜单布局
+ * 左侧分类导航 + 右侧表单内容
  */
 export function Settings({ shortcuts, onSetShortcut, onRemoveShortcut }: SettingsProps) {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -47,22 +46,7 @@ export function Settings({ shortcuts, onSetShortcut, onRemoveShortcut }: Setting
           />
         );
       case 'sync':
-        return (
-          <div className="space-y-8">
-            <div>
-              <h2 className="text-xl font-semibold text-white flex items-center gap-2">
-                <Icon name="cloud-arrow-up" size={20} color="#A78BFA" />
-                同步设置
-              </h2>
-              <p className="text-white/50 text-sm mt-1">
-                配置数据同步和备份选项
-              </p>
-            </div>
-            <div className="glass-light rounded-xl p-5">
-              <SyncSettings />
-            </div>
-          </div>
-        );
+        return <SyncSettings />;
       case 'plugins':
         return <PluginsSettings />;
       case 'about':
@@ -73,18 +57,16 @@ export function Settings({ shortcuts, onSetShortcut, onRemoveShortcut }: Setting
   };
 
   return (
-    <div className="h-full flex gap-6 p-6">
-      {/* 左侧导航 */}
+    <div className="min-h-full flex gap-6 p-6">
+      {/* 左侧分类导航 */}
       <SettingsNav
         activeCategory={activeCategory}
         onCategoryChange={handleCategoryChange}
       />
 
-      {/* 右侧内容区域 */}
-      <div className="flex-1 min-w-0 overflow-y-auto">
-        <div className="max-w-3xl">
-          {renderContent()}
-        </div>
+      {/* 右侧内容区域(滚动由 <main> 承担,避免双滚动条) */}
+      <div className="min-w-0 flex-1">
+        {renderContent()}
       </div>
     </div>
   );

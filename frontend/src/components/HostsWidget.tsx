@@ -1,10 +1,29 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { HostsService } from '../../bindings/ltools/plugins/hosts';
 import { Scenario, Backup, SystemInfo, HostEntry } from '../../bindings/ltools/plugins/hosts/models';
 import { Icon } from './Icon';
 import { useToast } from '../hooks/useToast';
+import {
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  Field,
+  IconButton,
+  Input,
+  Modal,
+  SectionTitle,
+  Segmented,
+  Skeleton,
+  Textarea,
+  Toggle,
+} from './ui';
 
 type View = 'scenarios' | 'editor' | 'backups';
+
+/**
+ * Hosts 管理器 — 场景卡片 + 条目行编辑 + 备份列表
+ */
 
 /**
  * 场景卡片组件
@@ -17,16 +36,9 @@ interface ScenarioCardProps {
 }
 
 function ScenarioCard({ scenario, onSwitch, onEdit, onDelete }: ScenarioCardProps): JSX.Element {
-  const [isHovered, setIsHovered] = useState(false);
-
   const handleSwitch = (e: React.MouseEvent) => {
     e.stopPropagation();
     onSwitch(scenario.id);
-  };
-
-  const handleEdit = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onEdit(scenario.id);
   };
 
   const handleDelete = (e: React.MouseEvent) => {
@@ -40,47 +52,40 @@ function ScenarioCard({ scenario, onSwitch, onEdit, onDelete }: ScenarioCardProp
 
   return (
     <div
-      className={`glass-light p-4 rounded-xl cursor-pointer transition-all duration-200 group ${
-        scenario.isActive ? 'ring-2 ring-[#7C3AED]' : ''
-      } ${isHovered ? 'bg-white/5' : ''}`}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      onClick={handleEdit}
+      className={`card card-hover group cursor-pointer p-4 ${scenario.isActive ? 'border-accent/60' : ''}`}
+      onClick={() => onEdit(scenario.id)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') onEdit(scenario.id);
+      }}
     >
-      <div className="flex items-start justify-between mb-3">
-        <h3 className="font-semibold text-white text-lg">{scenario.name}</h3>
+      <div className="flex items-start justify-between gap-2">
+        <h3 className="min-w-0 truncate text-[13px] font-semibold text-text-1" title={scenario.name}>
+          {scenario.name}
+        </h3>
         {scenario.isActive && (
-          <span className="px-2 py-0.5 rounded-full bg-[#22C55E]/20 text-[#22C55E] text-xs font-medium">
+          <Badge tone="success" className="shrink-0">
             活跃
-          </span>
+          </Badge>
         )}
       </div>
 
-      <p className="text-sm text-white/50 mb-3 line-clamp-2">{scenario.description}</p>
+      <p className="mt-1.5 line-clamp-2 min-h-[34px] text-[12px] leading-normal text-text-2">
+        {scenario.description}
+      </p>
 
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-xs text-white/40">
-          <Icon name="document" size={14} />
-          <span>{enabledCount}/{scenario.entries.length} 条目</span>
-        </div>
+      <div className="hairline-t mt-3 flex items-center justify-between gap-2 pt-2.5">
+        <span className="tnum flex shrink-0 items-center gap-1.5 text-[11.5px] text-text-3">
+          <Icon name="document" size={13} className="shrink-0" />
+          {enabledCount}/{scenario.entries.length} 条目
+        </span>
 
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center gap-0.5 opacity-0 transition-opacity duration-150 group-focus-within:opacity-100 group-hover:opacity-100">
           {!scenario.isActive && (
-            <button
-              className="p-1.5 rounded-lg bg-[#7C3AED]/10 text-[#A78BFA] hover:bg-[#7C3AED]/20 clickable"
-              onClick={handleSwitch}
-              title="切换到此场景"
-            >
-              <Icon name="refresh" size={14} />
-            </button>
+            <IconButton name="refresh" label="切换到此场景" size="sm" onClick={handleSwitch} />
           )}
-          <button
-            className="p-1.5 rounded-lg bg-white/5 text-white/60 hover:bg-[#EF4444]/10 hover:text-[#EF4444] clickable"
-            onClick={handleDelete}
-            title="删除场景"
-          >
-            <Icon name="trash" size={14} />
-          </button>
+          <IconButton name="trash" label="删除场景" size="sm" tone="danger" onClick={handleDelete} />
         </div>
       </div>
     </div>
@@ -120,32 +125,29 @@ function BackupItem({ backup, scenarios, onRestore, onDelete }: BackupItemProps)
   };
 
   return (
-    <tr className="border-t border-white/10 hover:bg-white/5 transition-colors">
-      <td className="px-4 py-3 text-white">{scenario?.name || backup.scenarioId}</td>
-      <td className="px-4 py-3 text-white/60 text-sm">{formatDate(backup.createdAt)}</td>
-      <td className="px-4 py-3 text-white/60 text-sm">{formatSize(backup.size)}</td>
-      <td className="px-4 py-3">
-        <div className="flex items-center gap-2">
-          <button
-            className="px-3 py-1.5 rounded-lg text-xs font-medium bg-[#7C3AED]/10 text-[#A78BFA] hover:bg-[#7C3AED]/20 clickable"
-            onClick={() => onRestore(backup.id)}
-          >
-            恢复
-          </button>
-          <button
-            className="p-1.5 rounded-lg text-white/60 hover:bg-[#EF4444]/10 hover:text-[#EF4444] clickable"
-            onClick={() => {
-              if (confirm('确定要删除此备份吗？')) {
-                onDelete(backup.id);
-              }
-            }}
-            title="删除备份"
-          >
-            <Icon name="trash" size={14} />
-          </button>
-        </div>
-      </td>
-    </tr>
+    <div className="row px-2.5">
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[12.5px] font-medium text-text-1">{scenario?.name || backup.scenarioId}</p>
+        <p className="tnum mt-0.5 font-mono text-[11px] text-text-3">{formatDate(backup.createdAt)}</p>
+      </div>
+      <span className="tnum shrink-0 font-mono text-[11.5px] text-text-3">{formatSize(backup.size)}</span>
+      <div className="flex shrink-0 items-center gap-1">
+        <Button size="sm" variant="secondary" onClick={() => onRestore(backup.id)}>
+          恢复
+        </Button>
+        <IconButton
+          name="trash"
+          label="删除备份"
+          size="sm"
+          tone="danger"
+          onClick={() => {
+            if (confirm('确定要删除此备份吗？')) {
+              onDelete(backup.id);
+            }
+          }}
+        />
+      </div>
+    </div>
   );
 }
 
@@ -158,15 +160,13 @@ interface CreateScenarioDialogProps {
   onCreate: (name: string, description: string) => Promise<void>;
 }
 
-function CreateScenarioDialog({ isOpen, onClose, onCreate }: CreateScenarioDialogProps): JSX.Element | null {
+function CreateScenarioDialog({ isOpen, onClose, onCreate }: CreateScenarioDialogProps): JSX.Element {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [creating, setCreating] = useState(false);
 
-  if (!isOpen) return null;
-
   const handleCreate = async () => {
-    if (!name.trim()) return;
+    if (!name.trim() || creating) return;
     setCreating(true);
     try {
       await onCreate(name.trim(), description.trim());
@@ -181,58 +181,52 @@ function CreateScenarioDialog({ isOpen, onClose, onCreate }: CreateScenarioDialo
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="glass-heavy rounded-2xl p-6 w-full max-w-md mx-4">
-        <h2 className="text-xl font-bold text-white mb-4">创建新场景</h2>
-
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-white/70 mb-2">
-              场景名称 <span className="text-[#EF4444]">*</span>
-            </label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="例如: 开发环境"
-              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-[#7C3AED]/50 focus:bg-white/10 transition-all"
-              autoFocus
-              onKeyPress={(e) => e.key === 'Enter' && handleCreate()}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-white/70 mb-2">
-              描述
-            </label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="场景的用途说明..."
-              rows={3}
-              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-[#7C3AED]/50 focus:bg-white/10 transition-all resize-none"
-            />
-          </div>
-        </div>
-
-        <div className="flex gap-3 mt-6">
-          <button
-            className="flex-1 px-4 py-2.5 rounded-xl bg-white/5 text-white/70 hover:bg-white/10 transition-colors clickable"
-            onClick={onClose}
-            disabled={creating}
-          >
+    <Modal
+      open={isOpen}
+      onClose={onClose}
+      title="创建新场景"
+      width={420}
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose} disabled={creating}>
             取消
-          </button>
-          <button
-            className="flex-1 px-4 py-2.5 rounded-xl bg-[#7C3AED] text-white hover:bg-[#6D28D9] transition-colors clickable disabled:opacity-50 disabled:cursor-not-allowed"
+          </Button>
+          <Button
+            variant="primary"
             onClick={handleCreate}
             disabled={!name.trim() || creating}
+            loading={creating}
           >
-            {creating ? '创建中...' : '创建'}
-          </button>
-        </div>
+            创建
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-4">
+        <Field label={<>场景名称 <span className="text-error-text">*</span></>}>
+          <Input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="例如: 开发环境"
+            autoFocus
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleCreate();
+            }}
+          />
+        </Field>
+
+        <Field label="描述">
+          <Textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="场景的用途说明..."
+            rows={3}
+            className="resize-none"
+          />
+        </Field>
       </div>
-    </div>
+    </Modal>
   );
 }
 
@@ -245,18 +239,28 @@ interface EditorViewProps {
   onUpdate: () => void;
 }
 
+/** 条目行网格:启用 / IP / 主机名 / 备注 / 操作 */
+const ENTRY_GRID =
+  'grid grid-cols-[36px_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.2fr)_32px] items-center gap-2';
+
 function EditorView({ scenario, onClose, onUpdate }: EditorViewProps): JSX.Element {
   const [entries, setEntries] = useState<HostEntry[]>([]);
+  // 与 entries 平行的稳定 key(仅用于列表 diff,不进入后端数据)
+  const [entryKeys, setEntryKeys] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [validating, setValidating] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const keyCounter = useRef(0);
+  const nextKey = () => `entry-${++keyCounter.current}`;
 
   useEffect(() => {
     setEntries([...scenario.entries]);
+    setEntryKeys(scenario.entries.map(() => nextKey()));
   }, [scenario]);
 
   const addEntry = () => {
     setEntries([...entries, { ip: '', hostname: '', comment: '', enabled: true }]);
+    setEntryKeys([...entryKeys, nextKey()]);
   };
 
   const updateEntry = (index: number, field: keyof HostEntry, value: string | boolean) => {
@@ -267,6 +271,7 @@ function EditorView({ scenario, onClose, onUpdate }: EditorViewProps): JSX.Eleme
 
   const removeEntry = (index: number) => {
     setEntries(entries.filter((_, i) => i !== index));
+    setEntryKeys(entryKeys.filter((_, i) => i !== index));
   };
 
   const saveChanges = async () => {
@@ -299,133 +304,108 @@ function EditorView({ scenario, onClose, onUpdate }: EditorViewProps): JSX.Eleme
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-white">{scenario.name}</h2>
-          <p className="text-white/50">{scenario.description}</p>
+    <div className="space-y-4">
+      {/* 编辑器头部 */}
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <h2 className="truncate text-[14px] font-semibold text-text-1">{scenario.name}</h2>
+          <p className="truncate text-[12px] text-text-3">{scenario.description}</p>
         </div>
-        <button
-          className="px-4 py-2 rounded-xl bg-white/5 text-white/70 hover:bg-white/10 clickable"
-          onClick={onClose}
-        >
+        <Button variant="secondary" size="sm" icon="arrow-left" onClick={onClose} className="shrink-0">
           返回
-        </button>
+        </Button>
       </div>
 
+      {/* 验证错误 */}
       {validationErrors.length > 0 && (
-        <div className="glass-light rounded-xl p-4 border border-[#EF4444]/30">
-          <h3 className="text-[#EF4444] font-medium mb-2">验证错误</h3>
-          <ul className="text-sm text-[#EF4444]/80 space-y-1">
+        <div className="card border-error/30 px-4 py-3">
+          <h3 className="flex items-center gap-1.5 text-[12.5px] font-medium text-error-text">
+            <Icon name="alert-circle" size={14} />
+            验证错误
+          </h3>
+          <ul className="mt-1.5 space-y-1">
             {validationErrors.map((error, i) => (
-              <li key={i}>• {error}</li>
+              <li key={i} className="text-[12px] text-error-text">
+                {error}
+              </li>
             ))}
           </ul>
         </div>
       )}
 
-      <div className="glass-light rounded-xl overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-white/5">
-            <tr>
-              <th className="px-4 py-3 text-left text-sm font-medium text-white/60">IP 地址</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-white/60">主机名</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-white/60">备注</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-white/60 w-20">启用</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-white/60 w-20">操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            {entries.map((entry, index) => (
-              <tr key={index} className="border-t border-white/10">
-                <td className="px-4 py-2">
-                  <input
-                    type="text"
-                    value={entry.ip}
-                    onChange={(e) => updateEntry(index, 'ip', e.target.value)}
-                    placeholder="127.0.0.1"
-                    className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-[#7C3AED]/50"
-                  />
-                </td>
-                <td className="px-4 py-2">
-                  <input
-                    type="text"
-                    value={entry.hostname}
-                    onChange={(e) => updateEntry(index, 'hostname', e.target.value)}
-                    placeholder="localhost"
-                    className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-[#7C3AED]/50"
-                  />
-                </td>
-                <td className="px-4 py-2">
-                  <input
-                    type="text"
-                    value={entry.comment || ''}
-                    onChange={(e) => updateEntry(index, 'comment', e.target.value)}
-                    placeholder="# 备注说明"
-                    className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-[#7C3AED]/50"
-                  />
-                </td>
-                <td className="px-4 py-2">
-                  <input
-                    type="checkbox"
-                    checked={entry.enabled}
-                    onChange={(e) => updateEntry(index, 'enabled', e.target.checked)}
-                    className="w-4 h-4 rounded border-white/20 bg-white/5 text-[#7C3AED] focus:ring-[#7C3AED]/50"
-                  />
-                </td>
-                <td className="px-4 py-2">
-                  <button
-                    className="p-1.5 rounded-lg text-white/60 hover:bg-[#EF4444]/10 hover:text-[#EF4444] clickable"
-                    onClick={() => removeEntry(index)}
-                  >
-                    <Icon name="trash" size={16} />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {/* 条目列表 */}
+      <Card inset className="p-2">
+        <div className={`${ENTRY_GRID} px-2 pb-1.5 pt-1 text-[11px] font-medium text-text-3`}>
+          <span>启用</span>
+          <span>IP 地址</span>
+          <span>主机名</span>
+          <span>备注</span>
+          <span className="text-right">操作</span>
+        </div>
 
-      <div className="flex justify-between">
-        <button
-          className="px-4 py-2 rounded-xl bg-white/5 text-white/70 hover:bg-white/10 clickable flex items-center gap-2"
-          onClick={addEntry}
-        >
-          <Icon name="plus" size={16} />
+        {entries.length === 0 ? (
+          <EmptyState
+            icon="document"
+            title="暂无条目"
+            description="添加一条 IP 与主机名的映射"
+          />
+        ) : (
+          entries.map((entry, index) => (
+            <div key={entryKeys[index] ?? `fallback-${index}`} className={`${ENTRY_GRID} px-2 py-1.5`}>
+              <Toggle
+                checked={entry.enabled}
+                onChange={(v) => updateEntry(index, 'enabled', v)}
+                label={`启用条目 ${index + 1}`}
+              />
+              <Input
+                type="text"
+                value={entry.ip}
+                onChange={(e) => updateEntry(index, 'ip', e.target.value)}
+                placeholder="127.0.0.1"
+                className="font-mono text-[12px]"
+              />
+              <Input
+                type="text"
+                value={entry.hostname}
+                onChange={(e) => updateEntry(index, 'hostname', e.target.value)}
+                placeholder="localhost"
+                className="font-mono text-[12px]"
+              />
+              <Input
+                type="text"
+                value={entry.comment || ''}
+                onChange={(e) => updateEntry(index, 'comment', e.target.value)}
+                placeholder="# 备注说明"
+              />
+              <div className="flex justify-end">
+                <IconButton
+                  name="trash"
+                  label="删除条目"
+                  size="sm"
+                  tone="danger"
+                  onClick={() => removeEntry(index)}
+                />
+              </div>
+            </div>
+          ))
+        )}
+      </Card>
+
+      {/* 底部操作 */}
+      <div className="flex items-center justify-between">
+        <Button variant="secondary" icon="plus" onClick={addEntry}>
           添加条目
-        </button>
-
-        <button
-          className="px-6 py-2.5 rounded-xl bg-[#7C3AED] text-white hover:bg-[#6D28D9] clickable disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+        </Button>
+        <Button
+          variant="primary"
+          icon="save"
           onClick={saveChanges}
+          loading={loading || validating}
           disabled={loading || validating}
         >
-          {loading || validating ? '保存中...' : '保存更改'}
-        </button>
+          保存更改
+        </Button>
       </div>
-    </div>
-  );
-}
-
-/**
- * 空状态组件
- */
-function EmptyState({ message, action }: { message: string; action?: { label: string; onClick: () => void } }): JSX.Element {
-  return (
-    <div className="glass-light rounded-xl p-12 text-center">
-      <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-white/5 mb-4">
-        <Icon name="server" size={28} color="rgba(255,255,255,0.3)" />
-      </div>
-      <h3 className="text-lg font-medium text-white mb-2">{message}</h3>
-      {action && (
-        <button
-          className="mt-4 px-4 py-2 rounded-xl bg-[#7C3AED] text-white hover:bg-[#6D28D9] clickable"
-          onClick={action.onClick}
-        >
-          {action.label}
-        </button>
-      )}
     </div>
   );
 }
@@ -549,11 +529,16 @@ export function HostsWidget(): JSX.Element {
 
   if (loading) {
     return (
-      <div className="glass-light rounded-xl p-8 text-center">
-        <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-white/5 animate-pulse">
-          <Icon name="refresh" size={20} color="rgba(255,255,255,0.3)" />
+      <div className="space-y-3" aria-busy="true">
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-7 w-40 rounded-[7px]" />
+          <Skeleton className="h-5 w-20 rounded-full" />
         </div>
-        <p className="text-white/40 mt-4">加载中...</p>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-[124px] rounded-[9px]" />
+          ))}
+        </div>
       </div>
     );
   }
@@ -577,67 +562,58 @@ export function HostsWidget(): JSX.Element {
 
   return (
     <>
-      <div className="space-y-6">
-        {/* 页头 */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bold text-white">Hosts 管理器</h2>
-            {systemInfo && (
-              <p className="text-sm text-white/50">
-                {systemInfo.hostsPath} · 当前: {systemInfo.currentScenario || '系统默认'}
-              </p>
-            )}
-          </div>
-
-          {/* 权限指示器 */}
+      <div className="space-y-4">
+        {/* 工具栏:视图切换 + 权限指示 */}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <Segmented<View>
+            options={[
+              { value: 'scenarios', label: '场景' },
+              { value: 'backups', label: '备份' },
+            ]}
+            value={currentView === 'editor' ? 'scenarios' : currentView}
+            onChange={(v) => setCurrentView(v)}
+          />
           {systemInfo && (
-            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${
-              systemInfo.hasPrivileges
-                ? 'bg-[#22C55E]/20 text-[#22C55E]'
-                : 'bg-[#F59E0B]/20 text-[#F59E0B]'
-            }`}>
-              <Icon name={systemInfo.hasPrivileges ? 'check-circle' : 'exclamation-circle'} size={16} />
-              <span className="text-sm font-medium">
-                {systemInfo.hasPrivileges ? '已提权' : '需要提权'}
-              </span>
-            </div>
+            <Badge tone={systemInfo.hasPrivileges ? 'success' : 'warning'}>
+              <Icon name={systemInfo.hasPrivileges ? 'check-circle' : 'exclamation-circle'} size={11} />
+              {systemInfo.hasPrivileges ? '已提权' : '需要提权'}
+            </Badge>
           )}
         </div>
 
-        {/* 视图切换 */}
-        <div className="flex gap-2">
-          <button
-            onClick={() => setCurrentView('scenarios')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all clickable ${
-              currentView === 'scenarios'
-                ? 'bg-[#7C3AED] text-white'
-                : 'glass-light text-white/60 hover:text-white/80'
-            }`}
+        {/* hosts 文件信息 */}
+        {systemInfo && (
+          <p
+            className="truncate font-mono text-[11px] text-text-4"
+            title={`${systemInfo.hostsPath} · 当前: ${systemInfo.currentScenario || '系统默认'}`}
           >
-            场景
-          </button>
-          <button
-            onClick={() => setCurrentView('backups')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all clickable ${
-              currentView === 'backups'
-                ? 'bg-[#7C3AED] text-white'
-                : 'glass-light text-white/60 hover:text-white/80'
-            }`}
-          >
-            备份
-          </button>
-        </div>
+            {systemInfo.hostsPath} · 当前: {systemInfo.currentScenario || '系统默认'}
+          </p>
+        )}
 
         {/* 场景视图 */}
         {currentView === 'scenarios' && (
-          <>
+          <section>
+            <SectionTitle
+              title="场景"
+              className="mb-2.5"
+              action={<span className="tnum text-[11.5px] text-text-3">{scenarios.length} 个</span>}
+            />
             {scenarios.length === 0 ? (
-              <EmptyState
-                message="还没有创建任何场景"
-                action={{ label: '创建第一个场景', onClick: () => setShowCreateDialog(true) }}
-              />
+              <Card inset>
+                <EmptyState
+                  icon="folder"
+                  title="还没有创建任何场景"
+                  description="创建场景来管理不同的 hosts 配置"
+                  action={
+                    <Button variant="primary" icon="plus" onClick={() => setShowCreateDialog(true)}>
+                      创建第一个场景
+                    </Button>
+                  }
+                />
+              </Card>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
                 {scenarios.map((scenario) => (
                   <ScenarioCard
                     key={scenario.id}
@@ -653,48 +629,45 @@ export function HostsWidget(): JSX.Element {
 
                 {/* 创建新场景卡片 */}
                 <button
-                  className="glass-light p-4 rounded-xl flex flex-col items-center justify-center text-[#A78BFA] hover:bg-white/5 clickable transition-all min-h-[140px] border-2 border-dashed border-[#7C3AED]/30 hover:border-[#7C3AED]/50"
+                  className="card card-hover flex min-h-[124px] flex-col items-center justify-center gap-2 border-dashed text-text-3 hover:text-text-2"
                   onClick={() => setShowCreateDialog(true)}
                 >
-                  <Icon name="plus" size={32} />
-                  <span className="mt-2 font-medium">创建场景</span>
+                  <Icon name="plus" size={20} />
+                  <span className="text-[12.5px] font-medium">创建场景</span>
                 </button>
               </div>
             )}
-          </>
+          </section>
         )}
 
         {/* 备份视图 */}
         {currentView === 'backups' && (
-          <>
+          <section>
+            <SectionTitle
+              title="备份记录"
+              className="mb-2.5"
+              action={<span className="tnum text-[11.5px] text-text-3">{backups.length} 条</span>}
+            />
             {backups.length === 0 ? (
-              <EmptyState message="还没有任何备份记录" />
+              <Card inset>
+                <EmptyState icon="document" title="还没有任何备份记录" />
+              </Card>
             ) : (
-              <div className="glass-light rounded-xl overflow-hidden">
-                <table className="w-full">
-                  <thead className="bg-[#7C3AED]/10">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-white">场景</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-white">创建时间</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-white">大小</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-white">操作</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {backups.map((backup) => (
-                      <BackupItem
-                        key={backup.id}
-                        backup={backup}
-                        scenarios={scenarios}
-                        onRestore={handleRestoreBackup}
-                        onDelete={handleDeleteBackup}
-                      />
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <Card inset className="p-1.5">
+                <div className="flex flex-col gap-0.5">
+                  {backups.map((backup) => (
+                    <BackupItem
+                      key={backup.id}
+                      backup={backup}
+                      scenarios={scenarios}
+                      onRestore={handleRestoreBackup}
+                      onDelete={handleDeleteBackup}
+                    />
+                  ))}
+                </div>
+              </Card>
             )}
-          </>
+          </section>
         )}
       </div>
 

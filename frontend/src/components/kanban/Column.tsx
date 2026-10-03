@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useRef, useEffect } from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import {
   SortableContext,
@@ -6,7 +6,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Column, Card, Label } from '../../../bindings/ltools/plugins/kanban/models';
+import { Column, Card, Label, Priority } from '../../../bindings/ltools/plugins/kanban/models';
 import { Icon } from '../Icon';
 
 interface KanbanColumnProps {
@@ -26,6 +26,18 @@ interface SortableCardProps {
   onDelete: () => void;
 }
 
+const priorityColors: Record<string, string> = {
+  [Priority.PriorityHigh]: 'var(--color-error-text)',
+  [Priority.PriorityMedium]: 'var(--color-warning-text)',
+  [Priority.PriorityLow]: 'var(--color-success-text)',
+};
+
+const priorityLabels: Record<string, string> = {
+  [Priority.PriorityHigh]: '高',
+  [Priority.PriorityMedium]: '中',
+  [Priority.PriorityLow]: '低',
+};
+
 function SortableCard({ card, labels, columnId, onClick, onDelete }: SortableCardProps): JSX.Element {
   const {
     attributes,
@@ -43,30 +55,16 @@ function SortableCard({ card, labels, columnId, onClick, onDelete }: SortableCar
     },
   });
 
-  const [isHovered, setIsHovered] = useState(false);
-
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
   };
 
-  const cardLabels = labels.filter(l => card.labels.includes(l.id));
+  const cardLabels = labels.filter(l => (card.labels || []).includes(l.id));
   const completedChecklists = card.checklists.filter(c => c.completed).length;
   const totalChecklists = card.checklists.length;
-  const isOverdue = card.dueDate && new Date(card.dueDate) < new Date() && !card.completedAt;
+  const isOverdue = card.dueDate && new Date(card.dueDate as string | Date) < new Date() && !card.completedAt;
   const isCompleted = !!card.completedAt;
-
-  const priorityColors: Record<string, string> = {
-    'high': '#EF4444',
-    'medium': '#F59E0B',
-    'low': '#22C55E',
-  };
-
-  const priorityLabels: Record<string, string> = {
-    'high': '高',
-    'medium': '中',
-    'low': '低',
-  };
 
   const formatDate = (date: string | Date | null) => {
     if (!date) return '';
@@ -95,33 +93,28 @@ function SortableCard({ card, labels, columnId, onClick, onDelete }: SortableCar
       {...attributes}
       {...listeners}
       onClick={onClick}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
       className={`
-        bg-[#1E1E2E] rounded-lg p-3 cursor-pointer transition-all duration-200
-        hover:bg-[#252536] group relative
-        ${isDragging ? 'opacity-50 shadow-lg scale-[1.02]' : ''}
+        card group relative cursor-pointer p-3 transition-colors duration-150 hover:border-hairline-strong
+        ${isDragging ? 'opacity-50' : ''}
         ${isCompleted ? 'opacity-60' : ''}
       `}
     >
       {/* Delete Button */}
       <button
         onClick={handleDelete}
-        className={`absolute top-2 right-2 p-1 rounded hover:bg-[#EF4444]/10 text-white/40 hover:text-[#EF4444] transition-all z-10 ${
-          isHovered ? 'opacity-100' : 'opacity-0'
-        }`}
+        className="icon-btn icon-btn-sm absolute right-1.5 top-1.5 z-10 opacity-0 transition-opacity duration-150 group-hover:opacity-100"
         title="删除卡片"
       >
-        <Icon name="close" size={14} />
+        <Icon name="close" size={12} />
       </button>
 
-      {/* Labels */}
+      {/* Labels(label.color 是用户自定义数据色,保留) */}
       {cardLabels.length > 0 && (
-        <div className="flex flex-wrap gap-1 mb-2">
+        <div className="mb-2 flex flex-wrap gap-1">
           {cardLabels.map(label => (
             <span
               key={label.id}
-              className="px-2 py-0.5 rounded text-xs font-medium"
+              className="rounded px-1.5 py-0.5 text-[10.5px] font-medium"
               style={{
                 backgroundColor: `${label.color}20`,
                 color: label.color,
@@ -134,27 +127,27 @@ function SortableCard({ card, labels, columnId, onClick, onDelete }: SortableCar
       )}
 
       {/* Title */}
-      <h4 className={`text-sm font-medium mb-2 pr-6 ${isCompleted ? 'line-through text-white/50' : 'text-white'}`}>
+      <h4 className={`mb-1.5 pr-6 text-[12.5px] font-medium leading-snug ${isCompleted ? 'text-text-3 line-through' : 'text-text-1'}`}>
         {card.title}
       </h4>
 
       {/* Description Preview */}
       {card.description && (
-        <p className="text-xs text-white/40 mb-2 line-clamp-2">
+        <p className="mb-2 line-clamp-2 text-[11px] leading-relaxed text-text-3">
           {card.description}
         </p>
       )}
 
       {/* Footer */}
-      <div className="flex items-center justify-between mt-2">
+      <div className="mt-1.5 flex items-center justify-between">
         <div className="flex items-center gap-2">
           {/* Priority */}
           {card.priority && priorityColors[card.priority] && (
             <span
-              className="px-1.5 py-0.5 rounded text-xs"
+              className="rounded px-1.5 py-0.5 text-[10.5px]"
               style={{
-                backgroundColor: `${priorityColors[card.priority]}20`,
                 color: priorityColors[card.priority],
+                background: 'rgba(255,255,255,0.05)',
               }}
             >
               {priorityLabels[card.priority]}
@@ -163,20 +156,20 @@ function SortableCard({ card, labels, columnId, onClick, onDelete }: SortableCar
 
           {/* Due Date */}
           {card.dueDate && (
-            <div className={`flex items-center gap-1 text-xs ${
-              isOverdue ? 'text-[#EF4444]' : 'text-white/40'
+            <div className={`tnum flex items-center gap-1 text-[10.5px] ${
+              isOverdue ? 'text-error-text' : 'text-text-4'
             }`}>
-              <Icon name="clock" size={12} />
-              <span>{formatDate(card.dueDate)}</span>
+              <Icon name="clock" size={11} />
+              <span>{formatDate(card.dueDate as string | Date)}</span>
             </div>
           )}
 
           {/* Checklists */}
           {totalChecklists > 0 && (
-            <div className={`flex items-center gap-1 text-xs ${
-              completedChecklists === totalChecklists ? 'text-[#22C55E]' : 'text-white/40'
+            <div className={`tnum flex items-center gap-1 text-[10.5px] ${
+              completedChecklists === totalChecklists ? 'text-success-text' : 'text-text-4'
             }`}>
-              <Icon name={completedChecklists === totalChecklists ? 'check-circle' : 'circle'} size={12} />
+              <Icon name={completedChecklists === totalChecklists ? 'check-circle' : 'circle'} size={11} />
               <span>{completedChecklists}/{totalChecklists}</span>
             </div>
           )}
@@ -184,8 +177,8 @@ function SortableCard({ card, labels, columnId, onClick, onDelete }: SortableCar
 
         {/* Completed indicator */}
         {isCompleted && (
-          <div className="text-[#22C55E]">
-            <Icon name="check-circle" size={16} />
+          <div className="text-success-text">
+            <Icon name="check-circle" size={14} />
           </div>
         )}
       </div>
@@ -201,7 +194,6 @@ export function KanbanColumn({
   onCardClick,
   onDeleteCard,
 }: KanbanColumnProps): JSX.Element {
-  const [isHovered, setIsHovered] = useState(false);
   const cardsContainerRef = useRef<HTMLDivElement>(null);
 
   // 阻止卡片区域的滚轮事件冒泡，使其进行垂直滚动
@@ -230,40 +222,34 @@ export function KanbanColumn({
   return (
     <div
       ref={setNodeRef}
-      className={`flex-shrink-0 w-72 h-full flex flex-col bg-white/5 rounded-xl transition-colors ${
-        isOver ? 'bg-white/10' : ''
+      className={`flex h-full w-72 shrink-0 flex-col rounded-[10px] transition-colors duration-150 ${
+        isOver ? 'bg-accent-subtle' : 'bg-surface-1'
       }`}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
     >
       {/* Column Header */}
-      <div className="p-3 border-b border-white/5 flex-shrink-0">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            <h3 className="font-medium text-white truncate">{column.name}</h3>
-            <span className="text-xs text-white/40 flex-shrink-0">
-              {column.cards.length}
-            </span>
-          </div>
+      <div className="group/header flex shrink-0 items-center justify-between border-b border-hairline px-3 py-2.5">
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <h3 className="truncate text-[12.5px] font-medium text-text-1">{column.name}</h3>
+          <span className="tnum shrink-0 text-[11px] text-text-4">
+            {column.cards.length}
+          </span>
+        </div>
 
-          <div className={`flex items-center gap-1 transition-opacity ${
-            isHovered ? 'opacity-100' : 'opacity-0'
-          }`}>
-            <button
-              onClick={onDeleteColumn}
-              className="p-1 rounded hover:bg-[#EF4444]/10 text-white/40 hover:text-[#EF4444] transition-colors"
-              title="删除列"
-            >
-              <Icon name="trash" size={14} />
-            </button>
-          </div>
+        <div className="flex items-center opacity-0 transition-opacity duration-150 group-hover/header:opacity-100">
+          <button
+            onClick={onDeleteColumn}
+            className="icon-btn icon-btn-sm"
+            title="删除列"
+          >
+            <Icon name="trash" size={12} />
+          </button>
         </div>
       </div>
 
-      {/* Cards Container - with visible scrollbar */}
+      {/* Cards Container */}
       <div
         ref={cardsContainerRef}
-        className="flex-1 overflow-y-auto p-2 space-y-2 min-h-0 scrollbar-gutter-stable"
+        className="min-h-0 flex-1 space-y-2 overflow-y-auto p-2"
       >
         <SortableContext
           items={column.cards.map(c => c.id)}
@@ -283,12 +269,12 @@ export function KanbanColumn({
       </div>
 
       {/* Add Card Button */}
-      <div className="p-2 border-t border-white/5 flex-shrink-0">
+      <div className="shrink-0 border-t border-hairline p-2">
         <button
           onClick={onAddCard}
-          className="w-full py-2 rounded-lg hover:bg-white/5 text-white/40 hover:text-white/60 transition-colors flex items-center justify-center gap-1.5 text-sm"
+          className="flex w-full items-center justify-center gap-1.5 rounded-[6px] py-1.5 text-[12px] text-text-4 transition-colors duration-150 hover:bg-white/[0.045] hover:text-text-2"
         >
-          <Icon name="plus" size={16} />
+          <Icon name="plus" size={13} />
           <span>添加卡片</span>
         </button>
       </div>

@@ -199,12 +199,12 @@ export function BoardView({ board, kanban }: BoardViewProps): JSX.Element {
           ))}
 
           {/* Add Column Button */}
-          <div className="flex-shrink-0 w-72 flex-none">
+          <div className="w-72 flex-none shrink-0">
             <button
               onClick={() => setShowAddColumn(true)}
-              className="w-full h-12 rounded-xl border-2 border-dashed border-white/10 hover:border-white/20 text-white/40 hover:text-white/60 transition-colors flex items-center justify-center gap-2 clickable"
+              className="flex h-12 w-full items-center justify-center gap-2 rounded-[9px] border border-dashed border-hairline-strong text-text-4 transition-colors duration-150 hover:border-text-4 hover:text-text-2 clickable"
             >
-              <Icon name="plus" size={20} />
+              <Icon name="plus" size={16} />
               <span>添加列</span>
             </button>
           </div>
@@ -214,8 +214,11 @@ export function BoardView({ board, kanban }: BoardViewProps): JSX.Element {
       {/* Drag Overlay */}
       <DragOverlay>
         {activeCard ? (
-          <div className="w-64 bg-[#1E1E2E] rounded-lg p-3 shadow-xl opacity-90">
-            <h4 className="text-sm font-medium text-white">{activeCard.title}</h4>
+          <div
+            className="w-64 rounded-[9px] p-3 opacity-95"
+            style={{ background: 'var(--color-surface-4)', border: '1px solid var(--color-hairline-strong)', boxShadow: 'var(--shadow-pop)' }}
+          >
+            <h4 className="text-[12.5px] font-medium text-text-1">{activeCard.title}</h4>
           </div>
         ) : null}
       </DragOverlay>

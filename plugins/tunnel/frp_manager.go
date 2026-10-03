@@ -20,12 +20,12 @@ import (
 
 // FRPProcessManager FRP 进程管理器
 type FRPProcessManager struct {
-	config       *TunnelConfig
-	frpcPath     string  // 使用 exec.LookPath 找到的路径
-	processes    map[string]*FRPProcess
-	mutex        sync.RWMutex
-	emitEvent    func(eventName string, data interface{})
-	app          *application.App
+	config    *TunnelConfig
+	frpcPath  string // 使用 exec.LookPath 找到的路径
+	processes map[string]*FRPProcess
+	mutex     sync.RWMutex
+	emitEvent func(eventName string, data interface{})
+	app       *application.App
 }
 
 // FRPProcess FRP 进程信息
@@ -47,11 +47,11 @@ func NewFRPProcessManager(config *TunnelConfig, emitEvent func(eventName string,
 	frpcPath := findFRPCExecutable(app)
 
 	return &FRPProcessManager{
-		config:       config,
-		frpcPath:     frpcPath,
-		processes:    make(map[string]*FRPProcess),
-		emitEvent:    emitEvent,
-		app:          app,
+		config:    config,
+		frpcPath:  frpcPath,
+		processes: make(map[string]*FRPProcess),
+		emitEvent: emitEvent,
+		app:       app,
 	}
 }
 
@@ -63,14 +63,14 @@ func findFRPCExecutable(app *application.App) string {
 	// 创建调试日志文件
 	debugLogPath := filepath.Join(os.TempDir(), "ltools_frp_debug.log")
 	debugLog, err := os.OpenFile(debugLogPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	debugLogger := log.Default()
 	if err == nil {
 		defer debugLog.Close()
-		log.SetOutput(debugLog)
+		debugLogger = log.New(debugLog, "", log.LstdFlags)
 	}
 
-	log.Printf("%s ========== Finding frpc executable ==========", logPrefix)
-	log.Printf("%s GOOS: %s, GOARCH: %s", logPrefix, runtime.GOOS, runtime.GOARCH)
-	log.Printf("%s Environment: HOME=%s, USER=%s, PATH=%s", logPrefix, os.Getenv("HOME"), os.Getenv("USER"), os.Getenv("PATH"))
+	debugLogger.Printf("%s ========== Finding frpc executable ==========", logPrefix)
+	debugLogger.Printf("%s GOOS: %s, GOARCH: %s", logPrefix, runtime.GOOS, runtime.GOARCH)
 
 	execName := "frpc"
 	if runtime.GOOS == "windows" {
@@ -482,7 +482,7 @@ func (pm *FRPProcessManager) monitorProcess(process *FRPProcess, stdout, stderr 
 		// 添加调试日志
 		if pm.app != nil {
 			pm.app.Logger.Error(fmt.Sprintf("[FRP] Scanner error: tunnelID=%s, error=%v", process.TunnelID, err))
-				log.Printf("[FRP] Scanner error: tunnelID=%s, error=%v\n", process.TunnelID, err)
+			log.Printf("[FRP] Scanner error: tunnelID=%s, error=%v\n", process.TunnelID, err)
 		}
 	}
 

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { BatchProgress as BatchProgressType, ProcessingResult } from './types';
 import { Icon } from '../Icon';
+import { Badge, Button, Modal, ProgressBar } from '../ui';
 
 interface BatchProgressProps {
   progress: BatchProgressType | null;
@@ -50,88 +51,74 @@ export function BatchProgress({
     : 0;
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="glass-heavy rounded-2xl p-6 w-full max-w-lg">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-[#FAF5FF] flex items-center gap-2">
-            <Icon name="cog-6-tooth" className={`w-5 h-5 text-[#A78BFA] ${progress.isRunning ? 'animate-spin' : ''}`} />
-            批量处理
-          </h3>
-          <button
-            onClick={onClose}
-            className="p-1 hover:bg-white/10 rounded-lg transition-colors"
-          >
-            <Icon name="x-mark" className="w-5 h-5 text-white/60" />
-          </button>
+    <Modal
+      open={visible}
+      onClose={onClose}
+      title="批量处理"
+      width={460}
+      footer={
+        progress.isRunning ? (
+          <Button variant="danger" icon="stop" onClick={onCancel}>
+            取消处理
+          </Button>
+        ) : (
+          <Button variant="primary" onClick={onClose}>
+            完成
+          </Button>
+        )
+      }
+    >
+      {/* 进度条 */}
+      <div className="mb-4">
+        <div className="mb-2 flex items-center justify-between">
+          <span className="text-[12px] text-text-3">进度</span>
+          <span className="tnum font-mono text-[12px] text-text-1">{percentage}%</span>
         </div>
-
-        {/* 进度条 */}
-        <div className="mb-4">
-          <div className="flex justify-between text-sm text-white/60 mb-2">
-            <span>进度</span>
-            <span>{percentage}%</span>
-          </div>
-          <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-gradient-to-r from-[#7C3AED] to-[#A78BFA] transition-all duration-300"
-              style={{ width: `${percentage}%` }}
-            />
-          </div>
-          <div className="flex justify-between text-xs text-white/40 mt-2">
-            <span>{progress.completed} 成功</span>
-            <span>{progress.failed} 失败</span>
-            <span>{progress.total} 总计</span>
-          </div>
-        </div>
-
-        {/* 当前文件 */}
-        {progress.isRunning && progress.current && (
-          <div className="mb-4 px-3 py-2 bg-white/5 rounded-lg">
-            <div className="text-xs text-white/40 mb-1">正在处理</div>
-            <div className="text-sm text-white/70 truncate">{progress.current}</div>
-          </div>
-        )}
-
-        {/* 耗时 */}
-        <div className="flex items-center gap-2 mb-4 text-sm text-white/60">
-          <Icon name="clock" className="w-4 h-4" />
-          <span>已用时: {formatTime(elapsedTime)}</span>
-        </div>
-
-        {/* 结果列表 */}
-        {progress.results.length > 0 && (
-          <div className="max-h-48 overflow-y-auto space-y-1 mb-4">
-            {progress.results.slice(-5).map((result, index) => (
-              <ResultItem
-                key={index}
-                result={result}
-                formatSize={formatSize}
-              />
-            ))}
-          </div>
-        )}
-
-        {/* 操作按钮 */}
-        <div className="flex gap-3">
-          {progress.isRunning ? (
-            <button
-              onClick={onCancel}
-              className="flex-1 px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
-            >
-              <Icon name="stop" className="w-4 h-4" />
-              取消处理
-            </button>
-          ) : (
-            <button
-              onClick={onClose}
-              className="flex-1 px-4 py-2 bg-[#7C3AED] hover:bg-[#6D28D9] text-white rounded-lg font-medium transition-colors"
-            >
-              完成
-            </button>
-          )}
+        <ProgressBar value={percentage} tone="accent" />
+        <div className="mt-2.5 flex items-center gap-1.5">
+          <Badge tone="success">
+            <span className="tnum">{progress.completed}</span> 成功
+          </Badge>
+          <Badge tone="error">
+            <span className="tnum">{progress.failed}</span> 失败
+          </Badge>
+          <Badge tone="neutral">
+            <span className="tnum">{progress.total}</span> 总计
+          </Badge>
         </div>
       </div>
-    </div>
+
+      {/* 当前文件 */}
+      {progress.isRunning && progress.current && (
+        <div className="card-inset mb-4 px-3 py-2.5">
+          <div className="mb-0.5 text-[10.5px] text-text-4">正在处理</div>
+          <div className="truncate text-[12.5px] text-text-1" title={progress.current}>
+            {progress.current}
+          </div>
+        </div>
+      )}
+
+      {/* 耗时 */}
+      <div className="mb-4 flex items-center gap-1.5 text-[12px] text-text-3">
+        <Icon name="clock" size={13} className="shrink-0 text-text-4" />
+        <span>
+          已用时: <span className="tnum font-mono text-text-2">{formatTime(elapsedTime)}</span>
+        </span>
+      </div>
+
+      {/* 结果列表 */}
+      {progress.results.length > 0 && (
+        <div className="mb-4 max-h-48 space-y-1 overflow-y-auto">
+          {progress.results.slice(-5).map((result, index) => (
+            <ResultItem
+              key={`${result.inputPath}-${index}`}
+              result={result}
+              formatSize={formatSize}
+            />
+          ))}
+        </div>
+      )}
+    </Modal>
   );
 }
 
@@ -147,25 +134,28 @@ function ResultItem({ result, formatSize }: ResultItemProps): JSX.Element {
     : null;
 
   return (
-    <div className={`flex items-center gap-3 px-3 py-2 rounded-lg ${
-      result.success ? 'bg-green-500/10' : 'bg-red-500/10'
-    }`}>
+    <div className="flex items-center gap-2.5 rounded-[6px] bg-surface-1 px-2.5 py-2">
       <Icon
         name={result.success ? 'check-circle' : 'x-circle'}
-        className={`w-4 h-4 flex-shrink-0 ${result.success ? 'text-green-400' : 'text-red-400'}`}
+        size={14}
+        className={`shrink-0 ${result.success ? 'text-success-text' : 'text-error-text'}`}
       />
-      <div className="flex-1 min-w-0">
-        <div className="text-sm text-white/70 truncate">{fileName}</div>
+      <div className="min-w-0 flex-1">
+        <div className="truncate text-[12px] text-text-1" title={fileName}>
+          {fileName}
+        </div>
         {result.success && sizeChange && (
-          <div className="text-xs text-white/40">
-            {formatSize(result.sizeBefore)} → {formatSize(result.sizeAfter)} &nbsp;
-            <span className={parseFloat(sizeChange) < 0 ? 'text-green-400' : 'text-red-400'}>
+          <div className="tnum mt-0.5 text-[10.5px] text-text-4">
+            {formatSize(result.sizeBefore)} → {formatSize(result.sizeAfter)}
+            <span className={`ml-1.5 ${parseFloat(sizeChange) < 0 ? 'text-success-text' : 'text-error-text'}`}>
               {parseFloat(sizeChange) > 0 ? '+' : ''}{sizeChange}%
             </span>
           </div>
         )}
         {!result.success && result.error && (
-          <div className="text-xs text-red-400 truncate">{result.error}</div>
+          <div className="mt-0.5 truncate text-[10.5px] text-error-text" title={result.error}>
+            {result.error}
+          </div>
         )}
       </div>
     </div>

@@ -1,4 +1,4 @@
-import { Icon, IconName } from './Icon';
+import { Icon, type IconName } from './Icon';
 
 /**
  * 设置分类类型
@@ -61,30 +61,29 @@ interface SettingsNavProps {
  */
 export function SettingsNav({ activeCategory, onCategoryChange }: SettingsNavProps) {
   return (
-    <nav className="w-56 flex-shrink-0">
-      <div className="glass-light rounded-xl p-3">
-        <ul className="space-y-1">
-          {navItems.map((item) => (
-            <li key={item.id}>
-              <button
-                onClick={() => onCategoryChange(item.id)}
-                className={`
-                  w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 text-left
-                  ${activeCategory === item.id
-                    ? 'bg-[#7C3AED]/20 text-white border border-[#7C3AED]/30'
-                    : 'text-white/60 hover:text-white hover:bg-white/5 border border-transparent'
-                  }
-                `}
-              >
-                <Icon
-                  name={item.icon}
-                  size={18}
-                  color={activeCategory === item.id ? '#A78BFA' : 'currentColor'}
-                />
-                <span className="font-medium text-sm">{item.label}</span>
-              </button>
-            </li>
-          ))}
+    <nav className="sticky top-6 w-[176px] shrink-0 self-start" aria-label="设置分类">
+      <div className="card-inset p-1.5">
+        <ul className="flex flex-col gap-0.5">
+          {navItems.map((item) => {
+            const active = activeCategory === item.id;
+            return (
+              <li key={item.id}>
+                <button
+                  onClick={() => onCategoryChange(item.id)}
+                  aria-current={active ? 'page' : undefined}
+                  title={item.description}
+                  className={`flex h-8 w-full items-center gap-2.5 rounded-[6px] px-2.5 text-left text-[12.5px] font-medium transition-colors duration-150 ${
+                    active
+                      ? 'bg-accent-subtle text-accent-text'
+                      : 'text-text-2 hover:bg-white/[0.045] hover:text-text-1'
+                  }`}
+                >
+                  <Icon name={item.icon} size={15} className="shrink-0" />
+                  <span className="truncate">{item.label}</span>
+                </button>
+              </li>
+            );
+          })}
         </ul>
       </div>
     </nav>

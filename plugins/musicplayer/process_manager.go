@@ -15,8 +15,9 @@ import (
 	"strings"
 	"sync"
 	"time"
-)
 
+	"ltools/internal/processutil"
+)
 
 // ProcessManager Node.js 进程管理器
 type ProcessManager struct {
@@ -25,6 +26,8 @@ type ProcessManager struct {
 	stdout       io.Reader
 	stderr       io.Reader
 	processMutex sync.RWMutex
+	exited       chan struct{}
+	exitError    error
 
 	// 进程状态
 	isRunning bool
@@ -42,8 +45,8 @@ type ProcessManager struct {
 
 // ProcessManagerConfig 进程管理器配置
 type ProcessManagerConfig struct {
-	NodePath           string // Node.js 路径（如果为空，使用 "node"）
-	ServiceDir         string // lx-music-service 目录路径
+	NodePath            string // Node.js 路径（如果为空，使用 "node"）
+	ServiceDir          string // lx-music-service 目录路径
 	HealthCheckInterval time.Duration
 }
 
@@ -245,6 +248,7 @@ func (pm *ProcessManager) Start() error {
 	log.Printf("[ProcessManager] Server path: %s", serverPath)
 	log.Printf("[ProcessManager] Working directory: %s", absServiceDir)
 	pm.cmd = exec.Command(pm.nodePath, serverPath)
+	processutil.Background(pm.cmd)
 	pm.cmd.Dir = pm.serviceDir
 
 	// 获取 stdin/stdout/stdout 管道
@@ -273,9 +277,22 @@ func (pm *ProcessManager) Start() error {
 
 	pm.isRunning = true
 	pm.startTime = time.Now()
+	pm.exited = make(chan struct{})
+	pm.exitError = nil
 
 	// 启动 goroutine 读取 stderr（日志）
 	go pm.readStderr()
+	cmd, exited := pm.cmd, pm.exited
+	go func() {
+		err := cmd.Wait()
+		pm.processMutex.Lock()
+		if pm.cmd == cmd {
+			pm.isRunning = false
+			pm.exitError = err
+		}
+		pm.processMutex.Unlock()
+		close(exited)
+	}()
 
 	log.Printf("[ProcessManager] Process started (PID: %d)", pm.cmd.Process.Pid)
 
@@ -288,44 +305,27 @@ func (pm *ProcessManager) Start() error {
 // Stop 停止进程
 func (pm *ProcessManager) Stop() error {
 	pm.processMutex.Lock()
-	defer pm.processMutex.Unlock()
-
 	if !pm.isRunning {
+		pm.processMutex.Unlock()
 		return nil
 	}
-
-	// 关闭 stdin
 	if pm.stdin != nil {
 		pm.stdin.Close()
 	}
-
-	// 发送 SIGTERM 信号
-	if pm.cmd != nil && pm.cmd.Process != nil {
-		if err := pm.cmd.Process.Signal(os.Interrupt); err != nil {
-			log.Printf("[ProcessManager] Failed to send SIGTERM: %v", err)
-		}
-
-		// 等待进程退出（最多 5 秒）
-		done := make(chan error, 1)
-		go func() {
-			done <- pm.cmd.Wait()
-		}()
-
-		select {
-		case <-time.After(5 * time.Second):
-			// 强制杀死进程
-			log.Printf("[ProcessManager] Force killing process")
-			pm.cmd.Process.Kill()
-		case err := <-done:
-			if err != nil {
-				log.Printf("[ProcessManager] Process exited with error: %v", err)
-			}
-		}
+	cmd, exited := pm.cmd, pm.exited
+	pm.processMutex.Unlock()
+	if runtime.GOOS == "windows" {
+		_ = cmd.Process.Kill()
+	} else {
+		_ = cmd.Process.Signal(os.Interrupt)
 	}
-
-	pm.isRunning = false
+	select {
+	case <-exited:
+	case <-time.After(5 * time.Second):
+		_ = cmd.Process.Kill()
+		<-exited
+	}
 	log.Printf("[ProcessManager] Process stopped")
-
 	return nil
 }
 
@@ -376,11 +376,16 @@ func (pm *ProcessManager) readStderr() {
 
 // WaitForExit 等待进程退出
 func (pm *ProcessManager) WaitForExit() error {
-	if pm.cmd == nil {
+	pm.processMutex.RLock()
+	exited := pm.exited
+	pm.processMutex.RUnlock()
+	if exited == nil {
 		return fmt.Errorf("process not started")
 	}
-
-	return pm.cmd.Wait()
+	<-exited
+	pm.processMutex.RLock()
+	defer pm.processMutex.RUnlock()
+	return pm.exitError
 }
 
 // GetUptime 获取进程运行时长
@@ -508,6 +513,7 @@ func findNodeExecutable() (string, error) {
 // checkNodeInstalled 检查 Node.js 是否安装
 func checkNodeInstalled(nodePath string) error {
 	cmd := exec.Command(nodePath, "--version")
+	processutil.Background(cmd)
 	output, err := cmd.Output()
 	if err != nil {
 		return fmt.Errorf("node.js not found at '%s': %w", nodePath, err)

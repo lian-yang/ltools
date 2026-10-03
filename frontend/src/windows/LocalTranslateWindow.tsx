@@ -7,9 +7,17 @@ import { LocalTranslateWidget } from '../components/LocalTranslateWidget';
  */
 export default function LocalTranslateWindow(): JSX.Element {
   return (
-    <div className="h-screen w-screen bg-[#0D0F1A] flex items-center justify-center p-8">
-      <div className="w-full max-w-2xl">
-        <LocalTranslateWidget />
+    <div className="flex h-screen w-screen justify-center overflow-y-auto bg-surface-0 p-8">
+      <div className="my-auto flex w-full max-w-2xl min-w-0 flex-col">
+        <header className="mb-4 flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="page-title">智能翻译</h1>
+            <p className="page-subtitle">多供应商 AI 翻译</p>
+          </div>
+        </header>
+        <div className="min-w-0">
+          <LocalTranslateWidget />
+        </div>
       </div>
     </div>
   );

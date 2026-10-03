@@ -3,6 +3,7 @@ import ReactCrop, { Crop, PixelCrop, PercentCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 import { ImageFile, PreviewResult } from './types';
 import { Icon } from '../Icon';
+import { EmptyState, Spinner } from '../ui';
 import { DragAction, DragState, initialDragState, reduceDragState } from './compareSlider';
 
 interface PreviewAreaProps {
@@ -211,17 +212,29 @@ export function PreviewArea({
     img.src = previewData.dataURL;
   }, [previewData, onCropComplete]);
 
-  // 鼠标滚轮缩放
-  const handleWheel = useCallback((e: React.WheelEvent<HTMLDivElement>) => {
+  // 鼠标滚轮缩放（通过原生非 passive 监听挂载，见下方 useEffect）
+  const handleWheelZoom = useCallback((deltaY: number) => {
+    const delta = deltaY > 0 ? 1 - ZOOM_STEP : 1 + ZOOM_STEP;
+    setZoom((prevZoom) => Math.min(Math.max(prevZoom * delta, ZOOM_MIN), ZOOM_MAX));
+  }, []);
+
+  // 挂载原生 wheel 监听(passive: false),使 preventDefault 生效,
+  // 避免缩放时页面跟随滚动与控制台报错
+  useEffect(() => {
     if (!cropMode || compareMode) return;
+    const el = containerRef.current;
+    if (!el) return;
 
-    e.preventDefault();
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      handleWheelZoom(e.deltaY);
+    };
 
-    const delta = e.deltaY > 0 ? 1 - ZOOM_STEP : 1 + ZOOM_STEP;
-    const newZoom = Math.min(Math.max(zoom * delta, ZOOM_MIN), ZOOM_MAX);
-
-    setZoom(newZoom);
-  }, [cropMode, compareMode, zoom]);
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => {
+      el.removeEventListener('wheel', onWheel);
+    };
+  }, [cropMode, compareMode, handleWheelZoom]);
 
   // 双击完成裁剪
   const handleDoubleClick = useCallback(() => {
@@ -389,22 +402,22 @@ export function PreviewArea({
   if (files.length === 0) {
     if (previewData?.dataURL) {
       return (
-        <div className="glass-heavy rounded-2xl p-4 h-full flex flex-col">
-          <div className="flex-1 relative bg-black/20 rounded-xl overflow-hidden flex items-center justify-center">
+        <div className="card flex h-full flex-col p-3">
+          <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-[9px] border border-hairline-faint bg-surface-1">
             <img
               src={previewData.dataURL}
               alt="Preview"
-              className="max-w-full max-h-full object-contain"
+              className="max-h-full max-w-full object-contain"
             />
             {isProcessing && (
-              <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+              <div className="absolute inset-0 flex items-center justify-center bg-black/60">
+                <Spinner size={22} />
               </div>
             )}
-            <div className="absolute bottom-4 left-4 px-3 py-2 bg-black/60 rounded-lg">
-              <div className="text-xs text-white/60">
+            <div className="absolute bottom-3 left-3 rounded-[6px] bg-black/60 px-2.5 py-1.5">
+              <span className="tnum font-mono text-[11px] text-text-2">
                 {previewData.width} × {previewData.height}
-              </div>
+              </span>
             </div>
           </div>
         </div>
@@ -412,51 +425,51 @@ export function PreviewArea({
     }
 
     return (
-      <div className="glass-heavy rounded-2xl p-8 h-full flex flex-col items-center justify-center text-center">
-        <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mb-4">
-          <Icon name="photo" className="w-10 h-10 text-white/30" />
-        </div>
-        <h3 className="text-lg font-medium text-white/60 mb-2">暂无图片</h3>
-        <p className="text-sm text-white/40 max-w-xs">
-          拖拽图片到此处，或点击选择文件按钮开始处理
-        </p>
+      <div className="card flex h-full items-center justify-center p-6">
+        <EmptyState
+          icon="photo"
+          title="暂无图片"
+          description="拖拽图片到此处，或点击选择文件按钮开始处理"
+        />
       </div>
     );
   }
 
   return (
-    <div className="glass-heavy rounded-2xl p-4 h-full flex flex-col">
+    <div className="card flex h-full flex-col p-3">
       {/* 文件列表 */}
       {files.length > 1 && (
-        <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
-          {files.map((file, index) => (
-            <button
-              key={file.path}
-              onClick={() => onSelect(index)}
-              className={`
-                flex-shrink-0 px-3 py-2 rounded-lg text-left min-w-[120px]
-                transition-all duration-200
-                ${selectedIndex === index
-                  ? 'bg-[#7C3AED]/30 border border-[#A78BFA]/50'
-                  : 'bg-white/5 hover:bg-white/10 border border-transparent'
-                }
-              `}
-            >
-              <div className="text-xs text-white/40 truncate">{file.name}</div>
-              <div className="text-xs text-white/60 mt-1">
-                {file.width} × {file.height}
-              </div>
-            </button>
-          ))}
+        <div className="scrollbar-hide mb-3 flex gap-1.5 overflow-x-auto pb-1">
+          {files.map((file, index) => {
+            const active = selectedIndex === index;
+            return (
+              <button
+                key={file.path}
+                onClick={() => onSelect(index)}
+                className={`min-w-[120px] shrink-0 rounded-[6px] border px-3 py-1.5 text-left transition-colors duration-150 ${
+                  active
+                    ? 'border-accent/40 bg-accent-subtle'
+                    : 'border-hairline bg-surface-1 hover:bg-surface-2'
+                }`}
+              >
+                <span className={`block truncate text-[11.5px] ${active ? 'text-accent-text' : 'text-text-2'}`}>
+                  {file.name}
+                </span>
+                <span className="tnum mt-0.5 block font-mono text-[10.5px] text-text-4">
+                  {file.width} × {file.height}
+                </span>
+              </button>
+            );
+          })}
         </div>
       )}
 
-      {/* 预览区域 */}
+      {/* 预览区域(画布,凹陷面板) */}
       <div
         ref={containerRef}
-        className={`flex-1 relative bg-black/20 rounded-xl overflow-hidden ${
+        className={`relative min-h-0 flex-1 overflow-hidden rounded-[9px] border border-hairline-faint bg-surface-1 ${
           compareMode
-            ? 'cursor-ew-resize select-none group'
+            ? 'group cursor-ew-resize select-none'
             : spacePressed && cropMode
             ? isPanning ? 'cursor-grabbing' : 'cursor-grab'
             : cropMode
@@ -480,7 +493,6 @@ export function PreviewArea({
           handlePointerUp(e);
           handlePanEnd(e);
         }}
-        onWheel={handleWheel}
         onDoubleClick={handleDoubleClick}
       >
         {previewData?.dataURL ? (
@@ -508,7 +520,7 @@ export function PreviewArea({
                       objectFit: 'contain',
                       transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
                       transformOrigin: 'center center',
-                      transition: isPanning ? 'none' : 'transform 0.1s ease-out',
+                      transition: isPanning ? 'none' : 'transform 120ms var(--ease-out)',
                     }}
                   />
                 </ReactCrop>
@@ -521,7 +533,7 @@ export function PreviewArea({
                     ref={imgRef}
                     src={previewData.dataURL}
                     alt="Preview"
-                    className="max-w-full max-h-full object-contain"
+                    className="max-h-full max-w-full object-contain"
                   />
                 </div>
 
@@ -537,15 +549,15 @@ export function PreviewArea({
                     <img
                       src={originalPreviewData.dataURL}
                       alt="Original"
-                      className="max-w-full max-h-full object-contain"
+                      className="max-h-full max-w-full object-contain"
                     />
                   </div>
                 )}
 
                 {compareMode && files[selectedIndex] && !originalPreviewData?.dataURL && (
-                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                    <div className="flex flex-col items-center gap-2 text-white/70 text-sm">
-                      <div className="w-6 h-6 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/60">
+                    <div className="flex flex-col items-center gap-2 text-[12px] text-text-2">
+                      <Spinner size={18} />
                       正在加载原图...
                     </div>
                   </div>
@@ -554,17 +566,16 @@ export function PreviewArea({
                 {/* 对比滑块 */}
                 {compareMode && (
                   <div
-                    className={`absolute top-0 bottom-0 w-0.5 transition-colors ${
-                      dragState.isDragging ? 'bg-white' : 'bg-white/70'
-                    } group-hover:bg-white`}
+                    className="absolute bottom-0 top-0 w-0.5 bg-text-1/80 transition-colors duration-150 group-hover:bg-text-1"
                     style={{ left: `${sliderPixelPosition}px` }}
                   >
                     <div
-                      className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white shadow-lg flex items-center justify-center transition-transform ${
-                        dragState.isDragging ? 'w-9 h-9 scale-105' : 'w-8 h-8'
-                      } group-hover:w-9 group-hover:h-9 group-hover:scale-105`}
+                      className={`absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-hairline-strong bg-text-1 transition-transform duration-150 ${
+                        dragState.isDragging ? 'h-9 w-9 scale-105' : 'h-8 w-8 group-hover:h-9 group-hover:w-9'
+                      }`}
                     >
-                      <Icon name="folder" className="w-4 h-4 text-gray-800" />
+                      <Icon name="chevron-left" size={13} className="text-surface-0" />
+                      <Icon name="chevron-right" size={13} className="text-surface-0" />
                     </div>
                   </div>
                 )}
@@ -573,8 +584,8 @@ export function PreviewArea({
 
             {/* 加载中 */}
             {isProcessing && (
-              <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+              <div className="absolute inset-0 flex items-center justify-center bg-black/60">
+                <Spinner size={22} />
               </div>
             )}
           </>
@@ -582,35 +593,35 @@ export function PreviewArea({
           <div className="absolute inset-0 flex items-center justify-center">
             {isProcessing ? (
               <div className="flex flex-col items-center gap-3">
-                <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                <span className="text-sm text-white/60">处理中...</span>
+                <Spinner size={22} />
+                <span className="text-[12px] text-text-3">处理中...</span>
               </div>
             ) : (
-              <span className="text-sm text-white/40">点击处理查看预览</span>
+              <span className="text-[12px] text-text-3">点击处理查看预览</span>
             )}
           </div>
         )}
 
         {/* 图片信息 */}
         {files[selectedIndex] && (
-          <div className="absolute bottom-4 left-4 px-3 py-2 bg-black/60 rounded-lg">
-            <div className="text-xs text-white/60">
+          <div className="absolute bottom-3 left-3 rounded-[6px] bg-black/60 px-2.5 py-1.5">
+            <span className="tnum font-mono text-[11px] text-text-2">
               {files[selectedIndex].width} × {files[selectedIndex].height} · {files[selectedIndex].format.toUpperCase()}
-            </div>
+            </span>
           </div>
         )}
       </div>
 
       {/* 当前选中的文件名 */}
       {files.length > 0 && (
-        <div className="mt-3 px-3 py-2 bg-white/5 rounded-lg flex items-center justify-between">
-          <div className="flex items-center gap-2 min-w-0">
-            <Icon name="document" className="w-4 h-4 text-white/40 flex-shrink-0" />
-            <span className="text-sm text-white/70 truncate">
+        <div className="mt-3 flex items-center justify-between rounded-[6px] bg-surface-1 px-3 py-2">
+          <div className="flex min-w-0 items-center gap-2">
+            <Icon name="document" size={14} className="shrink-0 text-text-4" />
+            <span className="truncate text-[12px] text-text-2">
               {files[selectedIndex]?.name || '未选择'}
             </span>
           </div>
-          <span className="text-xs text-white/40 flex-shrink-0">
+          <span className="tnum shrink-0 text-[11px] text-text-4">
             {selectedIndex + 1} / {files.length}
           </span>
         </div>

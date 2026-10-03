@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Icon } from './Icon';
+import { Icon, type IconName } from './Icon';
 import * as LocalTranslateService from '../../bindings/ltools/plugins/localtranslate/localtranslateservice';
 import { ProviderType, type ProviderStatus } from '../../bindings/ltools/plugins/localtranslate/models';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Badge, Button, Field, IconButton, Input, Spinner } from './ui';
 
 /**
  * SetupWizard - 多供应商翻译配置向导
@@ -34,7 +35,7 @@ interface OllamaModel {
   modified: string;
 }
 
-const PROVIDER_INFO: Record<string, { name: string; description: string; icon: string; requiresApiKey: boolean; requiresBaseUrl: boolean; supportsCustomBaseUrl: boolean; defaultModel: string; defaultBaseUrl: string }> = {
+const PROVIDER_INFO: Record<string, { name: string; description: string; icon: IconName; requiresApiKey: boolean; requiresBaseUrl: boolean; supportsCustomBaseUrl: boolean; defaultModel: string; defaultBaseUrl: string }> = {
   [ProviderType.ProviderOpenAI]: {
     name: 'OpenAI',
     description: '使用 GPT-4o-mini 进行翻译',
@@ -76,6 +77,8 @@ const PROVIDER_INFO: Record<string, { name: string; description: string; icon: s
     defaultBaseUrl: 'http://localhost:11434',
   },
 };
+
+const STEP_LABELS = ['选择供应商', '配置参数', '测试连接'] as const;
 
 export function SetupWizard({ isOpen, onClose, onComplete }: SetupWizardProps): JSX.Element | null {
   const [step, setStep] = useState(1);
@@ -135,18 +138,8 @@ export function SetupWizard({ isOpen, onClose, onComplete }: SetupWizardProps): 
     setDetectingOllama(true);
     try {
       // 尝试获取 Ollama 模型列表
-      const response = await fetch(`${baseUrl}/api/tags`, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        const models = data.models?.map((m: any) => ({
-          name: m.name,
-          size: m.size,
-          modified: m.modified,
-        })) || [];
+      const models = await LocalTranslateService.DetectOllamaModels(baseUrl);
+      {
         setOllamaModels(models);
 
         // 自动选择第一个模型
@@ -155,8 +148,6 @@ export function SetupWizard({ isOpen, onClose, onComplete }: SetupWizardProps): 
         }
 
         return { success: true, message: `检测到 ${models.length} 个模型` };
-      } else {
-        return { success: false, message: '无法连接到 Ollama 服务' };
       }
     } catch (err) {
       return { success: false, message: 'Ollama 服务未运行' };
@@ -298,362 +289,325 @@ export function SetupWizard({ isOpen, onClose, onComplete }: SetupWizardProps): 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="scrim fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* 背景遮罩 */}
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={handleClose} />
+      <div className="absolute inset-0" onClick={handleClose} />
 
       {/* 向导容器 */}
-      <div className="relative w-full max-w-2xl max-h-[90vh] overflow-hidden rounded-2xl bg-[#1A1F2E] border border-white/10 shadow-2xl">
+      <div
+        className="relative flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-[12px] border border-hairline-strong bg-surface-2"
+        style={{ boxShadow: 'var(--shadow-modal)' }}
+        role="dialog"
+        aria-modal="true"
+      >
         {/* 头部 */}
-        <div className="flex items-center justify-between p-6 border-b border-white/10">
-          <div className="flex items-center gap-3">
-            <Icon name="language" size={24} color="#7C3AED" />
-            <h2 className="text-xl font-bold text-white">翻译供应商配置</h2>
+        <div className="hairline-b flex shrink-0 items-center justify-between px-5 py-3.5">
+          <div className="flex items-center gap-2.5">
+            <Icon name="language" size={18} className="text-accent-text" />
+            <h2 className="text-[14px] font-semibold text-text-1">翻译供应商配置</h2>
           </div>
-          <button
-            onClick={handleClose}
-            className="p-2 rounded-lg hover:bg-white/10 text-white/60 hover:text-white transition-colors"
-          >
-            <Icon name="x" size={20} />
-          </button>
+          <IconButton name="x" label="关闭向导" size="sm" onClick={handleClose} disabled={loading} />
         </div>
 
         {/* 步骤指示器 */}
-        <div className="flex items-center justify-center gap-4 p-4 bg-white/5">
-          {[1, 2, 3].map((s) => (
-            <div key={s} className="flex items-center gap-2">
-              <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
-                  s === step
-                    ? 'bg-[#7C3AED] text-white'
-                    : s < step
-                    ? 'bg-green-500 text-white'
-                    : 'bg-white/10 text-white/40'
-                }`}
-              >
-                {s < step ? <Icon name="check" size={16} /> : s}
+        <div className="hairline-b flex shrink-0 items-center justify-center gap-2 px-5 py-3">
+          {STEP_LABELS.map((label, i) => {
+            const s = i + 1;
+            const isCurrent = s === step;
+            const isDone = s < step;
+            return (
+              <div key={s} className="flex items-center gap-2">
+                <div
+                  className="flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-semibold"
+                  style={
+                    isCurrent
+                      ? { background: 'var(--color-accent)', color: '#fff' }
+                      : isDone
+                        ? { background: 'var(--color-accent-subtle)', color: 'var(--color-accent-text)' }
+                        : { background: 'var(--color-surface-4)', color: 'var(--color-text-3)' }
+                  }
+                >
+                  {isDone ? <Icon name="check" size={12} /> : s}
+                </div>
+                <span className={`text-[12px] ${isCurrent ? 'font-medium text-text-1' : 'text-text-3'}`}>
+                  {label}
+                </span>
+                {s < STEP_LABELS.length && <div className="mx-1 h-px w-8 bg-hairline" />}
               </div>
-              <span
-                className={`text-sm ${
-                  s === step ? 'text-white' : 'text-white/40'
-                }`}
-              >
-                {s === 1 ? '选择供应商' : s === 2 ? '配置参数' : '测试连接'}
-              </span>
-              {s < 3 && <div className="w-8 h-px bg-white/10 ml-2" />}
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* 错误提示 */}
         {error && (
-          <div className="mx-6 mt-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center gap-2">
-            <Icon name="exclamation-circle" size={18} color="#EF4444" />
-            <span className="text-sm text-red-400">{error}</span>
+          <div className="mx-5 mt-4 flex shrink-0 items-center gap-2 rounded-[7px] border border-error/20 bg-error/10 px-3 py-2">
+            <Icon name="exclamation-circle" size={15} className="shrink-0 text-error-text" />
+            <span className="text-[12.5px] text-error-text">{error}</span>
           </div>
         )}
 
         {/* 内容区域 */}
-        <div className="p-6 overflow-y-auto max-h-[50vh]">
-          {/* 步骤 1: 选择供应商 */}
-          {step === 1 && (
-            <div className="space-y-4">
-              <p className="text-white/60 text-sm mb-4">
-                选择您想要使用的翻译供应商。系统会按照优先级自动选择可用的供应商。
-              </p>
+        <div className="min-h-0 flex-1 overflow-y-auto p-5">
+          {loading && providerStatuses.length === 0 ? (
+            <div className="flex items-center justify-center py-12">
+              <Spinner size={20} />
+            </div>
+          ) : (
+            <>
+              {/* 步骤 1: 选择供应商 */}
+              {step === 1 && (
+                <div className="space-y-4">
+                  <p className="text-[12.5px] text-text-2">
+                    选择您想要使用的翻译供应商。系统会按照优先级自动选择可用的供应商。
+                  </p>
 
-              <div className="grid grid-cols-1 gap-3">
-                {providerStatuses.map((status) => {
-                  const info = PROVIDER_INFO[status.type];
-                  const isSelected = selectedProviders.includes(status.type);
+                  <div className="grid grid-cols-1 gap-2">
+                    {providerStatuses.map((status) => {
+                      const info = PROVIDER_INFO[status.type];
+                      const isSelected = selectedProviders.includes(status.type);
 
-                  return (
-                    <div
-                      key={status.type}
-                      onClick={() => toggleProvider(status.type)}
-                      className={`p-4 rounded-xl border cursor-pointer transition-all ${
-                        isSelected
-                          ? 'bg-[#7C3AED]/20 border-[#7C3AED]'
-                          : 'bg-white/5 border-white/10 hover:border-white/30'
-                      }`}
-                    >
-                      <div className="flex items-start gap-4">
+                      return (
                         <div
-                          className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                            isSelected ? 'bg-[#7C3AED]' : 'bg-white/10'
-                          }`}
-                        >
-                          <Icon
-                            name={info.icon as any}
-                            size={20}
-                            color={isSelected ? 'white' : '#A78BFA'}
-                          />
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-medium text-white">{info.name}</h3>
-                            {status.available && (
-                              <span className="px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 text-xs">
-                                可用
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-sm text-white/50 mt-1">{info.description}</p>
-                          <p className="text-xs text-white/30 mt-1">
-                            模型: {status.model || info.defaultModel}
-                          </p>
-                        </div>
-                        <div
-                          className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                          key={status.type}
+                          onClick={() => toggleProvider(status.type)}
+                          className={`cursor-pointer rounded-[9px] border p-3.5 transition-colors duration-150 ${
                             isSelected
-                              ? 'border-[#7C3AED] bg-[#7C3AED]'
-                              : 'border-white/30'
+                              ? 'border-accent bg-accent-subtle'
+                              : 'border-hairline bg-surface-1 hover:border-hairline-strong'
                           }`}
                         >
-                          {isSelected && <Icon name="check" size={14} color="white" />}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* 步骤 2: 配置供应商 */}
-          {step === 2 && (
-            <div className="space-y-6">
-              <p className="text-white/60 text-sm">
-                为选中的供应商配置参数。API Key 可以稍后从环境变量读取。
-              </p>
-
-              {selectedProviders.map((type) => {
-                const info = PROVIDER_INFO[type];
-                const config = configs[type];
-
-                if (!config) return null;
-
-                return (
-                  <div key={type} className="p-4 rounded-xl bg-white/5 border border-white/10">
-                    <div className="flex items-center gap-3 mb-4">
-                      <Icon name={info.icon as any} size={20} color="#7C3AED" />
-                      <h3 className="font-medium text-white">{info.name}</h3>
-                    </div>
-
-                    <div className="space-y-4">
-                      {/* API Key */}
-                      {info.requiresApiKey && (
-                        <div>
-                          <label className="block text-sm text-white/60 mb-2">
-                            API Key
-                            <span className="text-white/30 ml-1">(可选，优先从环境变量读取)</span>
-                          </label>
-                          <input
-                            type="password"
-                            value={config.apiKey}
-                            onChange={(e) => updateConfig(type, { apiKey: e.target.value })}
-                            placeholder={`输入 ${info.name} API Key`}
-                            className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:border-[#7C3AED] transition-colors"
-                          />
-                          <p className="text-xs text-white/30 mt-1">
-                            环境变量: {type === ProviderType.ProviderOpenAI ? 'OPENAI_API_KEY' : type === ProviderType.ProviderAnthropic ? 'ANTHROPIC_API_KEY' : 'DEEPSEEK_API_KEY'}
-                          </p>
-                        </div>
-                      )}
-
-                      {/* Base URL */}
-                      {(info.requiresBaseUrl || info.supportsCustomBaseUrl) && (
-                        <div>
-                          <label className="block text-sm text-white/60 mb-2">
-                            服务地址
-                            {!info.requiresBaseUrl && (
-                              <span className="text-white/30 ml-1">(可选，留空使用默认地址)</span>
-                            )}
-                          </label>
-                          <div className="flex gap-2">
-                            <input
-                              type="text"
-                              value={config.baseUrl}
-                              onChange={(e) => updateConfig(type, { baseUrl: e.target.value })}
-                              placeholder={info.defaultBaseUrl}
-                              className="flex-1 px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:border-[#7C3AED] transition-colors"
-                            />
-                            {type === ProviderType.ProviderOllama && (
-                              <button
-                                onClick={() => detectOllama(config.baseUrl || info.defaultBaseUrl)}
-                                disabled={detectingOllama}
-                                className="px-4 py-2 rounded-lg bg-[#7C3AED]/20 hover:bg-[#7C3AED]/30 text-[#A78BFA] text-sm font-medium transition-colors disabled:opacity-50"
-                              >
-                                {detectingOllama ? '检测中...' : '检测'}
-                              </button>
-                            )}
+                          <div className="flex items-start gap-3">
+                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[7px] border border-hairline bg-surface-2">
+                              <Icon
+                                name={info.icon}
+                                size={17}
+                                className={isSelected ? 'text-accent-text' : 'text-text-3'}
+                              />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2">
+                                <h3 className="text-[12.5px] font-medium text-text-1">{info.name}</h3>
+                                {status.available && <Badge tone="success">可用</Badge>}
+                              </div>
+                              <p className="mt-0.5 text-[11.5px] text-text-3">{info.description}</p>
+                              <p className="tnum mt-0.5 truncate font-mono text-[11px] text-text-4">
+                                模型: {status.model || info.defaultModel}
+                              </p>
+                            </div>
+                            <div
+                              className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
+                                isSelected ? 'border-accent' : 'border-hairline-strong'
+                              }`}
+                              style={isSelected ? { background: 'var(--color-accent)', color: '#fff' } : undefined}
+                            >
+                              {isSelected && <Icon name="check" size={11} />}
+                            </div>
                           </div>
-                          {!info.requiresBaseUrl && (
-                            <p className="text-xs text-white/30 mt-1">
-                              默认: {info.defaultBaseUrl}
-                            </p>
-                          )}
                         </div>
-                      )}
-
-                      {/* 模型选择 */}
-                      <div>
-                        <label className="block text-sm text-white/60 mb-2">模型</label>
-                        {type === ProviderType.ProviderOllama && ollamaModels.length > 0 ? (
-                          <Select
-                            value={config.model}
-                            onValueChange={(value) => updateConfig(type, { model: value })}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="选择模型" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {ollamaModels.map((model) => (
-                                <SelectItem key={model.name} value={model.name}>
-                                  {model.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        ) : (
-                          <input
-                            type="text"
-                            value={config.model}
-                            onChange={(e) => updateConfig(type, { model: e.target.value })}
-                            placeholder={info.defaultModel}
-                            className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:border-[#7C3AED] transition-colors"
-                          />
-                        )}
-                      </div>
-
-                      {/* Max Tokens */}
-                      <div>
-                        <label className="block text-sm text-white/60 mb-2">最大 Token 数</label>
-                        <input
-                          type="number"
-                          value={config.maxTokens}
-                          onChange={(e) => updateConfig(type, { maxTokens: parseInt(e.target.value) || 1024 })}
-                          min={100}
-                          max={4096}
-                          className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:border-[#7C3AED] transition-colors"
-                        />
-                      </div>
-                    </div>
+                      );
+                    })}
                   </div>
-                );
-              })}
-            </div>
-          )}
+                </div>
+              )}
 
-          {/* 步骤 3: 测试连接 */}
-          {step === 3 && (
-            <div className="space-y-4">
-              <p className="text-white/60 text-sm">
-                测试与各个供应商的连接状态。测试成功后即可开始使用翻译功能。
-              </p>
+              {/* 步骤 2: 配置供应商 */}
+              {step === 2 && (
+                <div className="space-y-5">
+                  <p className="text-[12.5px] text-text-2">
+                    为选中的供应商配置参数。API Key 可以稍后从环境变量读取。
+                  </p>
 
-              <button
-                onClick={testAllProviders}
-                disabled={testing || selectedProviders.length === 0}
-                className="w-full py-3 rounded-lg bg-[#7C3AED] hover:bg-[#6D28D9] disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium transition-colors flex items-center justify-center gap-2"
-              >
-                {testing ? (
-                  <>
-                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    <span>测试中...</span>
-                  </>
-                ) : (
-                  <>
-                    <Icon name="refresh-cw" size={18} />
-                    <span>开始测试</span>
-                  </>
-                )}
-              </button>
-
-              {/* 测试结果 */}
-              {Object.keys(testResults).length > 0 && (
-                <div className="space-y-2 mt-4">
                   {selectedProviders.map((type) => {
                     const info = PROVIDER_INFO[type];
-                    const result = testResults?.[type];
+                    const config = configs[type];
+
+                    if (!config) return null;
 
                     return (
-                      <div
-                        key={type}
-                        className={`p-3 rounded-lg border flex items-center gap-3 ${
-                          result
-                            ? result.success
-                              ? 'bg-green-500/10 border-green-500/20'
-                              : 'bg-red-500/10 border-red-500/20'
-                            : 'bg-white/5 border-white/10'
-                        }`}
-                      >
-                        <Icon
-                          name={info.icon as any}
-                          size={18}
-                          color={result ? (result.success ? '#22C55E' : '#EF4444') : '#9CA3AF'}
-                        />
-                        <span className="text-sm text-white flex-1">{info.name}</span>
-                        {result && (
-                          <>
-                            <Icon
-                              name={result.success ? 'check-circle' : 'x-circle'}
-                              size={18}
-                              color={result.success ? '#22C55E' : '#EF4444'}
-                            />
-                            <span
-                              className={`text-xs ${
-                                result.success ? 'text-green-400' : 'text-red-400'
-                              }`}
+                      <div key={type} className="card-inset p-4">
+                        <div className="hairline-b mb-3 flex items-center gap-2 pb-2.5">
+                          <Icon name={info.icon} size={16} className="text-text-2" />
+                          <h3 className="text-[12.5px] font-medium text-text-1">{info.name}</h3>
+                        </div>
+
+                        <div className="space-y-3.5">
+                          {/* API Key */}
+                          {info.requiresApiKey && (
+                            <Field
+                              label="API Key"
+                              hint={`环境变量: ${type === ProviderType.ProviderOpenAI ? 'OPENAI_API_KEY' : type === ProviderType.ProviderAnthropic ? 'ANTHROPIC_API_KEY' : 'DEEPSEEK_API_KEY'}（可选，优先从环境变量读取）`}
                             >
-                              {result.message}
-                            </span>
-                          </>
-                        )}
+                              <Input
+                                type="password"
+                                value={config.apiKey}
+                                onChange={(e) => updateConfig(type, { apiKey: e.target.value })}
+                                placeholder={`输入 ${info.name} API Key`}
+                              />
+                            </Field>
+                          )}
+
+                          {/* Base URL */}
+                          {(info.requiresBaseUrl || info.supportsCustomBaseUrl) && (
+                            <Field
+                              label="服务地址"
+                              hint={info.requiresBaseUrl ? undefined : `可选，留空使用默认地址 ${info.defaultBaseUrl}`}
+                            >
+                              <div className="flex gap-2">
+                                <Input
+                                  type="text"
+                                  className="flex-1"
+                                  value={config.baseUrl}
+                                  onChange={(e) => updateConfig(type, { baseUrl: e.target.value })}
+                                  placeholder={info.defaultBaseUrl}
+                                />
+                                {type === ProviderType.ProviderOllama && (
+                                  <Button
+                                    variant="secondary"
+                                    onClick={() => detectOllama(config.baseUrl || info.defaultBaseUrl)}
+                                    disabled={detectingOllama}
+                                    loading={detectingOllama}
+                                  >
+                                    {detectingOllama ? '检测中...' : '检测'}
+                                  </Button>
+                                )}
+                              </div>
+                            </Field>
+                          )}
+
+                          {/* 模型选择 */}
+                          <Field label="模型">
+                            {type === ProviderType.ProviderOllama && ollamaModels.length > 0 ? (
+                              <Select
+                                value={config.model}
+                                onValueChange={(value) => updateConfig(type, { model: value })}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="选择模型" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {ollamaModels.map((model) => (
+                                    <SelectItem key={model.name} value={model.name}>
+                                      {model.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              <Input
+                                type="text"
+                                value={config.model}
+                                onChange={(e) => updateConfig(type, { model: e.target.value })}
+                                placeholder={info.defaultModel}
+                              />
+                            )}
+                          </Field>
+
+                          {/* Max Tokens */}
+                          <Field label="最大 Token 数">
+                            <Input
+                              type="number"
+                              className="tnum w-32"
+                              value={config.maxTokens}
+                              onChange={(e) => updateConfig(type, { maxTokens: parseInt(e.target.value) || 1024 })}
+                              min={100}
+                              max={4096}
+                            />
+                          </Field>
+                        </div>
                       </div>
                     );
                   })}
                 </div>
               )}
-            </div>
+
+              {/* 步骤 3: 测试连接 */}
+              {step === 3 && (
+                <div className="space-y-4">
+                  <p className="text-[12.5px] text-text-2">
+                    测试与各个供应商的连接状态。测试成功后即可开始使用翻译功能。
+                  </p>
+
+                  <Button
+                    variant="primary"
+                    icon="refresh-cw"
+                    onClick={testAllProviders}
+                    disabled={testing || selectedProviders.length === 0}
+                    loading={testing}
+                  >
+                    {testing ? '测试中...' : '开始测试'}
+                  </Button>
+
+                  {/* 测试结果 */}
+                  {Object.keys(testResults).length > 0 && (
+                    <div className="space-y-1.5">
+                      {selectedProviders.map((type) => {
+                        const info = PROVIDER_INFO[type];
+                        const result = testResults?.[type];
+
+                        return (
+                          <div
+                            key={type}
+                            className={`flex items-center gap-2.5 rounded-[7px] border px-3 py-2.5 ${
+                              result
+                                ? result.success
+                                  ? 'border-success/20 bg-success/10'
+                                  : 'border-error/20 bg-error/10'
+                                : 'border-hairline bg-surface-1'
+                            }`}
+                          >
+                            <Icon name={info.icon} size={15} className="shrink-0 text-text-3" />
+                            <span className="min-w-0 flex-1 truncate text-[12.5px] text-text-1">{info.name}</span>
+                            {result && (
+                              <>
+                                <Icon
+                                  name={result.success ? 'check-circle' : 'x-circle'}
+                                  size={15}
+                                  className={`shrink-0 ${result.success ? 'text-success-text' : 'text-error-text'}`}
+                                />
+                                <span className={`text-[11.5px] ${result.success ? 'text-success-text' : 'text-error-text'}`}>
+                                  {result.message}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
           )}
         </div>
 
         {/* 底部按钮 */}
-        <div className="flex items-center justify-between p-6 border-t border-white/10 bg-white/5">
-          <button
+        <div className="hairline-t flex shrink-0 items-center justify-between px-5 py-3.5">
+          <Button
+            variant="ghost"
             onClick={step === 1 ? handleClose : () => setStep(step - 1)}
-            className="px-6 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white font-medium transition-colors"
+            disabled={loading}
           >
             {step === 1 ? '取消' : '上一步'}
-          </button>
+          </Button>
 
           {step < 3 ? (
-            <button
+            <Button
+              variant="primary"
               onClick={() => setStep(step + 1)}
               disabled={step === 1 && selectedProviders.length === 0}
-              className="px-6 py-2 rounded-lg bg-[#7C3AED] hover:bg-[#6D28D9] disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium transition-colors"
             >
               下一步
-            </button>
+            </Button>
           ) : (
-            <button
+            <Button
+              variant="primary"
+              icon="check"
               onClick={saveConfig}
               disabled={loading}
-              className="px-6 py-2 rounded-lg bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white font-medium transition-colors flex items-center gap-2"
+              loading={loading}
             >
-              {loading ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  <span>保存中...</span>
-                </>
-              ) : (
-                <>
-                  <Icon name="check" size={18} />
-                  <span>完成配置</span>
-                </>
-              )}
-            </button>
+              {loading ? '保存中...' : '完成配置'}
+            </Button>
           )}
         </div>
       </div>

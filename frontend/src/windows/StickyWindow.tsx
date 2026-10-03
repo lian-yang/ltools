@@ -50,9 +50,9 @@ const colorOptions: ColorOption[] = [
     name: 'purple',
     bgClass: 'bg-violet-100',
     borderClass: 'border-violet-300',
-    textColor: '#5B21B6',
-    bgColor: '#EDE9FE',
-    borderColor: '#C4B5FD',
+    textColor: '#7A4BA8',
+    bgColor: '#F5EDFC',
+    borderColor: '#DDB3F9',
   },
 ];
 
@@ -417,8 +417,8 @@ const StickyWindow: React.FC = () => {
 
   if (!note) {
     return (
-      <div className="fixed inset-0 flex items-center justify-center" style={{ backgroundColor: '#f3f4f6' }}>
-        <div className="text-gray-500">加载中...</div>
+      <div className="fixed inset-0 flex items-center justify-center" style={{ backgroundColor: '#FEF3C7' }}>
+        <div className="text-[12.5px]" style={{ color: '#92400E', opacity: 0.7 }}>加载中…</div>
       </div>
     );
   }
@@ -450,7 +450,7 @@ const StickyWindow: React.FC = () => {
             <button
               key={color.name}
               onClick={() => handleColorChange(color.name)}
-              className={`w-4 h-4 rounded-full border-2 transition-all hover:scale-110 cursor-pointer ${color.bgClass}`}
+              className={`h-4 w-4 cursor-pointer rounded-full border-2 transition-transform duration-100 hover:scale-110 ${color.bgClass}`}
               style={{
                 borderColor: color.borderColor,
                 boxShadow: note.color === color.name ? `0 0 0 2px ${color.textColor}` : undefined,
@@ -509,24 +509,24 @@ const StickyWindow: React.FC = () => {
       {/* Delete confirmation dialog */}
       {showDeleteConfirm && (
         <div
-          className="fixed inset-0 flex items-center justify-center z-50"
+          className="fixed inset-0 z-50 flex items-center justify-center"
           style={{ backgroundColor: 'rgba(0,0,0,0.3)' }}
           onClick={() => setShowDeleteConfirm(false)}
         >
           <div
-            className="p-4 rounded-lg shadow-lg max-w-xs"
-            style={{ backgroundColor: currentColor.bgColor }}
+            className="max-w-xs rounded-[10px] p-4"
+            style={{ backgroundColor: currentColor.bgColor, border: `1px solid ${currentColor.borderColor}`, boxShadow: '0 12px 32px rgba(0,0,0,0.25)' }}
             onClick={(e) => e.stopPropagation()}
           >
-            <p className="mb-4 text-center" style={{ color: currentColor.textColor }}>
+            <p className="mb-3.5 text-center text-[12.5px]" style={{ color: currentColor.textColor }}>
               确定要删除这个便利贴吗？
             </p>
-            <div className="flex gap-2 justify-center">
+            <div className="flex justify-center gap-2">
               <button
                 onClick={() => setShowDeleteConfirm(false)}
-                className="px-4 py-2 rounded transition-colors"
+                className="rounded-[6px] px-3.5 py-1.5 text-[12.5px] transition-colors"
                 style={{
-                  backgroundColor: 'rgba(0,0,0,0.1)',
+                  backgroundColor: 'rgba(0,0,0,0.08)',
                   color: currentColor.textColor,
                 }}
               >
@@ -534,7 +534,8 @@ const StickyWindow: React.FC = () => {
               </button>
               <button
                 onClick={handleDeleteConfirm}
-                className="px-4 py-2 rounded transition-colors bg-red-500 text-white"
+                className="rounded-[6px] px-3.5 py-1.5 text-[12.5px] text-white transition-colors"
+                style={{ backgroundColor: '#E5484D' }}
               >
                 删除
               </button>

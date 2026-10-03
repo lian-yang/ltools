@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { VaultEntry } from '../../../bindings/ltools/plugins/vault/models';
 import EntryCard from './EntryCard';
 import { Icon } from '../Icon';
+import { EmptyState, Segmented } from '../ui';
 
 interface EntryListProps {
   entries: VaultEntry[];
@@ -10,7 +11,7 @@ interface EntryListProps {
 }
 
 const EntryList: React.FC<EntryListProps> = ({ entries, onEdit, onDelete }) => {
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
 
   // 按收藏和更新时间排序
   const sortedEntries = [...entries].sort((a, b) => {
@@ -22,50 +23,36 @@ const EntryList: React.FC<EntryListProps> = ({ entries, onEdit, onDelete }) => {
 
   if (entries.length === 0) {
     return (
-      <div className="flex-1 flex items-center justify-center">
-        <div className="text-center">
-          <Icon name="key" className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-400 mb-2">暂无密码条目</h3>
-          <p className="text-sm text-gray-500">
-            点击右上角的"新建"按钮添加您的第一个密码
-          </p>
-        </div>
+      <div className="flex flex-1 items-center justify-center">
+        <EmptyState
+          icon="key"
+          title="暂无密码条目"
+          description='点击右上角的"新建"按钮添加您的第一个密码'
+        />
       </div>
     );
   }
 
   return (
     <div className="flex-1 overflow-auto p-4">
-      {/* 视图切换 */}
-      <div className="flex items-center justify-between mb-4">
-        <p className="text-sm text-gray-400">
+      {/* 工具行 */}
+      <div className="mb-3 flex items-center justify-between">
+        <p className="tnum text-[12px] text-text-3">
           共 {entries.length} 个条目
         </p>
-        <div className="flex items-center gap-1 bg-white/5 rounded-lg p-1">
-          <button
-            onClick={() => setViewMode('list')}
-            className={`p-2 rounded transition-colors ${
-              viewMode === 'list' ? 'bg-white/10 text-white' : 'text-gray-400 hover:text-white'
-            }`}
-            title="列表视图"
-          >
-            <Icon name="list" className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => setViewMode('grid')}
-            className={`p-2 rounded transition-colors ${
-              viewMode === 'grid' ? 'bg-white/10 text-white' : 'text-gray-400 hover:text-white'
-            }`}
-            title="网格视图"
-          >
-            <Icon name="grid" className="w-4 h-4" />
-          </button>
-        </div>
+        <Segmented
+          value={viewMode}
+          onChange={setViewMode}
+          options={[
+            { value: 'list', label: <Icon name="list" size={13} /> },
+            { value: 'grid', label: <Icon name="grid" size={13} /> },
+          ]}
+        />
       </div>
 
       {/* 条目列表 */}
       {viewMode === 'list' ? (
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           {sortedEntries.map((entry) => (
             <EntryCard
               key={entry.id}
@@ -77,7 +64,7 @@ const EntryList: React.FC<EntryListProps> = ({ entries, onEdit, onDelete }) => {
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
           {sortedEntries.map((entry) => (
             <EntryCard
               key={entry.id}

@@ -3,6 +3,7 @@ import { Events, Browser } from '@wailsio/runtime';
 import { ImageBedService } from '../../bindings/ltools/plugins/imagebed';
 import { ImageBedConfig, UploadRecord } from '../../bindings/ltools/plugins/imagebed/models';
 import { Icon } from './Icon';
+import { Button, IconButton, Input, Modal, Spinner } from './ui';
 import { useToast } from '../hooks/useToast';
 
 type LinkFormat = 'raw' | 'markdown' | 'html';
@@ -333,158 +334,141 @@ export function ImageBedWidget(): JSX.Element {
     await Browser.OpenURL('https://github.com/settings/tokens/new?scopes=repo&description=LTools%20ImageBed');
   };
 
+  const helpSteps = [
+    { title: '创建 Personal Access Token', desc: null },
+    { title: '配置 Token 权限', desc: <>勾选 <code className="rounded bg-surface-1 px-1 py-0.5 font-mono text-[11px]">repo</code> 权限即可(包含对仓库的读写权限)</> },
+    { title: '生成并复制 Token', desc: <>点击底部 "Generate token" 按钮,然后复制生成的 Token(以 <code className="rounded bg-surface-1 px-1 py-0.5 font-mono text-[11px]">ghp_</code> 开头)</> },
+  ];
+
   return (
-    <div className="glass-heavy rounded-2xl p-8">
+    <div>
       {/* 头部 */}
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold flex items-center gap-2">
-          <Icon name="photo" className="w-6 h-6 text-[#A78BFA]" />
-          图床
-        </h2>
-        <button
+      <div className="mb-5 flex items-center justify-between">
+        <div>
+          <h1 className="page-title">图床</h1>
+          <p className="page-subtitle">使用 GitHub 仓库托管图片</p>
+        </div>
+        <Button
+          variant="secondary"
+          icon="cog-6-tooth"
           onClick={() => setShowConfig(!showConfig)}
-          className="px-4 py-2 rounded-lg bg-[#A78BFA]/10 hover:bg-[#A78BFA]/20 text-[#A78BFA] transition-colors flex items-center gap-2"
         >
-          <Icon name="cog-6-tooth" size={18} />
           {showConfig ? '返回上传' : '设置'}
-        </button>
+        </Button>
       </div>
 
       {/* 配置面板 */}
       {showConfig && (
-        <div className="glass rounded-xl p-6 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold">GitHub 配置</h3>
+        <div className="card mx-auto max-w-[560px] p-5">
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="text-[13.5px] font-semibold text-text-1">GitHub 配置</h3>
             <button
               onClick={() => setShowHelp(!showHelp)}
-              className="text-[#A78BFA] hover:text-[#A78BFA]/80 text-sm flex items-center gap-1 transition-colors"
+              className="flex items-center gap-1 text-[11.5px] text-accent-text transition-colors hover:text-accent-hover"
             >
-              <Icon name="information-circle" size={16} />
+              <Icon name="information-circle" size={13} />
               {showHelp ? '隐藏帮助' : '获取帮助'}
             </button>
           </div>
 
           {/* 帮助面板 */}
           {showHelp && (
-            <div className="mb-6 space-y-4">
-              <div className="glass rounded-lg p-4 border-l-4 border-[#A78BFA]">
-                <h4 className="font-semibold mb-3 text-[#FAF5FF]">如何获取 GitHub Token</h4>
+            <div className="card-inset mb-4 space-y-3 p-4">
+              <h4 className="text-[12.5px] font-semibold text-text-1">如何获取 GitHub Token</h4>
 
-                <div className="space-y-3">
-                  <div className="flex gap-3">
-                    <div className="flex-shrink-0 w-6 h-6 rounded-full bg-[#A78BFA] flex items-center justify-center text-white text-sm font-bold">
-                      1
+              <div className="space-y-3">
+                {helpSteps.map((step, i) => (
+                  <div key={step.title} className="flex gap-3">
+                    <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent-subtle text-[10.5px] font-semibold text-accent-text">
+                      {i + 1}
                     </div>
-                    <div className="flex-1">
-                      <p className="text-sm text-[#E9D5FF] mb-2">创建 Personal Access Token</p>
-                      <button
-                        onClick={openGitHubTokenPage}
-                        className="inline-flex items-center gap-2 px-3 py-1.5 text-sm bg-[#A78BFA] hover:bg-[#A78BFA]/80 text-white rounded-lg transition-colors"
-                      >
-                        <Icon name="external-link" size={14} />
-                        打开 GitHub Token 页面
-                      </button>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[12.5px] text-text-1">{step.title}</p>
+                      {i === 0 ? (
+                        <button
+                          onClick={openGitHubTokenPage}
+                          className="mt-1.5 inline-flex items-center gap-1.5 text-[11.5px] text-accent-text transition-colors hover:text-accent-hover"
+                        >
+                          <Icon name="external-link" size={12} />
+                          打开 GitHub Token 页面
+                        </button>
+                      ) : (
+                        <p className="mt-0.5 text-[11.5px] leading-relaxed text-text-3">{step.desc}</p>
+                      )}
                     </div>
                   </div>
+                ))}
+              </div>
 
-                  <div className="flex gap-3">
-                    <div className="flex-shrink-0 w-6 h-6 rounded-full bg-[#A78BFA] flex items-center justify-center text-white text-sm font-bold">
-                      2
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm text-[#E9D5FF] mb-2">配置 Token 权限</p>
-                      <p className="text-xs text-[#E9D5FF]/70">勾选 <code className="px-1 py-0.5 bg-[#1E1E2E] rounded">repo</code> 权限即可（包含对仓库的读写权限）</p>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-3">
-                    <div className="flex-shrink-0 w-6 h-6 rounded-full bg-[#A78BFA] flex items-center justify-center text-white text-sm font-bold">
-                      3
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm text-[#E9D5FF] mb-2">生成并复制 Token</p>
-                      <p className="text-xs text-[#E9D5FF]/70">点击底部 "Generate token" 按钮，然后复制生成的 Token（以 <code className="px-1 py-0.5 bg-[#1E1E2E] rounded">ghp_</code> 开头）</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-4 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-                  <p className="text-xs text-yellow-300 flex items-start gap-2">
-                    <span className="text-base">⚠️</span>
-                    <span>Token 只会显示一次，请立即保存。不要将 Token 提交到公开仓库。</span>
-                  </p>
-                </div>
+              <div
+                className="flex items-start gap-2 rounded-[7px] px-3 py-2.5 text-[11.5px] leading-relaxed"
+                style={{ background: 'rgba(255,159,10,0.08)', border: '1px solid rgba(255,159,10,0.18)', color: 'var(--color-warning-text)' }}
+              >
+                <Icon name="exclamation-circle" size={13} className="mt-0.5 shrink-0" />
+                <span>Token 只会显示一次,请立即保存。不要将 Token 提交到公开仓库。</span>
               </div>
             </div>
           )}
 
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-[#E9D5FF] mb-2">
-                GitHub Token <span className="text-red-400">*</span>
+              <label className="field-label">
+                GitHub Token <span style={{ color: 'var(--color-error-text)' }}>*</span>
               </label>
-              <input
+              <Input
                 type="password"
                 value={config.githubToken}
                 onChange={(e) => setConfig({ ...config, githubToken: e.target.value })}
                 placeholder="ghp_xxxxxxxxxxxx"
-                className="w-full px-4 py-2 bg-[#1E1E2E] border border-[#A78BFA]/20 rounded-lg focus:outline-none focus:border-[#A78BFA] text-[#FAF5FF]"
               />
-              <p className="text-xs text-[#E9D5FF]/60 mt-1">需要 repo 权限的 Personal Access Token</p>
+              <p className="field-hint">需要 repo 权限的 Personal Access Token</p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-[#E9D5FF] mb-2">
-                仓库所有者 <span className="text-red-400">*</span>
+              <label className="field-label">
+                仓库所有者 <span style={{ color: 'var(--color-error-text)' }}>*</span>
               </label>
-              <input
+              <Input
                 type="text"
                 value={config.owner}
                 onChange={(e) => setConfig({ ...config, owner: e.target.value })}
                 placeholder="username"
-                className="w-full px-4 py-2 bg-[#1E1E2E] border border-[#A78BFA]/20 rounded-lg focus:outline-none focus:border-[#A78BFA] text-[#FAF5FF]"
               />
-              <p className="text-xs text-[#E9D5FF]/60 mt-1">GitHub 用户名或组织名</p>
+              <p className="field-hint">GitHub 用户名或组织名</p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-[#E9D5FF] mb-2">
-                仓库名称 <span className="text-red-400">*</span>
+              <label className="field-label">
+                仓库名称 <span style={{ color: 'var(--color-error-text)' }}>*</span>
               </label>
-              <input
+              <Input
                 type="text"
                 value={config.repo}
                 onChange={(e) => setConfig({ ...config, repo: e.target.value })}
                 placeholder="image-hosting"
-                className="w-full px-4 py-2 bg-[#1E1E2E] border border-[#A78BFA]/20 rounded-lg focus:outline-none focus:border-[#A78BFA] text-[#FAF5FF]"
               />
-              <p className="text-xs text-[#E9D5FF]/60 mt-1">用于存储图片的 GitHub 仓库名</p>
+              <p className="field-hint">用于存储图片的 GitHub 仓库名</p>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-[#E9D5FF] mb-2">
-                  存储路径
-                </label>
-                <input
+                <label className="field-label">存储路径</label>
+                <Input
                   type="text"
                   value={config.path}
                   onChange={(e) => setConfig({ ...config, path: e.target.value })}
                   placeholder="images"
-                  className="w-full px-4 py-2 bg-[#1E1E2E] border border-[#A78BFA]/20 rounded-lg focus:outline-none focus:border-[#A78BFA] text-[#FAF5FF]"
                 />
-                <p className="text-xs text-[#E9D5FF]/60 mt-1">图片在仓库中的存储路径</p>
+                <p className="field-hint">图片在仓库中的存储路径</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-[#E9D5FF] mb-2">
-                  分支
-                </label>
-                <input
+                <label className="field-label">分支</label>
+                <Input
                   type="text"
                   value={config.branch}
                   onChange={(e) => setConfig({ ...config, branch: e.target.value })}
                   placeholder="main"
-                  className="w-full px-4 py-2 bg-[#1E1E2E] border border-[#A78BFA]/20 rounded-lg focus:outline-none focus:border-[#A78BFA] text-[#FAF5FF]"
                 />
-                <p className="text-xs text-[#E9D5FF]/60 mt-1">
-                  目标分支名称。常见值：<code className="px-1 bg-[#1E1E2E] rounded">main</code> 或 <code className="px-1 bg-[#1E1E2E] rounded">master</code>
+                <p className="field-hint">
+                  常见值:<code className="rounded bg-surface-1 px-1 font-mono text-[11px]">main</code> 或{' '}
+                  <code className="rounded bg-surface-1 px-1 font-mono text-[11px]">master</code>
                 </p>
                 <button
                   onClick={() => {
@@ -496,20 +480,16 @@ export function ImageBedWidget(): JSX.Element {
                     }
                   }}
                   disabled={!config.owner || !config.repo}
-                  className="mt-2 text-xs text-[#A78BFA] hover:text-[#A78BFA]/80 disabled:text-[#A78BFA]/40 flex items-center gap-1 transition-colors"
+                  className="mt-1.5 flex items-center gap-1 text-[11px] text-accent-text transition-colors hover:text-accent-hover disabled:opacity-40"
                 >
-                  <Icon name="external-link" size={12} />
+                  <Icon name="external-link" size={11} />
                   查看仓库分支
                 </button>
               </div>
             </div>
-            <button
-              onClick={handleSaveConfig}
-              disabled={isValidating}
-              className="w-full py-3 bg-[#A78BFA] hover:bg-[#A78BFA]/80 disabled:bg-[#A78BFA]/40 rounded-lg font-medium transition-colors"
-            >
-              {isValidating ? '验证中...' : '保存配置'}
-            </button>
+            <Button variant="primary" className="w-full" onClick={handleSaveConfig} loading={isValidating}>
+              {isValidating ? '验证中…' : '保存配置'}
+            </Button>
           </div>
         </div>
       )}
@@ -518,10 +498,10 @@ export function ImageBedWidget(): JSX.Element {
       {!showConfig && (
         <>
           <div
-            className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors ${
+            className={`rounded-[10px] border border-dashed p-8 text-center transition-colors duration-150 ${
               dragActive
-                ? 'border-[#A78BFA] bg-[#A78BFA]/10'
-                : 'border-[#A78BFA]/20 hover:border-[#A78BFA]/40'
+                ? 'file-drop-target-active'
+                : 'border-hairline-strong hover:border-text-4'
             }`}
             onDragEnter={handleDrag}
             onDragLeave={handleDrag}
@@ -535,21 +515,23 @@ export function ImageBedWidget(): JSX.Element {
               className="hidden"
               id="file-upload"
             />
-            <label
-              htmlFor="file-upload"
-              className="cursor-pointer flex flex-col items-center gap-4"
-            >
-              <div className={`w-16 h-16 rounded-full flex items-center justify-center ${
-                dragActive ? 'bg-[#A78BFA]/20' : 'bg-[#A78BFA]/10'
-              }`}>
-                <Icon name="cloud-arrow-up" size={32} className="text-[#A78BFA]" />
+            <label htmlFor="file-upload" className="flex cursor-pointer flex-col items-center gap-3">
+              <div
+                className="flex h-12 w-12 items-center justify-center rounded-full"
+                style={{ background: dragActive ? 'var(--color-accent-subtle)' : 'var(--color-surface-2)' }}
+              >
+                {isUploading ? (
+                  <Spinner size={20} />
+                ) : (
+                  <Icon name="cloud-arrow-up" size={22} color={dragActive ? 'var(--color-accent-text)' : 'var(--color-text-3)'} />
+                )}
               </div>
               <div>
-                <p className="text-lg font-medium text-[#FAF5FF]">
-                  {isUploading ? '上传中...' : '拖拽图片到这里或点击上传'}
+                <p className="text-[13.5px] font-medium text-text-1">
+                  {isUploading ? '上传中…' : '拖拽图片到这里或点击上传'}
                 </p>
-                <p className="text-sm text-[#E9D5FF]/60 mt-1">
-                  支持 Ctrl/Cmd+V 粘贴上传，最大 10MB
+                <p className="mt-1 text-[11.5px] text-text-3">
+                  支持 Ctrl/Cmd+V 粘贴上传,最大 10MB
                 </p>
               </div>
             </label>
@@ -558,94 +540,64 @@ export function ImageBedWidget(): JSX.Element {
           {/* 历史记录 */}
           {history.length > 0 && (
             <div className="mt-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold">上传历史</h3>
-                <button
+              <div className="mb-3 flex items-center justify-between">
+                <h3 className="section-title" style={{ marginBottom: 0 }}>上传历史</h3>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  icon="refresh"
                   onClick={handleSyncFromRepo}
                   disabled={!isConfigured}
-                  className="px-3 py-1.5 text-sm bg-[#A78BFA]/10 hover:bg-[#A78BFA]/20 text-[#A78BFA] rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                   title="从 GitHub 仓库同步已有图片"
                 >
-                  <Icon name="refresh" size={14} />
                   同步仓库图片
-                </button>
+                </Button>
               </div>
 
               {/* 搜索框 */}
-              <div className="mb-4">
-                <div className="relative">
-                  <Icon name="magnifying-glass" size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#E9D5FF]/60" />
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="搜索文件名..."
-                    className="w-full pl-10 pr-4 py-2 bg-[#1E1E2E] border border-[#A78BFA]/20 rounded-lg focus:outline-none focus:border-[#A78BFA] text-[#FAF5FF]"
-                  />
-                </div>
+              <div className="relative mb-3 max-w-[320px]">
+                <Icon name="search" size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-text-4" />
+                <Input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="搜索文件名…"
+                  className="pl-8"
+                />
               </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
                 {filteredHistory.map((record) => (
-                  <div
-                    key={record.id}
-                    className="glass rounded-lg overflow-hidden group flex flex-col"
-                  >
-                    <div className="relative bg-[#1E1E2E]/50 flex-shrink-0 aspect-square">
+                  <div key={record.id} className="card group flex flex-col overflow-hidden">
+                    <div className="relative aspect-square shrink-0 bg-surface-1">
                       <img
                         src={record.cdnUrl}
                         alt={record.fileName}
-                        className="w-full h-full object-contain"
+                        className="h-full w-full object-contain"
                         loading="lazy"
                       />
-                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 p-2">
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => handleCopyLink(record, 'raw')}
-                            className="p-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors"
-                            title="复制原始链接"
-                          >
-                            <Icon name="link" size={16} />
-                          </button>
-                          <button
-                            onClick={() => handleCopyLink(record, 'markdown')}
-                            className="p-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors"
-                            title="复制 Markdown 格式"
-                          >
-                            <Icon name="code-bracket" size={16} />
-                          </button>
-                          <button
-                            onClick={() => handleCopyLink(record, 'html')}
-                            className="p-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors"
-                            title="复制 HTML 格式"
-                          >
-                            <Icon name="code-bracket-square" size={16} />
-                          </button>
-                          <button
+                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/60 p-2 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+                        <div className="flex gap-1.5">
+                          <IconButton name="link" label="复制原始链接" onClick={() => handleCopyLink(record, 'raw')} />
+                          <IconButton name="code-bracket" label="复制 Markdown 格式" onClick={() => handleCopyLink(record, 'markdown')} />
+                          <IconButton name="code-bracket-square" label="复制 HTML 格式" onClick={() => handleCopyLink(record, 'html')} />
+                          <IconButton
+                            name="pencil-square"
+                            label="重命名"
                             onClick={() => {
                               setRenamingRecord(record);
                               setNewFileName(record.fileName);
                             }}
-                            className="p-2 bg-blue-500/20 hover:bg-blue-500/30 rounded-lg transition-colors"
-                            title="重命名"
-                          >
-                            <Icon name="pencil-square" size={16} />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteClick(record)}
-                            className="p-2 bg-red-500/20 hover:bg-red-500/30 rounded-lg transition-colors"
-                            title="删除"
-                          >
-                            <Icon name="trash" size={16} />
-                          </button>
+                          />
+                          <IconButton name="trash" label="删除" onClick={() => handleDeleteClick(record)} />
                         </div>
                       </div>
                     </div>
-                    <div className="p-2 mt-auto bg-[#1E1E2E]/30">
-                      <p className="text-xs text-[#E9D5FF] truncate" title={record.fileName}>
+                    <div className="hairline-t p-2">
+                      <p className="truncate text-[11.5px] text-text-1" title={record.fileName}>
                         {record.fileName}
                       </p>
-                      <p className="text-xs text-[#E9D5FF]/60 mt-1">
+                      <p className="tnum mt-0.5 text-[10.5px] text-text-4">
                         {formatFileSize(record.size)} · {formatDate(record.uploadTime)}
                       </p>
                     </div>
@@ -656,95 +608,75 @@ export function ImageBedWidget(): JSX.Element {
           )}
 
           {history.length === 0 && (
-            <div className="mt-6 text-center text-[#E9D5FF]/60 py-8">
-              暂无上传记录
-            </div>
+            <p className="mt-6 py-8 text-center text-[12.5px] text-text-3">暂无上传记录</p>
           )}
         </>
       )}
 
       {/* 重命名对话框 */}
-      {renamingRecord && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="glass-heavy rounded-xl p-6 w-96 max-w-[90vw]">
-            <h3 className="text-lg font-semibold mb-4">重命名图片</h3>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-[#E9D5FF] mb-2">
-                新文件名
-              </label>
-              <input
-                type="text"
-                value={newFileName}
-                onChange={(e) => setNewFileName(e.target.value)}
-                placeholder="输入新文件名"
-                className="w-full px-4 py-2 bg-[#1E1E2E] border border-[#A78BFA]/20 rounded-lg focus:outline-none focus:border-[#A78BFA] text-[#FAF5FF]"
-                autoFocus
-              />
-            </div>
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  setRenamingRecord(null);
-                  setNewFileName('');
-                }}
-                disabled={isRenaming}
-                className="flex-1 py-2 bg-[#1E1E2E] hover:bg-[#1E1E2E]/80 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
-              >
-                取消
-              </button>
-              <button
-                onClick={handleRenameImage}
-                disabled={isRenaming || !newFileName.trim()}
-                className="flex-1 py-2 bg-[#A78BFA] hover:bg-[#A78BFA]/80 disabled:bg-[#A78BFA]/40 disabled:cursor-not-allowed rounded-lg font-medium transition-colors"
-              >
-                {isRenaming ? '重命名中...' : '确认'}
-              </button>
-            </div>
-          </div>
+      <Modal
+        open={renamingRecord !== null}
+        onClose={() => {
+          setRenamingRecord(null);
+          setNewFileName('');
+        }}
+        title="重命名图片"
+        width={380}
+        footer={
+          <>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setRenamingRecord(null);
+                setNewFileName('');
+              }}
+              disabled={isRenaming}
+            >
+              取消
+            </Button>
+            <Button variant="primary" onClick={handleRenameImage} loading={isRenaming} disabled={!newFileName.trim()}>
+              确认
+            </Button>
+          </>
+        }
+      >
+        <div>
+          <label className="field-label">新文件名</label>
+          <Input
+            type="text"
+            value={newFileName}
+            onChange={(e) => setNewFileName(e.target.value)}
+            placeholder="输入新文件名"
+            autoFocus
+          />
         </div>
-      )}
+      </Modal>
 
       {/* 删除确认对话框 */}
-      {deletingRecord && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="glass-heavy rounded-xl p-6 w-96 max-w-[90vw]">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0">
-                <Icon name="exclamation-circle" size={24} className="text-red-400" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold">确认删除图片</h3>
-                <p className="text-sm text-[#E9D5FF]/70 mt-1">此操作无法撤销</p>
-              </div>
-            </div>
-            <div className="mb-6 p-3 bg-[#1E1E2E]/50 rounded-lg">
-              <p className="text-sm text-[#E9D5FF]">
-                <span className="font-medium">文件名：</span>
-                {deletingRecord.fileName}
-              </p>
-              <p className="text-sm text-[#E9D5FF]/70 mt-1">
-                图片将从 GitHub 仓库和历史记录中永久删除
-              </p>
-            </div>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setDeletingRecord(null)}
-                disabled={isDeleting}
-                className="flex-1 py-2 bg-[#1E1E2E] hover:bg-[#1E1E2E]/80 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
-              >
-                取消
-              </button>
-              <button
-                onClick={handleConfirmDelete}
-                disabled={isDeleting}
-                className="flex-1 py-2 bg-red-500 hover:bg-red-600 disabled:bg-red-500/50 disabled:cursor-not-allowed rounded-lg font-medium transition-colors"
-              >
-                {isDeleting ? '删除中...' : '确认删除'}
-              </button>
-            </div>
-          </div>
+      <Modal
+        open={deletingRecord !== null}
+        onClose={() => setDeletingRecord(null)}
+        title="确认删除图片"
+        width={380}
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setDeletingRecord(null)} disabled={isDeleting}>
+              取消
+            </Button>
+            <Button variant="danger-solid" onClick={handleConfirmDelete} loading={isDeleting}>
+              {isDeleting ? '删除中…' : '确认删除'}
+            </Button>
+          </>
+        }
+      >
+        <div className="card-inset px-3.5 py-3">
+          <p className="text-[12.5px] text-text-1">
+            <span className="font-medium">文件名:</span>
+            <span className="select-text">{deletingRecord?.fileName}</span>
+          </p>
+          <p className="mt-1 text-[11.5px] text-text-3">图片将从 GitHub 仓库和历史记录中永久删除</p>
         </div>
-      )}
+      </Modal>
     </div>
   );
 }

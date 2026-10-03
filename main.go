@@ -251,19 +251,6 @@ func main() {
 		Mac: application.MacOptions{
 			ApplicationShouldTerminateAfterLastWindowClosed: false, // 保持应用在窗口关闭后运行
 		},
-		// 参考 https://learn.microsoft.com/en-us/microsoft-edge/webview2/concepts/webview-features-flags?tabs=dotnetcsharp
-		Windows: application.WindowsOptions{
-			EnabledFeatures: []string{
-				"ignore-certificate-errors",      // 忽略与证书相关的错误
-				"allow-insecure-localhost",       // 允许忽略本地主机上的 TLS/SSL 错误
-				"allow-running-insecure-content", // 解除对从 HTTP 源提供内容的 MSP 的阻止
-				"autoplay-policy",                // 允许自动播放策略
-			},
-			DisabledFeatures: []string{},
-			AdditionalBrowserArgs: []string{
-				"--disable-web-security", // 禁用同源策略
-			}, // webview2 启动参数
-		},
 	})
 
 	// 设置 proxyHandler 的 app 引用，用于访问环境信息
@@ -794,30 +781,16 @@ func main() {
 		log.Printf("Failed to start localtranslate service: %v", err)
 	}
 
-	// Register default search window hotkey (Cmd+5 / Ctrl+5)
-	// Using Cmd+5 which might work better with gohook
-	// Note: This will override the sysinfo plugin's shortcut
+	// Preserve the user's saved search shortcut across restarts.
 	searchHotkey := "cmd+5" // macOS
 	if runtime.GOOS != "darwin" {
 		searchHotkey = "ctrl+5" // Windows/Linux
 	}
 
-	// Remove old search window shortcuts if they exist
-	// Also remove cmd+5 which is currently used by sysinfo plugin
-	oldShortcuts := []string{"cmd+space", "ctrl+space", "cmd+shift+p", "ctrl+shift+p", "alt+space", "cmd+k", "ctrl+k", "cmd+9", "ctrl+9", "cmd+l", "ctrl+l", "cmd+6", "ctrl+6", "cmd+5", "ctrl+5"}
-	for _, oldShortcut := range oldShortcuts {
-		if err := shortcutService.RemoveShortcut(oldShortcut); err != nil {
-			// Ignore errors - the shortcut might not exist
-			log.Printf("[Main] Note: %s (may not exist): %v", oldShortcut, err)
+	if shortcutService.GetPluginShortcut("search.window.builtin") == nil {
+		if err := shortcutService.SetShortcut(searchHotkey, "search.window.builtin"); err != nil {
+			log.Printf("[Main] Failed to set default search hotkey %s: %v", searchHotkey, err)
 		}
-	}
-
-	// Try to set the default search shortcut
-	// If it conflicts, we'll let the user know
-	if err := shortcutService.SetShortcut(searchHotkey, "search.window.builtin"); err != nil {
-		log.Printf("[Main] Failed to set default search hotkey %s: %v (may conflict with existing shortcut)", searchHotkey, err)
-	} else {
-		log.Printf("[Main] Default search hotkey registered: %s", searchHotkey)
 	}
 
 	// Register default screenshot hotkey (Cmd+Shift+S / Ctrl+Shift+S)

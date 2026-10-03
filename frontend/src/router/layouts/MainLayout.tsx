@@ -106,12 +106,12 @@ export function MainLayout() {
 
   return (
     <ToastProvider>
-      <div className="flex h-screen bg-[#0D0F1A] text-[#FAF5FF]">
+      <div className="flex h-screen bg-surface-0 text-text-1">
         {/* 侧边栏 */}
         <Sidebar />
 
         {/* 主内容区 - 由子路由填充 */}
-        <main className="flex-1 overflow-auto relative">
+        <main className="relative flex-1 overflow-auto">
           <Outlet />
         </main>
       </div>

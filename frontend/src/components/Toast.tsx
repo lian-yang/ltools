@@ -15,6 +15,13 @@ interface ToastItemProps {
   onRemove: (id: string) => void;
 }
 
+const toastVisuals: Record<ToastType, { icon: Parameters<typeof Icon>[0]['name']; color: string }> = {
+  success: { icon: 'check-circle', color: 'var(--color-success-text)' },
+  error: { icon: 'x-circle', color: 'var(--color-error-text)' },
+  warning: { icon: 'exclamation-circle', color: 'var(--color-warning-text)' },
+  info: { icon: 'information-circle', color: 'var(--color-info)' },
+};
+
 function ToastItem({ toast, onRemove }: ToastItemProps): JSX.Element {
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -24,47 +31,26 @@ function ToastItem({ toast, onRemove }: ToastItemProps): JSX.Element {
     return () => clearTimeout(timer);
   }, [toast, onRemove]);
 
-  const getStyles = () => {
-    switch (toast.type) {
-      case 'success':
-        return 'bg-[#22C55E]/10 border-[#22C55E]/20 text-[#22C55E]';
-      case 'error':
-        return 'bg-[#EF4444]/10 border-[#EF4444]/20 text-[#EF4444]';
-      case 'warning':
-        return 'bg-[#F59E0B]/10 border-[#F59E0B]/20 text-[#F59E0B]';
-      case 'info':
-      default:
-        return 'bg-[#3B82F6]/10 border-[#3B82F6]/20 text-[#60A5FA]';
-    }
-  };
-
-  const getIcon = () => {
-    switch (toast.type) {
-      case 'success':
-        return 'check-circle';
-      case 'error':
-        return 'x-circle';
-      case 'warning':
-        return 'exclamation-circle';
-      case 'info':
-      default:
-        return 'information-circle';
-    }
-  };
+  const { icon, color } = toastVisuals[toast.type] ?? toastVisuals.info;
 
   return (
     <div
-      className={`glass-light rounded-lg p-4 flex items-center gap-3 border ${getStyles()} animate-slide-in-right min-w-[300px] max-w-md`}
+      className="animate-slide-up flex w-[300px] items-start gap-2.5 rounded-[10px] px-3.5 py-3"
+      style={{
+        background: 'var(--color-surface-3)',
+        border: '1px solid var(--color-hairline-strong)',
+        boxShadow: 'var(--shadow-pop)',
+      }}
       role="alert"
     >
-      <Icon name={getIcon()} size={20} />
-      <p className="flex-1 text-sm text-white/90">{toast.message}</p>
+      <Icon name={icon} size={16} color={color} className="mt-px shrink-0" />
+      <p className="flex-1 text-[12.5px] leading-relaxed text-text-1 select-text">{toast.message}</p>
       <button
-        className="p-1 rounded hover:bg-white/5 transition-colors clickable"
+        className="icon-btn icon-btn-sm -mr-1 -mt-1 shrink-0"
         onClick={() => onRemove(toast.id)}
         aria-label="关闭"
       >
-        <Icon name="x-circle" size={16} />
+        <Icon name="close" size={13} />
       </button>
     </div>
   );
@@ -79,7 +65,7 @@ export function ToastContainer({ toasts, onRemove }: ToastContainerProps): JSX.E
   if (toasts.length === 0) return null;
 
   return (
-    <div className="fixed top-4 right-4 z-50 flex flex-col gap-3">
+    <div className="fixed bottom-4 right-4 z-[900] flex flex-col-reverse gap-2">
       {toasts.map((toast) => (
         <ToastItem key={toast.id} toast={toast} onRemove={onRemove} />
       ))}

@@ -1,7 +1,8 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, type CSSProperties } from 'react';
 import * as MusicPlayerService from '../../bindings/ltools/plugins/musicplayer/servicelx';
 import { Song } from '../../bindings/ltools/plugins/musicplayer/models';
 import { Icon } from '../components/Icon';
+import { Button, EmptyState, IconButton, Input, Spinner } from '../components/ui';
 import { Dialogs } from '@wailsio/runtime';
 import { useToast } from '../hooks/useToast';
 
@@ -63,6 +64,17 @@ export function MusicPlayerWidget() {
     const searchResultsRef = useRef<HTMLDivElement>(null); // 搜索结果容器引用
     const likesListRef = useRef<HTMLDivElement>(null);
     const hotListRef = useRef<HTMLDivElement>(null);
+    const preloadRetryTimerRef = useRef<number | null>(null); // 预加载失败重试定时器
+
+    // 卸载时清理定时器，避免泄漏
+    useEffect(() => {
+        return () => {
+            if (preloadRetryTimerRef.current !== null) {
+                window.clearTimeout(preloadRetryTimerRef.current);
+                preloadRetryTimerRef.current = null;
+            }
+        };
+    }, []);
 
     // 更新最新的进度和歌词（不触发重渲染）
     useEffect(() => {
@@ -409,14 +421,13 @@ export function MusicPlayerWidget() {
         try {
             const newSongs = await MusicPlayerService.GetRandomSongs(5);
             setPreloadQueue(prev => [...prev, ...newSongs]);
+            setIsPreloading(false);
         } catch (error) {
             // 失败后等待5秒再重试，避免频繁请求
-            setTimeout(() => {
+            // （修复：原实现中 finally 会立即清除 isPreloading，5 秒延时重试实际失效且定时器未清理）
+            preloadRetryTimerRef.current = window.setTimeout(() => {
                 setIsPreloading(false);
             }, 5000);
-            return;
-        } finally {
-            setIsPreloading(false);
         }
     };
 
@@ -588,7 +599,7 @@ export function MusicPlayerWidget() {
 
             setCurrentSong(song);
 
-            // 🔧 关键修复：在设置新 src 之前，先清理 audio 元素状态
+            // 关键修复：在设置新 src 之前，先清理 audio 元素状态
             const audio = audioRef.current;
 
             // 1. 暂停当前播放
@@ -944,11 +955,6 @@ export function MusicPlayerWidget() {
         }
     };
 
-    // 播放结束自动下一曲
-    const handleEnded = () => {
-        playNext();
-    };
-
     // 进度条点击
     const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
         if (!audioRef.current || !duration) return;
@@ -964,84 +970,85 @@ export function MusicPlayerWidget() {
 
     return (
         <>
-            <div className="vinyl-player">
-                {/* 背景装饰 */}
-                <div className="vinyl-bg-glow" />
-
-                {/* 顶部按钮组 - 绝对定位 */}
-                {viewMode === 'player' && (
-                    <div className="vinyl-top-group">
-                        <button
-                            onClick={() => {
-                                setViewMode('likes');
-                                if (likedSongs.length === 0) loadLikedSongs(1);
-                            }}
-                            className="vinyl-top-group-btn"
-                        >
-                            <Icon name="heart" size={16} />
-                            <span>喜欢</span>
-                            {likesTotal > 0 && <span className="vinyl-badge">{likesTotal}</span>}
-                        </button>
-
-                        <span className="vinyl-top-divider">·</span>
-
-                        <button
-                            onClick={() => {
-                                setViewMode('hot');
-                                if (hotSongs.length === 0) loadHotSongs(1);
-                            }}
-                            className="vinyl-top-group-btn"
-                        >
-                            <Icon name="fire" size={16} />
-                            <span>热门</span>
-                        </button>
+            <div className="mp-root">
+                {/* 顶部工具条：喜欢 / 热门入口 + 关闭（窗口拖拽区） */}
+                <div className="mp-topbar" style={{ '--wails-draggable': 'drag' } as CSSProperties}>
+                    <div className="mp-topbar-side">
+                        {viewMode === 'player' && currentSong && (
+                            <IconButton
+                                name="heart"
+                                size="sm"
+                                label={isLiked ? '取消喜欢' : '喜欢'}
+                                onClick={toggleLike}
+                                className={`mp-like ${isLiked ? 'liked' : ''}`}
+                            />
+                        )}
                     </div>
-                )}
 
-                {/* 主容器 */}
-                <div className="vinyl-container" style={{ '--wails-draggable': 'drag' } as React.CSSProperties}>
-                    {/* 关闭按钮 */}
-                    <button
-                        onClick={() => MusicPlayerService.HideWindow()}
-                        className="vinyl-close-btn"
-                        style={{ '--wails-draggable': 'no-drag' } as React.CSSProperties}
-                        title="关闭窗口"
-                    >
-                        <Icon name="x" size={14} />
-                    </button>
+                    {viewMode === 'player' && (
+                        <div className="mp-tabs">
+                            <button
+                                className="mp-tab"
+                                onClick={() => {
+                                    setViewMode('likes');
+                                    if (likedSongs.length === 0) loadLikedSongs(1);
+                                }}
+                            >
+                                <Icon name="heart" size={13} />
+                                <span>喜欢</span>
+                                {likesTotal > 0 && <span className="mp-tab-badge tnum">{likesTotal}</span>}
+                            </button>
 
-                    {/* 黑胶唱片 */}
+                            <button
+                                className="mp-tab"
+                                onClick={() => {
+                                    setViewMode('hot');
+                                    if (hotSongs.length === 0) loadHotSongs(1);
+                                }}
+                            >
+                                <Icon name="fire" size={13} />
+                                <span>热门</span>
+                            </button>
+                        </div>
+                    )}
+
+                    <div className="mp-topbar-side mp-topbar-right">
+                        <IconButton
+                            name="x"
+                            size="sm"
+                            label="关闭窗口"
+                            onClick={() => MusicPlayerService.HideWindow()}
+                        />
+                    </div>
+                </div>
+
+                {/* 播放器主视图（窗口拖拽区） */}
+                <div className="mp-window" style={{ '--wails-draggable': 'drag' } as CSSProperties}>
+                    {/* 封面 / 歌词（点击切换） */}
                     <div
-                        className="vinyl-disc-container"
+                        className="mp-cover-wrap"
                         onClick={() => setShowLyrics(!showLyrics)}
-                        style={{ cursor: 'pointer' }}
                         title={showLyrics ? '点击显示封面' : '点击显示歌词'}
                     >
-                        {/* 旋转的唱片背景和封面 */}
-                        <div className={`vinyl-disc ${isPlaying ? 'spinning' : ''}`}>
-                            <div className="vinyl-grooves" />
+                        {!showLyrics && (
+                            <div className="mp-cover">
+                                {currentSong && coverURL ? (
+                                    <img
+                                        src={coverURL}
+                                        alt={currentSong.name}
+                                        className="mp-cover-img"
+                                    />
+                                ) : (
+                                    <div className="mp-cover-placeholder">
+                                        <Icon name="sparkles" size={28} />
+                                    </div>
+                                )}
+                            </div>
+                        )}
 
-                            {/* 封面图片 - 跟着旋转 */}
-                            {!showLyrics && (
-                                <div className="vinyl-center">
-                                    {currentSong && coverURL ? (
-                                        <img
-                                            src={coverURL}
-                                            alt={currentSong.name}
-                                            className="vinyl-cover"
-                                        />
-                                    ) : (
-                                        <div className="vinyl-cover-placeholder">
-                                            <Icon name="sparkles" size={32} />
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-
-                        {/* 静态的歌词显示区域 - 禁止用户滚动 */}
+                        {/* 歌词显示区域 - 禁止用户滚动 */}
                         {showLyrics && (
-                            <div className="vinyl-lyrics-display" ref={lyricsContainerRef}>
+                            <div className="mp-lyrics" ref={lyricsContainerRef}>
                                 {parsedLyrics.length > 0 ? (
                                     parsedLyrics.map((line, index) => {
                                         const isCurrentLine = (() => {
@@ -1069,98 +1076,79 @@ export function MusicPlayerWidget() {
                         )}
 
                         {isLoading && (
-                            <div className="vinyl-loading">
-                                <div className="vinyl-loading-spinner" />
+                            <div className="mp-cover-loading">
+                                <Spinner size={18} />
                             </div>
                         )}
                     </div>
 
                     {/* 歌曲信息 */}
-                    <div className="vinyl-info">
-                        <h3 className="vinyl-title">{currentSong ? currentSong.name : '暂未播放'}</h3>
-                        <p className="vinyl-artist">{currentSong ? currentSong.artist.join(', ') : '—'}</p>
+                    <div className="mp-info">
+                        <h3 className="mp-title">{currentSong ? currentSong.name : '暂未播放'}</h3>
+                        <p className="mp-artist">{currentSong ? currentSong.artist.join(', ') : '—'}</p>
                     </div>
 
                     {/* 进度条 */}
-                    <div className="vinyl-progress-container">
-                        <span className="vinyl-time">{formatTime(progress)}</span>
-                        <div className="vinyl-progress-bar" onClick={handleProgressClick}>
+                    <div className="mp-progress-row">
+                        <span className="mp-time mp-time-current tnum">{formatTime(progress)}</span>
+                        <div className="mp-progress" onClick={handleProgressClick}>
+                            <div className="mp-progress-track">
+                                <div
+                                    className="mp-progress-fill"
+                                    style={{ width: duration > 0 ? `${(progress / duration) * 100}%` : '0%' }}
+                                />
+                            </div>
                             <div
-                                className="vinyl-progress-fill"
-                                style={{ width: `${(progress / duration) * 100}%` }}
-                            />
-                            <div
-                                className="vinyl-progress-dot"
-                                style={{ left: `${(progress / duration) * 100}%` }}
+                                className="mp-progress-dot"
+                                style={{ left: duration > 0 ? `${(progress / duration) * 100}%` : '0%' }}
                             />
                         </div>
-                        <span className="vinyl-time">{formatTime(duration)}</span>
+                        <span className="mp-time tnum">{formatTime(duration)}</span>
 
                         {/* 下载按钮 - 进度条右边 */}
                         {currentSong && (
-                            <button
+                            <IconButton
+                                name={isDownloading ? 'refresh-cw' : 'download'}
+                                size="sm"
+                                label={isDownloading ? '下载中' : '下载当前歌曲'}
                                 onClick={handleDownloadCurrentSong}
-                                className="vinyl-download-btn"
-                                title="下载当前歌曲"
                                 disabled={isDownloading}
-                            >
-                                {isDownloading ? (
-                                    <Icon name="refresh-cw" size={16} className="animate-spin" />
-                                ) : (
-                                    <Icon name="download" size={16} />
-                                )}
-                            </button>
+                                className={isDownloading ? 'animate-spin' : ''}
+                            />
                         )}
-
                     </div>
 
-                    {/* 喜欢按钮 - 左上角 */}
-                    {currentSong && (
-                        <button
-                            onClick={toggleLike}
-                            className={`vinyl-like-btn ${isLiked ? 'liked' : ''}`}
-                            title={isLiked ? '取消喜欢' : '喜欢'}
-                        >
-                            <Icon name="heart" size={18} />
-                        </button>
-                    )}
-
                     {/* 控制按钮 */}
-                    <div className="vinyl-controls">
-                        <button
+                    <div className="mp-controls">
+                        <IconButton
+                            name="refresh"
+                            label="随机播放"
                             onClick={playRandom}
-                            className="vinyl-btn vinyl-btn-secondary"
-                            title="随机播放"
                             disabled={isLoading}
-                        >
-                            <Icon name="refresh" size={20} />
-                        </button>
+                        />
 
-                        <button
+                        <IconButton
+                            name="skip-back"
+                            label="上一曲"
                             onClick={playPrev}
-                            className="vinyl-btn vinyl-btn-tertiary"
-                            title="上一曲"
-                        >
-                            <Icon name="chevron-left" size={20} />
-                        </button>
+                        />
 
-                        <button
+                        <IconButton
+                            name={isPlaying ? 'pause' : 'play'}
+                            label={isPlaying ? '暂停' : '播放'}
                             onClick={togglePlay}
-                            className="vinyl-btn vinyl-btn-primary"
-                            title={isPlaying ? '暂停' : '播放'}
-                        >
-                            <Icon name={isPlaying ? 'pause' : 'play'} size={24} />
-                        </button>
+                            className="mp-play-main"
+                        />
 
-                        <button
+                        <IconButton
+                            name="skip-forward"
+                            label="下一曲"
                             onClick={playNext}
-                            className="vinyl-btn vinyl-btn-tertiary"
-                            title="下一曲"
-                        >
-                            <Icon name="chevron-right" size={20} />
-                        </button>
+                        />
 
-                        <button
+                        <IconButton
+                            name={viewMode === 'search' ? 'x' : 'search'}
+                            label={viewMode === 'search' ? '关闭搜索' : '搜索'}
                             onClick={() => {
                                 if (viewMode === 'search') {
                                     setViewMode('player');
@@ -1168,1055 +1156,754 @@ export function MusicPlayerWidget() {
                                     setViewMode('search');
                                 }
                             }}
-                            className="vinyl-btn vinyl-btn-secondary"
-                            title={viewMode === 'search' ? '关闭搜索' : '搜索'}
-                        >
-                            <Icon name={viewMode === 'search' ? 'x' : 'search'} size={20} />
-                        </button>
+                        />
                     </div>
                 </div>
 
                 {/* 喜欢列表视图 */}
                 {viewMode === 'likes' && (
-                    <div className="vinyl-list-view" ref={likesListRef}>
-                        {/* 一键播放按钮 */}
-                        <div className="vinyl-list-header">
-                            <button
+                    <div className="mp-list">
+                        {/* 顶栏：返回 + 播放全部 */}
+                        <div className="mp-list-topbar">
+                            <IconButton
+                                name="chevron-left"
+                                label="返回播放器"
+                                onClick={() => setViewMode('player')}
+                            />
+                            <span className="mp-list-title">我的喜欢</span>
+                            <div className="mp-list-topbar-spacer" />
+                            <Button
+                                variant="secondary"
+                                size="sm"
+                                icon="play"
                                 onClick={playAllLiked}
-                                className="vinyl-play-all-btn"
                                 disabled={likedSongs.length === 0}
                             >
-                                <Icon name="play" size={16} />
-                                播放全部 ({likesTotal})
-                            </button>
+                                播放全部{likesTotal > 0 ? ` (${likesTotal})` : ''}
+                            </Button>
                         </div>
 
                         {/* 歌曲列表 */}
-                        {likedSongs.map((item, index) => {
-                            const coverUrl = songCovers.get(item.song.id);
+                        <div className="mp-list-scroll" ref={likesListRef}>
+                            {likedSongs.map((item, index) => {
+                                const coverUrl = songCovers.get(item.song.id);
+                                const song = item.song;
 
-                            return (
-                                <div key={`${item.song.id}-${index}`} className="vinyl-list-item">
+                                return (
                                     <div
-                                        className="vinyl-list-item-main"
-                                        onClick={() => {
-                                            playSong(item.song);
-                                            setViewMode('player');
-                                        }}
-                                    >
-                                        {coverUrl ? (
-                                            <img src={coverUrl} alt={item.song.name} className="vinyl-list-cover" />
-                                        ) : (
-                                            <div className="vinyl-list-cover-placeholder">
-                                                <Icon name="sparkles" size={20} />
-                                            </div>
-                                        )}
-                                        <div className="vinyl-list-info">
-                                            <div className="vinyl-list-name">{item.song.name}</div>
-                                            <div className="vinyl-list-artist">{item.song.artist.join(', ')}</div>
-                                            <div className="vinyl-list-meta">
-                                                {formatTimeAgo(item.liked_at)}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="vinyl-list-actions">
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                playSong(item.song);
-                                            }}
-                                            title="播放"
-                                        >
-                                            <Icon name="play" size={16} />
-                                        </button>
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleRemoveFromLikes(item.song.id);
-                                            }}
-                                            title="取消喜欢"
-                                            className="liked"
-                                        >
-                                            <Icon name="heart" size={16} />
-                                        </button>
-                                    </div>
-                                </div>
-                            );
-                        })}
-
-                        {/* 加载状态 */}
-                        {isLoadingLikes && (
-                            <div className="vinyl-list-loading">
-                                <div className="vinyl-loading-spinner" />
-                            </div>
-                        )}
-                        {!hasMoreLikes && likedSongs.length > 0 && (
-                            <div className="vinyl-list-end">已加载全部</div>
-                        )}
-                    </div>
-                )}
-
-                {/* 热门歌曲列表视图 */}
-                {viewMode === 'hot' && (
-                    <div className="vinyl-list-view" ref={hotListRef}>
-                        <div className="vinyl-list-header">
-                            <button onClick={playAllHot} className="vinyl-play-all-btn">
-                                <Icon name="play" size={16} />
-                                播放全部热门
-                            </button>
-                        </div>
-
-                        {/* 歌曲列表 */}
-                        {hotSongs.map((song, index) => {
-                            const coverUrl = songCovers.get(song.id);
-
-                            return (
-                                <div key={`${song.id}-${index}`} className="vinyl-list-item">
-                                    <div
-                                        className="vinyl-list-item-main"
+                                        key={`${song.id}-${index}`}
+                                        className={`row row-clickable mp-row ${currentSong?.id === song.id ? 'row-selected' : ''}`}
                                         onClick={() => {
                                             playSong(song);
                                             setViewMode('player');
                                         }}
                                     >
                                         {coverUrl ? (
-                                            <img src={coverUrl} alt={song.name} className="vinyl-list-cover" />
+                                            <img src={coverUrl} alt={song.name} className="mp-row-cover" />
                                         ) : (
-                                            <div className="vinyl-list-cover-placeholder">
-                                                <Icon name="sparkles" size={20} />
+                                            <div className="mp-row-cover mp-row-cover-placeholder">
+                                                <Icon name="sparkles" size={16} />
                                             </div>
                                         )}
-                                        <div className="vinyl-list-info">
-                                            <div className="vinyl-list-name">{song.name}</div>
-                                            <div className="vinyl-list-artist">{song.artist.join(', ')}</div>
+                                        <div className="mp-row-info">
+                                            <div className="mp-row-name">{song.name}</div>
+                                            <div className="mp-row-artist">{song.artist.join(', ')}</div>
+                                        </div>
+                                        <span className="mp-row-meta tnum">{formatTimeAgo(item.liked_at)}</span>
+                                        <div className="mp-row-actions" onClick={(e) => e.stopPropagation()}>
+                                            <IconButton
+                                                size="sm"
+                                                name="play"
+                                                label="播放"
+                                                onClick={() => playSong(song)}
+                                            />
+                                            <IconButton
+                                                size="sm"
+                                                name="heart"
+                                                label="取消喜欢"
+                                                tone="danger"
+                                                onClick={() => handleRemoveFromLikes(song.id)}
+                                            />
                                         </div>
                                     </div>
-                                    <div className="vinyl-list-actions">
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                playSong(song);
-                                            }}
-                                            title="播放"
-                                        >
-                                            <Icon name="play" size={16} />
-                                        </button>
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleDownloadSearchSong(song);
-                                            }}
-                                            title="下载"
-                                            disabled={downloadingSongs.has(song.id)}
-                                        >
-                                            {downloadingSongs.has(song.id) ? (
-                                                <Icon name="refresh-cw" size={16} className="animate-spin" />
-                                            ) : (
-                                                <Icon name="download" size={16} />
-                                            )}
-                                        </button>
-                                    </div>
-                                </div>
-                            );
-                        })}
+                                );
+                            })}
 
-                        {/* 加载状态 */}
-                        {isLoadingHot && (
-                            <div className="vinyl-list-loading">
-                                <div className="vinyl-loading-spinner" />
-                            </div>
-                        )}
-                        {!hasMoreHot && hotSongs.length > 0 && (
-                            <div className="vinyl-list-end">已加载全部</div>
-                        )}
+                            {/* 加载状态 */}
+                            {isLoadingLikes && (
+                                <div className="mp-list-loading">
+                                    <Spinner size={16} />
+                                </div>
+                            )}
+                            {!hasMoreLikes && likedSongs.length > 0 && (
+                                <div className="mp-list-end">已加载全部</div>
+                            )}
+                            {!isLoadingLikes && likedSongs.length === 0 && (
+                                <EmptyState
+                                    icon="heart"
+                                    title="还没有喜欢的歌曲"
+                                    description="播放歌曲时点击红心，喜欢的歌曲会出现在这里"
+                                />
+                            )}
+                        </div>
                     </div>
                 )}
 
-                {/* 搜索面板 */}
+                {/* 热门歌曲列表视图 */}
+                {viewMode === 'hot' && (
+                    <div className="mp-list">
+                        <div className="mp-list-topbar">
+                            <IconButton
+                                name="chevron-left"
+                                label="返回播放器"
+                                onClick={() => setViewMode('player')}
+                            />
+                            <span className="mp-list-title">热门歌曲</span>
+                            <div className="mp-list-topbar-spacer" />
+                            <Button variant="secondary" size="sm" icon="play" onClick={playAllHot}>
+                                播放全部
+                            </Button>
+                        </div>
+
+                        {/* 歌曲列表 */}
+                        <div className="mp-list-scroll" ref={hotListRef}>
+                            {hotSongs.map((song, index) => {
+                                const coverUrl = songCovers.get(song.id);
+
+                                return (
+                                    <div
+                                        key={`${song.id}-${index}`}
+                                        className={`row row-clickable mp-row ${currentSong?.id === song.id ? 'row-selected' : ''}`}
+                                        onClick={() => {
+                                            playSong(song);
+                                            setViewMode('player');
+                                        }}
+                                    >
+                                        {coverUrl ? (
+                                            <img src={coverUrl} alt={song.name} className="mp-row-cover" />
+                                        ) : (
+                                            <div className="mp-row-cover mp-row-cover-placeholder">
+                                                <Icon name="sparkles" size={16} />
+                                            </div>
+                                        )}
+                                        <div className="mp-row-info">
+                                            <div className="mp-row-name">{song.name}</div>
+                                            <div className="mp-row-artist">{song.artist.join(', ')}</div>
+                                        </div>
+                                        <div className="mp-row-actions" onClick={(e) => e.stopPropagation()}>
+                                            <IconButton
+                                                size="sm"
+                                                name="play"
+                                                label="播放"
+                                                onClick={() => playSong(song)}
+                                            />
+                                            <IconButton
+                                                size="sm"
+                                                name="download"
+                                                label="下载"
+                                                disabled={downloadingSongs.has(song.id)}
+                                                onClick={() => handleDownloadSearchSong(song)}
+                                            />
+                                        </div>
+                                    </div>
+                                );
+                            })}
+
+                            {/* 加载状态 */}
+                            {isLoadingHot && (
+                                <div className="mp-list-loading">
+                                    <Spinner size={16} />
+                                </div>
+                            )}
+                            {!hasMoreHot && hotSongs.length > 0 && (
+                                <div className="mp-list-end">已加载全部</div>
+                            )}
+                            {!isLoadingHot && hotSongs.length === 0 && (
+                                <EmptyState
+                                    icon="fire"
+                                    title="暂无热门歌曲"
+                                    description="稍后再来看看"
+                                />
+                            )}
+                        </div>
+                    </div>
+                )}
+
                 {/* 搜索视图 */}
                 {viewMode === 'search' && (
-                    <div className="vinyl-list-view">
+                    <div className="mp-list">
                         {/* 搜索框 */}
-                        <div className="vinyl-list-header">
-                            <div className="vinyl-search-input-wrapper">
-                                <Icon name="search" size={18} />
-                                <input
+                        <div className="mp-list-topbar">
+                            <IconButton
+                                name="chevron-left"
+                                label="返回播放器"
+                                onClick={() => setViewMode('player')}
+                            />
+                            <div className="mp-search-wrap">
+                                <Icon name="search" size={13} className="mp-search-icon" />
+                                <Input
                                     type="text"
                                     value={searchKeyword}
                                     onChange={(e) => setSearchKeyword(e.target.value)}
-                                    onKeyPress={(e) => e.key === 'Enter' && searchSongs()}
-                                    placeholder="搜索歌曲..."
-                                    className="vinyl-search-input"
+                                    onKeyDown={(e) => e.key === 'Enter' && searchSongs()}
+                                    placeholder="搜索歌曲"
+                                    className="mp-search-input"
                                     autoFocus
                                 />
                             </div>
                         </div>
 
                         {/* 搜索结果 */}
-                        {songs.length > 0 && (
-                            <div ref={searchResultsRef}>
-                                {songs.map((song, index) => {
-                                    const coverUrl = songCovers.get(song.id);
+                        <div className="mp-list-scroll" ref={searchResultsRef}>
+                            {songs.map((song, index) => {
+                                const coverUrl = songCovers.get(song.id);
 
-                                    return (
-                                        <div key={`${song.id}-${index}`} className="vinyl-list-item">
-                                            <div
-                                                className="vinyl-list-item-main"
-                                                onClick={() => {
-                                                    playSong(song);
-                                                    setViewMode('player');
-                                                }}
-                                            >
-                                                {coverUrl ? (
-                                                    <img src={coverUrl} alt={song.name} className="vinyl-list-cover" />
-                                                ) : (
-                                                    <div className="vinyl-list-cover-placeholder">
-                                                        <Icon name="sparkles" size={20} />
-                                                    </div>
-                                                )}
-                                                <div className="vinyl-list-info">
-                                                    <div className="vinyl-list-name">{song.name}</div>
-                                                    <div className="vinyl-list-artist">{song.artist.join(', ')}</div>
-                                                </div>
+                                return (
+                                    <div
+                                        key={`${song.id}-${index}`}
+                                        className={`row row-clickable mp-row ${currentSong?.id === song.id ? 'row-selected' : ''}`}
+                                        onClick={() => {
+                                            playSong(song);
+                                            setViewMode('player');
+                                        }}
+                                    >
+                                        {coverUrl ? (
+                                            <img src={coverUrl} alt={song.name} className="mp-row-cover" />
+                                        ) : (
+                                            <div className="mp-row-cover mp-row-cover-placeholder">
+                                                <Icon name="sparkles" size={16} />
                                             </div>
-                                            <div className="vinyl-list-actions">
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        playSong(song);
-                                                    }}
-                                                    title="播放"
-                                                >
-                                                    <Icon name="play" size={16} />
-                                                </button>
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleDownloadSearchSong(song);
-                                                    }}
-                                                    title="下载"
-                                                    disabled={downloadingSongs.has(song.id)}
-                                                >
-                                                    {downloadingSongs.has(song.id) ? (
-                                                        <Icon name="refresh-cw" size={16} className="animate-spin" />
-                                                    ) : (
-                                                        <Icon name="download" size={16} />
-                                                    )}
-                                                </button>
-                                            </div>
+                                        )}
+                                        <div className="mp-row-info">
+                                            <div className="mp-row-name">{song.name}</div>
+                                            <div className="mp-row-artist">{song.artist.join(', ')}</div>
                                         </div>
-                                    );
-                                })}
-
-                                {/* 加载状态 */}
-                                {isLoadingMore && (
-                                    <div className="vinyl-list-loading">
-                                        <div className="vinyl-loading-spinner" />
+                                        <div className="mp-row-actions" onClick={(e) => e.stopPropagation()}>
+                                            <IconButton
+                                                size="sm"
+                                                name="play"
+                                                label="播放"
+                                                onClick={() => playSong(song)}
+                                            />
+                                            <IconButton
+                                                size="sm"
+                                                name="download"
+                                                label="下载"
+                                                disabled={downloadingSongs.has(song.id)}
+                                                onClick={() => handleDownloadSearchSong(song)}
+                                            />
+                                        </div>
                                     </div>
-                                )}
-                                {!hasMoreResults && songs.length > 0 && !isLoadingMore && (
-                                    <div className="vinyl-list-end">已加载全部结果</div>
-                                )}
-                            </div>
-                        )}
+                                );
+                            })}
+
+                            {/* 加载状态 */}
+                            {(isLoading || isLoadingMore) && songs.length === 0 && (
+                                <div className="mp-list-loading">
+                                    <Spinner size={16} />
+                                </div>
+                            )}
+                            {isLoadingMore && songs.length > 0 && (
+                                <div className="mp-list-loading">
+                                    <Spinner size={16} />
+                                </div>
+                            )}
+                            {!hasMoreResults && songs.length > 0 && !isLoadingMore && (
+                                <div className="mp-list-end">已加载全部结果</div>
+                            )}
+                            {songs.length === 0 && !isLoading && (
+                                <EmptyState
+                                    icon="search"
+                                    title={searchKeyword ? '未找到相关歌曲' : '搜索歌曲'}
+                                    description={searchKeyword ? '换个关键词试试' : '输入歌名或歌手，回车搜索'}
+                                />
+                            )}
+                        </div>
                     </div>
                 )}
             </div>
 
-            {/* 音频元素 */}
-            <audio ref={audioRef} onEnded={handleEnded} crossOrigin="anonymous" preload="auto" />
+            {/* 音频元素（ended 事件在 useEffect 中统一绑定，避免重复触发下一曲） */}
+            <audio ref={audioRef} crossOrigin="anonymous" preload="auto" />
 
-            <style>{`
-                @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&display=swap');
+                <style>{`
+                    /* ============================================================
+                       音乐播放器窗口 — 设计系统 v2「精密仪器」
+                       全部使用 styles.css 的 token；无渐变 / 无辉光 / 无玻璃拟态
+                       ============================================================ */
 
-                .vinyl-player {
-                    position: relative;
-                    width: 100vw;
-                    height: 100vh;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #0a0a0a 100%);
-                    overflow: hidden;
-                }
-
-                /* 背景光晕效果 */
-                .vinyl-bg-glow {
-                    position: absolute;
-                    width: 600px;
-                    height: 600px;
-                    border-radius: 50%;
-                    background: radial-gradient(circle,
-                        rgba(255, 0, 128, 0.15) 0%,
-                        rgba(0, 255, 255, 0.1) 30%,
-                        transparent 70%
-                    );
-                    filter: blur(60px);
-                    animation: vinyl-pulse 4s ease-in-out infinite;
-                }
-
-                @keyframes vinyl-pulse {
-                    0%, 100% { transform: scale(1); opacity: 0.6; }
-                    50% { transform: scale(1.2); opacity: 0.8; }
-                }
-
-                /* 主容器 */
-                .vinyl-container {
-                    position: relative;
-                    z-index: 1;
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    gap: 24px;
-                    padding: 88px 40px 40px;
-                }
-
-                /* 关闭按钮 */
-                .vinyl-close-btn {
-                    position: absolute;
-                    top: 30px;
-                    right: 8px;
-                    width: 32px;
-                    height: 32px;
-                    border-radius: 50%;
-                    background: rgba(255, 0, 128, 0.1);
-                    border: 1px solid rgba(255, 0, 128, 0.3);
-                    color: #ff0080;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    cursor: pointer;
-                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                    z-index: 10;
-                }
-
-                .vinyl-close-btn:hover {
-                    background: rgba(255, 0, 128, 0.2);
-                    border-color: rgba(255, 0, 128, 0.5);
-                    transform: rotate(90deg) scale(1.1);
-                    box-shadow: 0 0 20px rgba(255, 0, 128, 0.5);
-                }
-
-                /* 黑胶唱片容器 */
-                .vinyl-disc-container {
-                    position: relative;
-                    width: 320px;
-                    height: 320px;
-                }
-
-                /* 黑胶唱片 */
-                .vinyl-disc {
-                    position: absolute;
-                    inset: 0;
-                    width: 100%;
-                    height: 100%;
-                    border-radius: 50%;
-                    background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%);
-                    box-shadow:
-                        0 0 0 8px #0a0a0a,
-                        0 0 40px rgba(0, 255, 255, 0.3),
-                        0 0 80px rgba(255, 0, 128, 0.2),
-                        inset 0 0 60px rgba(0, 0, 0, 0.8);
-                    animation: vinyl-idle-glow 3s ease-in-out infinite;
-                    z-index: 1;
-                }
-
-                @keyframes vinyl-idle-glow {
-                    0%, 100% {
-                        box-shadow:
-                            0 0 0 8px #0a0a0a,
-                            0 0 40px rgba(0, 255, 255, 0.3),
-                            0 0 80px rgba(255, 0, 128, 0.2),
-                            inset 0 0 60px rgba(0, 0, 0, 0.8);
+                    .mp-root {
+                        position: relative;
+                        width: 100vw;
+                        height: 100vh;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        background: var(--color-surface-0);
+                        color: var(--color-text-1);
+                        font-family: var(--font-ui);
+                        overflow: hidden;
                     }
-                    50% {
-                        box-shadow:
-                            0 0 0 8px #0a0a0a,
-                            0 0 60px rgba(0, 255, 255, 0.5),
-                            0 0 100px rgba(255, 0, 128, 0.4),
-                            inset 0 0 60px rgba(0, 0, 0, 0.8);
+
+                    /* Wails 无边框窗口：仅顶部栏与窗口空白处可拖拽，
+                       可点元件一律 no-drag，避免拖拽吞掉点击 */
+                    .mp-root button,
+                    .mp-root input,
+                    .mp-cover-wrap,
+                    .mp-progress {
+                        --wails-draggable: no-drag;
                     }
-                }
-
-                .vinyl-disc.spinning {
-                    animation: vinyl-spin 3s linear infinite;
-                }
-
-                @keyframes vinyl-spin {
-                    from { transform: rotate(0deg); }
-                    to { transform: rotate(360deg); }
-                }
-
-                /* 黑胶纹理 */
-                .vinyl-grooves {
-                    position: absolute;
-                    inset: 0;
-                    border-radius: 50%;
-                    background: repeating-radial-gradient(
-                        circle at center,
-                        transparent 0px,
-                        transparent 1px,
-                        rgba(255, 255, 255, 0.03) 2px,
-                        transparent 3px
-                    );
-                    opacity: 0.6;
-                }
-
-                /* 唱片中心 */
-                .vinyl-center {
-                    position: absolute;
-                    top: 50%;
-                    left: 50%;
-                    transform: translate(-50%, -50%);
-                    width: 160px;
-                    height: 160px;
-                    border-radius: 50%;
-                    background: linear-gradient(135deg, #ff0080 0%, #00ffff 100%);
-                    padding: 3px;
-                    box-shadow:
-                        0 0 30px rgba(255, 0, 128, 0.5),
-                        inset 0 0 20px rgba(0, 0, 0, 0.3);
-                    z-index: 1;
-                }
-
-                .vinyl-cover {
-                    width: 100%;
-                    height: 100%;
-                    border-radius: 50%;
-                    object-fit: cover;
-                    box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.5);
-                }
-
-                .vinyl-cover-placeholder {
-                    width: 100%;
-                    height: 100%;
-                    border-radius: 50%;
-                    background: linear-gradient(135deg, #1a1a2e 0%, #0a0a0a 100%);
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    color: rgba(255, 0, 128, 0.3);
-                }
-
-                /* 歌词显示区域 */
-                .vinyl-lyrics-display {
-                    position: absolute;
-                    top: 50%;
-                    left: 50%;
-                    transform: translate(-50%, -50%);
-                    width: 280px;
-                    height: 280px;
-                    border-radius: 50%;
-                    background: linear-gradient(135deg, rgba(26, 26, 46, 0.98) 0%, rgba(10, 10, 10, 0.98) 100%);
-                    overflow-y: auto;
-                    overflow-x: hidden;
-                    padding: 60px 30px;
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    justify-content: flex-start;
-                    box-shadow:
-                        0 0 30px rgba(255, 0, 128, 0.5),
-                        inset 0 0 20px rgba(0, 0, 0, 0.3);
-                    z-index: 2;
-
-                    /* 隐藏滚动条 - Firefox */
-                    scrollbar-width: none;
-                    /* 隐藏滚动条 - IE/Edge */
-                    -ms-overflow-style: none;
-                }
-
-                /* 隐藏滚动条 - Chrome/Safari/Opera */
-                .vinyl-lyrics-display::-webkit-scrollbar {
-                    display: none;
-                }
-
-                .vinyl-lyrics-display::-webkit-scrollbar {
-                    width: 4px;
-                }
-
-                .vinyl-lyrics-display::-webkit-scrollbar-track {
-                    background: transparent;
-                }
-
-                .vinyl-lyrics-display::-webkit-scrollbar-thumb {
-                    background: rgba(0, 255, 255, 0.3);
-                    border-radius: 2px;
-                }
-
-                .lyrics-line {
-                    font-family: 'Rajdhani', sans-serif;
-                    font-size: 13px;
-                    color: rgba(255, 255, 255, 0.4);
-                    padding: 6px 12px;
-                    text-align: center;
-                    transition: all 0.3s ease;
-                    line-height: 1.6;
-                    min-width: 100px;
-                }
-
-                .lyrics-line.current {
-                    color: #00ffff;
-                    font-size: 15px;
-                    font-weight: 600;
-                    text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
-                    transform: scale(1.05);
-                }
-
-                .lyrics-empty {
-                    font-family: 'Rajdhani', sans-serif;
-                    font-size: 14px;
-                    color: rgba(255, 255, 255, 0.3);
-                    text-align: center;
-                    padding: 20px;
-                }
-
-                /* 加载动画 */
-                .vinyl-loading {
-                    position: absolute;
-                    inset: 0;
-                    border-radius: 50%;
-                    background: rgba(0, 0, 0, 0.7);
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    backdrop-filter: blur(4px);
-                }
-
-                .vinyl-loading-spinner {
-                    width: 48px;
-                    height: 48px;
-                    border: 3px solid transparent;
-                    border-top-color: #00ffff;
-                    border-right-color: #ff0080;
-                    border-radius: 50%;
-                    animation: vinyl-loading-spin 1s linear infinite;
-                }
-
-                @keyframes vinyl-loading-spin {
-                    to { transform: rotate(360deg); }
-                }
-
-                /* 歌曲信息 */
-                .vinyl-info {
-                    text-align: center;
-                    max-width: 320px;
-                    min-height: 57px;
-                    animation: vinyl-fade-in 0.5s ease-out;
-                }
-
-                @keyframes vinyl-fade-in {
-                    from { opacity: 0; transform: translateY(10px); }
-                    to { opacity: 1; transform: translateY(0); }
-                }
-
-                .vinyl-title {
-                    font-family: 'Orbitron', monospace;
-                    font-size: 20px;
-                    font-weight: 700;
-                    background: linear-gradient(90deg, #ff0080, #00ffff);
-                    -webkit-background-clip: text;
-                    -webkit-text-fill-color: transparent;
-                    background-clip: text;
-                    margin: 0 0 8px 0;
-                    text-shadow: 0 0 20px rgba(255, 0, 128, 0.5);
-                    letter-spacing: 0.5px;
-                    white-space: nowrap;
-                    overflow: hidden;
-                    text-overflow: ellipsis;
-                    max-width: 100%;
-                }
-
-                .vinyl-artist {
-                    font-family: 'Rajdhani', sans-serif;
-                    font-size: 16px;
-                    color: rgba(255, 255, 255, 0.6);
-                    margin: 0;
-                    font-weight: 500;
-                    letter-spacing: 0.5px;
-                    white-space: nowrap;
-                    overflow: hidden;
-                    text-overflow: ellipsis;
-                    max-width: 100%;
-                }
-
-                /* 进度条 */
-                .vinyl-progress-container {
-                    display: flex;
-                    align-items: center;
-                    gap: 12px;
-                    width: 320px;
-                }
-
-                .vinyl-time {
-                    font-family: 'Orbitron', monospace;
-                    font-size: 11px;
-                    color: rgba(0, 255, 255, 0.8);
-                    min-width: 40px;
-                    font-weight: 500;
-                    letter-spacing: 0.5px;
-                }
-
-                .vinyl-progress-bar {
-                    flex: 1;
-                    height: 4px;
-                    background: rgba(255, 255, 255, 0.1);
-                    border-radius: 2px;
-                    position: relative;
-                    cursor: pointer;
-                    overflow: visible;
-                    transition: height 0.2s;
-                }
-
-                .vinyl-progress-bar:hover {
-                    height: 6px;
-                }
-
-                .vinyl-progress-fill {
-                    height: 100%;
-                    background: linear-gradient(90deg, #ff0080, #00ffff);
-                    border-radius: 2px;
-                    transition: width 0.1s linear;
-                    box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
-                }
-
-                .vinyl-progress-dot {
-                    position: absolute;
-                    top: 50%;
-                    width: 12px;
-                    height: 12px;
-                    background: #00ffff;
-                    border-radius: 50%;
-                    transform: translate(-50%, -50%);
-                    box-shadow: 0 0 10px rgba(0, 255, 255, 0.8);
-                    opacity: 0;
-                    transition: opacity 0.2s;
-                }
-
-                .vinyl-progress-bar:hover .vinyl-progress-dot {
-                    opacity: 1;
-                }
-
-                /* 控制按钮 */
-                .vinyl-controls {
-                    display: flex;
-                    gap: 16px;
-                    align-items: center;
-                }
-
-                .vinyl-btn {
-                    border: none;
-                    border-radius: 50%;
-                    cursor: pointer;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                    font-family: inherit;
-                }
-
-                .vinyl-btn-primary {
-                    width: 64px;
-                    height: 64px;
-                    background: linear-gradient(135deg, #ff0080, #00ffff);
-                    color: white;
-                    box-shadow: 0 0 30px rgba(255, 0, 128, 0.5);
-                }
-
-                .vinyl-btn-primary:hover {
-                    transform: scale(1.1);
-                    box-shadow: 0 0 50px rgba(255, 0, 128, 0.8);
-                }
-
-                .vinyl-btn-primary:active {
-                    transform: scale(0.95);
-                }
-
-                .vinyl-btn-secondary {
-                    width: 44px;
-                    height: 44px;
-                    background: rgba(255, 255, 255, 0.05);
-                    border: 1px solid rgba(0, 255, 255, 0.3);
-                    color: #00ffff;
-                }
-
-                .vinyl-btn-secondary:hover {
-                    background: rgba(0, 255, 255, 0.1);
-                    border-color: rgba(0, 255, 255, 0.6);
-                    box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
-                    transform: scale(1.05);
-                }
-
-                .vinyl-btn-secondary:disabled {
-                    opacity: 0.4;
-                    cursor: not-allowed;
-                }
-
-                .vinyl-btn-secondary:disabled:hover {
-                    transform: none;
-                    box-shadow: none;
-                }
-
-                .vinyl-btn-tertiary {
-                    width: 44px;
-                    height: 44px;
-                    background: rgba(255, 255, 255, 0.05);
-                    border: 1px solid rgba(255, 0, 128, 0.3);
-                    color: #ff0080;
-                }
-
-                .vinyl-btn-tertiary:hover {
-                    background: rgba(255, 0, 128, 0.1);
-                    border-color: rgba(255, 0, 128, 0.6);
-                    box-shadow: 0 0 20px rgba(255, 0, 128, 0.5);
-                    transform: scale(1.05);
-                }
-
-                /* 喜欢按钮 - 左上角 */
-                .vinyl-like-btn {
-                    position: absolute;
-                    top: 30px;
-                    left: 10px;
-                    width: 40px;
-                    height: 40px;
-                    border-radius: 50%;
-                    background: rgba(255, 255, 255, 0.05);
-                    border: 1px solid rgba(255, 0, 128, 0.3);
-                    color: rgba(255, 0, 128, 0.5);
-                    cursor: pointer;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                    z-index: 10;
-                }
-
-                .vinyl-like-btn:hover {
-                    background: rgba(255, 0, 128, 0.1);
-                    border-color: rgba(255, 0, 128, 0.6);
-                    box-shadow: 0 0 20px rgba(255, 0, 128, 0.5);
-                    transform: scale(1.1);
-                }
-
-                .vinyl-like-btn.liked {
-                    background: rgba(255, 0, 128, 0.2);
-                    border-color: #ff0080;
-                    color: #ff0080;
-                    box-shadow: 0 0 20px rgba(255, 0, 128, 0.5);
-                }
-
-                /* 下载按钮 - 进度条上方 */
-                .vinyl-download-btn {
-                    border-radius: 50%;
-                    background: transparent;
-                    border: none;
-                    color: rgba(0, 255, 255, 0.6);
-                    cursor: pointer;
-                    display: flex;
-                    align-items: end;
-                    justify-content: center;
-                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                }
-
-                .vinyl-download-btn:hover {
-                    color: #00ffff;
-                    transform: scale(1.15);
-                }
-
-                .vinyl-download-btn:disabled {
-                    opacity: 0.4;
-                    cursor: not-allowed;
-                }
-
-                .vinyl-download-btn:disabled:hover {
-                    transform: none;
-                }
-
-                /* 搜索框样式 */
-                .vinyl-search-input-wrapper {
-                    display: flex;
-                    align-items: center;
-                    gap: 12px;
-                    background: rgba(255, 255, 255, 0.05);
-                    border: 1px solid rgba(255, 255, 255, 0.1);
-                    border-radius: 25px;
-                    padding: 12px 20px;
-                    transition: all 0.3s;
-                    width: 100%;
-                    max-width: 400px;
-                }
-
-                .vinyl-search-input-wrapper:focus-within {
-                    border-color: rgba(255, 0, 128, 0.5);
-                    box-shadow: 0 0 20px rgba(255, 0, 128, 0.3);
-                }
-
-                .vinyl-search-input {
-                    flex: 1;
-                    background: transparent;
-                    border: none;
-                    outline: none;
-                    color: white;
-                    font-family: 'Rajdhani', sans-serif;
-                    font-size: 15px;
-                    font-weight: 500;
-                }
-
-                .vinyl-search-input::placeholder {
-                    color: rgba(255, 255, 255, 0.4);
-                }
-
-                /* 顶部按钮组 - 绝对定位 */
-                .vinyl-top-group {
-                    position: absolute;
-                    top: 20px;
-                    left: 50%;
-                    transform: translateX(-50%);
-                    display: flex;
-                    align-items: center;
-                    gap: 0;
-                    z-index: 50;
-                    background: rgba(255, 255, 255, 0.08);
-                    backdrop-filter: blur(10px);
-                    border: 1px solid rgba(255, 0, 128, 0.3);
-                    border-radius: 16px;
-                    padding: 2px;
-                    box-shadow: 0 0 20px rgba(255, 0, 128, 0.2);
-                }
-
-                .vinyl-top-group-btn {
-                    display: flex;
-                    align-items: center;
-                    gap: 4px;
-                    padding: 5px 12px;
-                    border-radius: 13px;
-                    background: transparent;
-                    border: none;
-                    color: rgba(255, 255, 255, 0.7);
-                    font-family: 'Rajdhani', sans-serif;
-                    font-size: 12px;
-                    font-weight: 600;
-                    cursor: pointer;
-                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                    white-space: nowrap;
-                    position: relative;
-                }
-
-                .vinyl-top-group-btn:hover {
-                    background: rgba(255, 0, 128, 0.2);
-                    color: #fff;
-                }
-
-                .vinyl-top-divider {
-                    width: 1px;
-                    height: 16px;
-                    background: linear-gradient(
-                        to bottom,
-                        transparent,
-                        rgba(255, 0, 128, 0.5),
-                        transparent
-                    );
-                    margin: 0 2px;
-                    font-size: 14px;
-                    color: rgba(255, 0, 128, 0.6);
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                }
-
-                .vinyl-badge {
-                    background: rgba(255, 0, 128, 0.4);
-                    color: #fff;
-                    padding: 1px 6px;
-                    border-radius: 8px;
-                    font-size: 10px;
-                    font-weight: 700;
-                    margin-left: 3px;
-                    min-width: 16px;
-                    text-align: center;
-                }
-
-                /* 列表视图 */
-                .vinyl-list-view {
-                    position: absolute;
-                    top: 0;
-                    left: 0;
-                    right: 0;
-                    bottom: 0;
-                    background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #0a0a0a 100%);
-                    z-index: 100;
-                    display: flex;
-                    flex-direction: column;
-                    padding: 60px 20px 20px;
-                    overflow-y: auto;
-                }
-
-                .vinyl-list-header {
-                    display: flex;
-                    justify-content: center;
-                    margin-bottom: 20px;
-                }
-
-                .vinyl-play-all-btn {
-                    display: flex;
-                    align-items: center;
-                    gap: 8px;
-                    padding: 12px 24px;
-                    background: linear-gradient(135deg, rgba(255, 0, 128, 0.2), rgba(0, 255, 255, 0.2));
-                    border: 1px solid rgba(255, 0, 128, 0.5);
-                    border-radius: 25px;
-                    color: #fff;
-                    font-family: 'Rajdhani', sans-serif;
-                    font-size: 15px;
-                    font-weight: 600;
-                    cursor: pointer;
-                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                }
-
-                .vinyl-play-all-btn:hover:not(:disabled) {
-                    background: linear-gradient(135deg, rgba(255, 0, 128, 0.3), rgba(0, 255, 255, 0.3));
-                    box-shadow: 0 0 30px rgba(255, 0, 128, 0.4);
-                    transform: translateY(-2px);
-                }
-
-                .vinyl-play-all-btn:disabled {
-                    opacity: 0.5;
-                    cursor: not-allowed;
-                }
-
-                .vinyl-list-item {
-                    display: flex;
-                    align-items: center;
-                    padding: 12px;
-                    background: rgba(255, 255, 255, 0.03);
-                    border: 1px solid rgba(255, 255, 255, 0.05);
-                    border-radius: 12px;
-                    margin-bottom: 8px;
-                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                }
-
-                .vinyl-list-item:hover {
-                    background: rgba(255, 255, 255, 0.08);
-                    border-color: rgba(255, 255, 255, 0.1);
-                    transform: translateX(4px);
-                }
-
-                .vinyl-list-item-main {
-                    flex: 1;
-                    display: flex;
-                    align-items: center;
-                    gap: 12px;
-                    cursor: pointer;
-                    min-width: 0;
-                }
-
-                .vinyl-list-cover {
-                    width: 50px;
-                    height: 50px;
-                    border-radius: 8px;
-                    object-fit: cover;
-                    flex-shrink: 0;
-                }
-
-                .vinyl-list-cover-placeholder {
-                    width: 50px;
-                    height: 50px;
-                    border-radius: 8px;
-                    background: rgba(255, 0, 128, 0.1);
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    color: rgba(255, 0, 128, 0.3);
-                    flex-shrink: 0;
-                }
-
-                .vinyl-list-info {
-                    flex: 1;
-                    min-width: 0;
-                }
-
-                .vinyl-list-name {
-                    font-family: 'Rajdhani', sans-serif;
-                    font-size: 15px;
-                    font-weight: 600;
-                    color: #fff;
-                    margin-bottom: 4px;
-                    overflow: hidden;
-                    text-overflow: ellipsis;
-                    white-space: nowrap;
-                }
-
-                .vinyl-list-artist {
-                    font-family: 'Rajdhani', sans-serif;
-                    font-size: 13px;
-                    color: rgba(255, 255, 255, 0.5);
-                    overflow: hidden;
-                    text-overflow: ellipsis;
-                    white-space: nowrap;
-                }
-
-                .vinyl-list-meta {
-                    font-family: 'Rajdhani', sans-serif;
-                    font-size: 11px;
-                    color: rgba(255, 255, 255, 0.3);
-                    margin-top: 2px;
-                }
-
-                .vinyl-list-actions {
-                    display: flex;
-                    gap: 8px;
-                    flex-shrink: 0;
-                }
-
-                .vinyl-list-actions button {
-                    width: 32px;
-                    height: 32px;
-                    border-radius: 50%;
-                    background: rgba(255, 255, 255, 0.05);
-                    border: 1px solid rgba(255, 255, 255, 0.1);
-                    color: rgba(255, 255, 255, 0.6);
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    cursor: pointer;
-                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                }
-
-                .vinyl-list-actions button:hover {
-                    background: rgba(255, 255, 255, 0.1);
-                    border-color: rgba(255, 255, 255, 0.2);
-                    color: #fff;
-                }
-
-                .vinyl-list-actions button.liked {
-                    color: #ff0080;
-                    border-color: rgba(255, 0, 128, 0.3);
-                }
-
-                .vinyl-list-loading {
-                    display: flex;
-                    justify-content: center;
-                    padding: 20px;
-                }
-
-                .vinyl-list-end {
-                    text-align: center;
-                    padding: 16px;
-                    color: rgba(255, 255, 255, 0.3);
-                    font-family: 'Rajdhani', sans-serif;
-                    font-size: 13px;
-                }
-
-                /* 旋转动画 */
-                @keyframes spin {
-                    from { transform: rotate(0deg); }
-                    to { transform: rotate(360deg); }
-                }
-
-                .animate-spin {
-                    animation: spin 1s linear infinite;
-                }
-            `}</style>
-        </>
-    );
-}
+
+                    /* ---------- 顶部工具条 ---------- */
+
+                    .mp-topbar {
+                        position: absolute;
+                        top: 0;
+                        left: 0;
+                        right: 0;
+                        height: 44px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        padding: 0 10px;
+                        z-index: 5;
+                    }
+
+                    .mp-topbar-side {
+                        display: flex;
+                        align-items: center;
+                        gap: 4px;
+                        min-width: 56px;
+                    }
+
+                    .mp-topbar-right {
+                        justify-content: flex-end;
+                    }
+
+                    .mp-tabs {
+                        position: absolute;
+                        left: 50%;
+                        top: 9px;
+                        transform: translateX(-50%);
+                        display: flex;
+                        align-items: center;
+                        gap: 2px;
+                    }
+
+                    .mp-tab {
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 5px;
+                        height: 26px;
+                        padding: 0 10px;
+                        border: none;
+                        border-radius: var(--radius-control);
+                        background: transparent;
+                        color: var(--color-text-2);
+                        font-size: 12px;
+                        font-weight: 500;
+                        white-space: nowrap;
+                        transition:
+                            background-color var(--dur-1) ease,
+                            color var(--dur-1) ease,
+                            transform 100ms ease-out;
+                    }
+
+                    .mp-tab:hover {
+                        background: rgba(255, 255, 255, 0.07);
+                        color: var(--color-text-1);
+                    }
+
+                    .mp-tab:active {
+                        transform: scale(0.97);
+                    }
+
+                    .mp-tab-badge {
+                        font-size: 10.5px;
+                        line-height: 15px;
+                        min-width: 16px;
+                        padding: 0 5px;
+                        border-radius: 999px;
+                        background: rgba(255, 255, 255, 0.08);
+                        color: var(--color-text-3);
+                        text-align: center;
+                    }
+
+                    /* 喜欢（激活态 = 强调色 subtle） */
+                    .icon-btn.mp-like.liked,
+                    .icon-btn.mp-like.liked:hover:not(:disabled) {
+                        color: var(--color-accent-text);
+                        background: var(--color-accent-subtle);
+                    }
+
+                    /* ---------- 主视图 ---------- */
+
+                    .mp-window {
+                        position: relative;
+                        z-index: 1;
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        gap: 16px;
+                        padding: 60px 36px 32px;
+                        width: 100%;
+                        max-width: 380px;
+                    }
+
+                    /* ---------- 封面 / 歌词 ---------- */
+
+                    .mp-cover-wrap {
+                        position: relative;
+                        width: 240px;
+                        height: 240px;
+                        flex-shrink: 0;
+                        cursor: pointer;
+                    }
+
+                    .mp-cover {
+                        position: absolute;
+                        inset: 0;
+                        border-radius: var(--radius-card);
+                        border: 1px solid var(--color-hairline);
+                        background: var(--color-surface-2);
+                        overflow: hidden;
+                    }
+
+                    .mp-cover-img {
+                        display: block;
+                        width: 100%;
+                        height: 100%;
+                        object-fit: cover;
+                    }
+
+                    .mp-cover-placeholder {
+                        width: 100%;
+                        height: 100%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        color: var(--color-text-4);
+                    }
+
+                    .mp-cover-loading {
+                        position: absolute;
+                        inset: 0;
+                        z-index: 2;
+                        border-radius: var(--radius-card);
+                        background: rgba(4, 5, 8, 0.55);
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                    }
+
+                    .mp-lyrics {
+                        position: absolute;
+                        inset: 0;
+                        border-radius: var(--radius-card);
+                        border: 1px solid var(--color-hairline);
+                        background: var(--color-surface-1);
+                        overflow-y: auto;
+                        overflow-x: hidden;
+                        padding: 14px 10px;
+                        scrollbar-width: none;
+                        -ms-overflow-style: none;
+                    }
+
+                    .mp-lyrics::-webkit-scrollbar {
+                        display: none;
+                    }
+
+                    .lyrics-line {
+                        font-size: 12.5px;
+                        line-height: 22px;
+                        padding: 4px 8px;
+                        color: var(--color-text-4);
+                        text-align: center;
+                        transition: color var(--dur-1) ease;
+                    }
+
+                    .lyrics-line.current {
+                        font-size: 14px;
+                        font-weight: 550;
+                        color: var(--color-text-1);
+                    }
+
+                    .lyrics-empty {
+                        height: 100%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        padding: 20px;
+                        font-size: 12px;
+                        color: var(--color-text-4);
+                        text-align: center;
+                    }
+
+                    /* ---------- 歌曲信息 ---------- */
+
+                    .mp-info {
+                        text-align: center;
+                        max-width: 300px;
+                        min-height: 42px;
+                    }
+
+                    .mp-title {
+                        margin: 0 0 2px;
+                        font-size: 13.5px;
+                        font-weight: 600;
+                        color: var(--color-text-1);
+                        white-space: nowrap;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                        max-width: 100%;
+                    }
+
+                    .mp-artist {
+                        margin: 0;
+                        font-size: 12px;
+                        color: var(--color-text-3);
+                        white-space: nowrap;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                        max-width: 100%;
+                    }
+
+                    /* ---------- 进度条（可点跳转，自绘条） ---------- */
+
+                    .mp-progress-row {
+                        display: flex;
+                        align-items: center;
+                        gap: 10px;
+                        width: 280px;
+                    }
+
+                    .mp-time {
+                        font-family: var(--font-mono);
+                        font-size: 11px;
+                        color: var(--color-text-3);
+                        min-width: 38px;
+                    }
+
+                    .mp-time-current {
+                        text-align: right;
+                    }
+
+                    /* 16px 高的可点击热区，视觉条只有 4px */
+                    .mp-progress {
+                        position: relative;
+                        flex: 1;
+                        height: 16px;
+                        display: flex;
+                        align-items: center;
+                        cursor: pointer;
+                    }
+
+                    .mp-progress-track {
+                        width: 100%;
+                        height: 4px;
+                        border-radius: 999px;
+                        background: rgba(255, 255, 255, 0.07);
+                        overflow: hidden;
+                    }
+
+                    .mp-progress-fill {
+                        height: 100%;
+                        border-radius: 999px;
+                        background: var(--color-accent);
+                        transition: width 100ms linear;
+                    }
+
+                    .mp-progress-dot {
+                        position: absolute;
+                        top: 50%;
+                        width: 10px;
+                        height: 10px;
+                        border-radius: 50%;
+                        background: var(--color-accent);
+                        transform: translate(-50%, -50%);
+                        opacity: 0;
+                        transition: opacity var(--dur-1) ease;
+                        pointer-events: none;
+                    }
+
+                    .mp-progress:hover .mp-progress-dot {
+                        opacity: 1;
+                    }
+
+                    /* ---------- 播放控制 ---------- */
+
+                    .mp-controls {
+                        display: flex;
+                        align-items: center;
+                        gap: 10px;
+                    }
+
+                    .mp-root .icon-btn:disabled {
+                        opacity: 0.4;
+                    }
+
+                    /* 主播放键：放大 + 唯一强调色面积 */
+                    .icon-btn.mp-play-main {
+                        width: 44px;
+                        height: 44px;
+                        border-radius: 999px;
+                        background: var(--color-accent);
+                        color: #fff;
+                    }
+
+                    .icon-btn.mp-play-main:hover:not(:disabled) {
+                        background: var(--color-accent-hover);
+                        color: #fff;
+                    }
+
+                    .icon-btn.mp-play-main:active:not(:disabled) {
+                        background: var(--color-accent-pressed);
+                        transform: scale(0.96);
+                    }
+
+                    .icon-btn.mp-play-main svg {
+                        width: 20px;
+                        height: 20px;
+                    }
+
+                    /* ---------- 列表视图（喜欢 / 热门 / 搜索） ---------- */
+
+                    .mp-list {
+                        position: absolute;
+                        inset: 0;
+                        z-index: 20;
+                        background: var(--color-surface-0);
+                        display: flex;
+                        flex-direction: column;
+                        padding: 10px 12px 12px;
+                    }
+
+                    .mp-list-topbar {
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                        flex-shrink: 0;
+                        margin-bottom: 10px;
+                    }
+
+                    .mp-list-topbar-spacer {
+                        flex: 1;
+                    }
+
+                    .mp-list-title {
+                        font-size: 13px;
+                        font-weight: 600;
+                        color: var(--color-text-1);
+                    }
+
+                    .mp-list-scroll {
+                        flex: 1;
+                        min-height: 0;
+                        overflow-y: auto;
+                        overflow-x: hidden;
+                        display: flex;
+                        flex-direction: column;
+                        align-items: stretch;
+                    }
+
+                    .mp-row {
+                        padding: 6px 8px;
+                        flex-shrink: 0;
+                    }
+
+                    .mp-row-cover {
+                        width: 40px;
+                        height: 40px;
+                        border-radius: var(--radius-card);
+                        border: 1px solid var(--color-hairline);
+                        background: var(--color-surface-2);
+                        object-fit: cover;
+                        flex-shrink: 0;
+                    }
+
+                    .mp-row-cover-placeholder {
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        color: var(--color-text-4);
+                    }
+
+                    .mp-row-info {
+                        flex: 1;
+                        min-width: 0;
+                    }
+
+                    .mp-row-name {
+                        font-size: 12.5px;
+                        font-weight: 500;
+                        color: var(--color-text-1);
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                        white-space: nowrap;
+                    }
+
+                    .mp-row-artist {
+                        margin-top: 1px;
+                        font-size: 11.5px;
+                        color: var(--color-text-3);
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                        white-space: nowrap;
+                    }
+
+                    .mp-row-meta {
+                        flex-shrink: 0;
+                        font-size: 11px;
+                        color: var(--color-text-4);
+                    }
+
+                    .mp-row-actions {
+                        display: flex;
+                        align-items: center;
+                        gap: 2px;
+                        flex-shrink: 0;
+                    }
+
+                    .mp-list-loading {
+                        display: flex;
+                        justify-content: center;
+                        padding: 16px;
+                    }
+
+                    .mp-list-end {
+                        padding: 12px;
+                        font-size: 11.5px;
+                        color: var(--color-text-4);
+                        text-align: center;
+                    }
+
+                    .mp-list .empty-state {
+                        padding: 32px 16px;
+                    }
+
+                    /* ---------- 搜索框 ---------- */
+
+                    .mp-search-wrap {
+                        position: relative;
+                        flex: 1;
+                        min-width: 0;
+                        display: flex;
+                        align-items: center;
+                    }
+
+                    .mp-search-icon {
+                        position: absolute;
+                        left: 9px;
+                        top: 50%;
+                        transform: translateY(-50%);
+                        color: var(--color-text-4);
+                        pointer-events: none;
+                    }
+
+                    .mp-search-input {
+                        padding-left: 28px;
+                    }
+                `}</style>
+            </>
+        );
+    }

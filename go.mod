@@ -7,12 +7,16 @@ require (
 	github.com/disintegration/imaging v1.6.2
 	github.com/kbinani/screenshot v0.0.0-20250624051815-089614a94018
 	github.com/kirklin/go-blind-watermark v0.0.1
+	github.com/lxn/win v0.0.0-20210218163916-a377121e959e
 	github.com/mattn/go-sqlite3 v1.14.34
+	github.com/microcosm-cc/bluemonday v1.0.27
 	github.com/mozillazg/go-pinyin v0.21.0
 	github.com/robotn/gohook v0.42.3
+	github.com/sahilm/fuzzy v0.1.1
 	github.com/shirou/gopsutil/v4 v4.26.1
 	github.com/wailsapp/wails/v3 v3.0.0-alpha.74
 	github.com/zalando/go-keyring v0.2.6
+	golang.design/x/hotkey v0.4.1
 	golang.org/x/crypto v0.47.0
 	golang.org/x/image v0.35.0
 	golang.org/x/sys v0.40.0
@@ -25,6 +29,7 @@ require (
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/ProtonMail/go-crypto v1.3.0 // indirect
 	github.com/adrg/xdg v0.5.3 // indirect
+	github.com/aymerick/douceur v0.2.0 // indirect
 	github.com/bep/debounce v1.2.1 // indirect
 	github.com/cloudflare/circl v1.6.3 // indirect
 	github.com/coder/websocket v1.8.14 // indirect
@@ -40,17 +45,18 @@ require (
 	github.com/godbus/dbus/v5 v5.2.2 // indirect
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
 	github.com/google/uuid v1.6.0 // indirect
+	github.com/gorilla/css v1.0.1 // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
 	github.com/jchv/go-winloader v0.0.0-20250406163304-c1995be93bd1 // indirect
 	github.com/jezek/xgb v1.1.1 // indirect
 	github.com/jsummers/gobmp v0.0.0-20230614200233-a9de23ed2e25 // indirect
 	github.com/kevinburke/ssh_config v1.4.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
+	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/leaanthony/go-ansi-parser v1.6.1 // indirect
 	github.com/leaanthony/u v1.1.1 // indirect
 	github.com/lmittmann/tint v1.1.3 // indirect
 	github.com/lufia/plan9stats v0.0.0-20251013123823-9fd1530e3ec3 // indirect
-	github.com/lxn/win v0.0.0-20210218163916-a377121e959e // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/pjbgf/sha1cd v0.5.0 // indirect

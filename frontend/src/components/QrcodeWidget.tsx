@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { QRCodeCanvas } from 'qrcode.react';
 import { Icon } from './Icon';
 import { useToast } from '../hooks/useToast';
+import { Badge, Button, Card, EmptyState, Field, SectionTitle, Segmented, Textarea, Toggle } from './ui';
 import * as QrcodeService from '../../bindings/ltools/plugins/qrcode/qrcodeservice';
 
 /**
@@ -32,6 +33,13 @@ const ERROR_LEVELS: Array<{ value: ErrorCorrectionLevel; label: string; descript
   { value: 'H', label: 'H', description: '30% 容错' },
 ];
 
+const QUICK_FILLS: Array<{ label: string; value: string }> = [
+  { label: 'GitHub', value: 'https://github.com' },
+  { label: '示例网址', value: 'https://example.com' },
+  { label: '文本示例', value: 'Hello, World!' },
+  { label: 'WiFi 配置', value: 'WIFI:S:MyNetwork;T:WPA;P:password;;' },
+];
+
 /**
  * 二维码生成器组件
  *
@@ -52,6 +60,7 @@ export function QrcodeWidget(): JSX.Element {
   const [includeMargin, setIncludeMargin] = useState(false);
   const [saveDir, setSaveDir] = useState('~/Pictures/QRCodes');
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const copiedTimerRef = useRef<number | null>(null);
 
   // 计算实际尺寸
   const actualSize = sizePreset === 'custom' ? customSize : SIZE_PRESETS[sizePreset];
@@ -78,6 +87,15 @@ export function QrcodeWidget(): JSX.Element {
     });
   }, []);
 
+  // 卸载时清理复制状态计时器
+  useEffect(() => {
+    return () => {
+      if (copiedTimerRef.current) {
+        window.clearTimeout(copiedTimerRef.current);
+      }
+    };
+  }, []);
+
   // 复制到剪贴板 - 使用后端原生剪贴板 API
   const copyToClipboard = useCallback(async () => {
     const canvas = canvasRef.current;
@@ -91,13 +109,16 @@ export function QrcodeWidget(): JSX.Element {
       await QrcodeService.CopyToClipboard(dataUrl);
 
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      if (copiedTimerRef.current) {
+        window.clearTimeout(copiedTimerRef.current);
+      }
+      copiedTimerRef.current = window.setTimeout(() => setCopied(false), 2000);
       success('二维码已复制到剪贴板');
     } catch (err) {
       console.error('复制失败:', err);
       showError('复制失败: ' + (err as Error).message);
     }
-  }, [showError]);
+  }, [success, showError]);
 
   // 保存为文件 - 使用后端服务
   const saveToFile = useCallback(async () => {
@@ -118,7 +139,7 @@ export function QrcodeWidget(): JSX.Element {
       console.error('保存失败:', err);
       showError('保存失败: ' + (err as Error).message);
     }
-  }, [content, success, showError]);
+  }, [success, showError]);
 
   // 常用内容快速填充
   const quickFill = useCallback((text: string) => {
@@ -129,214 +150,159 @@ export function QrcodeWidget(): JSX.Element {
   const showQrcode = content.trim().length > 0;
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <div className="glass-heavy rounded-2xl p-8">
-        {/* 标题 */}
-        <div className="flex items-center gap-3 mb-8">
-          <div className="w-12 h-12 rounded-xl bg-[#7C3AED]/20 flex items-center justify-center">
-            <Icon name="qrcode" size={24} color="#A78BFA" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-white">二维码生成器</h1>
-            <p className="text-sm text-white/50">输入文本或链接，快速生成二维码</p>
-          </div>
-        </div>
-
-        {/* 输入区域 */}
-        <div className="space-y-4 mb-8">
-          <div>
-            <label className="block text-sm font-medium text-white/70 mb-2">
-              输入内容
-            </label>
-            <textarea
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="输入网址、文本或任何内容..."
-              className="w-full h-32 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-[#7C3AED]/50 focus:bg-white/10 transition-all resize-none"
-            />
-            {/* 输入类型指示器 */}
-            {inputType !== 'empty' && (
-              <div className="mt-2 flex items-center gap-2">
-                <span className="text-xs text-white/40">类型:</span>
-                <span className={`text-xs px-2 py-1 rounded ${
-                  inputType === 'url'
-                    ? 'bg-green-500/20 text-green-400'
-                    : 'bg-blue-500/20 text-blue-400'
-                }`}>
-                  {inputType === 'url' ? '链接' : '文本'}
-                </span>
-                <span className="text-xs text-white/30">
-                  {content.length} 字符
-                </span>
-              </div>
-            )}
-          </div>
-
-          {/* 快速填充按钮 */}
-          <div className="flex flex-wrap gap-2">
-            <span className="text-xs text-white/40 self-center">快速填充:</span>
-            <button
-              className="text-xs px-3 py-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors clickable"
-              onClick={() => quickFill('https://github.com')}
-            >
-              GitHub
-            </button>
-            <button
-              className="text-xs px-3 py-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors clickable"
-              onClick={() => quickFill('https://example.com')}
-            >
-              示例网址
-            </button>
-            <button
-              className="text-xs px-3 py-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors clickable"
-              onClick={() => quickFill('Hello, World!')}
-            >
-              文本示例
-            </button>
-            <button
-              className="text-xs px-3 py-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors clickable"
-              onClick={() => quickFill('WIFI:S:MyNetwork;T:WPA;P:password;;')}
-            >
-              WiFi 配置
-            </button>
-          </div>
-        </div>
-
-        {/* 配置选项 */}
-        <div className="grid grid-cols-2 gap-6 mb-8">
-          {/* 尺寸选择 */}
-          <div>
-            <label className="block text-sm font-medium text-white/70 mb-3">
-              二维码尺寸
-            </label>
-            <div className="flex gap-2">
-              {(['small', 'medium', 'large'] as SizePreset[]).map((preset) => (
-                <button
-                  key={preset}
-                  className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
-                    sizePreset === preset
-                      ? 'bg-[#7C3AED] text-white shadow-lg shadow-[#7C3AED]/30'
-                      : 'bg-white/5 text-white/60 hover:bg-white/10'
-                  } clickable`}
-                  onClick={() => setSizePreset(preset)}
-                >
-                  {preset === 'small' ? '小' : preset === 'medium' ? '中' : '大'}
-                </button>
-              ))}
+    <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
+      {/* 左列：输入与参数 */}
+      <div className="min-w-0 space-y-5">
+        {/* 输入内容 */}
+        <Card className="p-4">
+          <SectionTitle
+            title="输入内容"
+            className="mb-3"
+            action={
+              showQrcode ? (
+                <span className="tnum text-[11.5px] text-text-4">{content.length} 字符</span>
+              ) : undefined
+            }
+          />
+          <Textarea
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            placeholder="输入网址、文本或任何内容..."
+            className="h-28 resize-none"
+          />
+          {inputType !== 'empty' && (
+            <div className="mt-2.5 flex items-center gap-2">
+              <span className="text-[11.5px] text-text-4">类型</span>
+              {inputType === 'url' ? (
+                <Badge tone="accent">链接</Badge>
+              ) : (
+                <Badge tone="neutral">文本</Badge>
+              )}
             </div>
-            <div className="mt-2 text-xs text-white/30">
-              当前: {actualSize}px
-            </div>
+          )}
+
+          {/* 快速填充 */}
+          <div className="hairline-t mt-3.5 flex flex-wrap items-center gap-1.5 pt-3.5">
+            <span className="mr-1 text-[11.5px] text-text-4">快速填充</span>
+            {QUICK_FILLS.map((fill) => (
+              <Button key={fill.label} variant="ghost" size="sm" onClick={() => quickFill(fill.value)}>
+                {fill.label}
+              </Button>
+            ))}
+          </div>
+        </Card>
+
+        {/* 参数 */}
+        <Card className="p-4">
+          <SectionTitle title="生成参数" className="mb-3" />
+
+          {/* 尺寸 */}
+          <div className="mb-1">
+            <Field label="二维码尺寸">
+              <Segmented<'small' | 'medium' | 'large'>
+                options={[
+                  { value: 'small', label: '小' },
+                  { value: 'medium', label: '中' },
+                  { value: 'large', label: '大' },
+                ]}
+                value={sizePreset === 'custom' ? 'medium' : sizePreset}
+                onChange={setSizePreset}
+              />
+            </Field>
+            <p className="tnum field-hint">{SIZE_PRESETS[sizePreset]} px</p>
           </div>
 
           {/* 纠错级别 */}
-          <div>
-            <label className="block text-sm font-medium text-white/70 mb-3">
-              纠错级别
-            </label>
-            <div className="grid grid-cols-4 gap-2">
-              {ERROR_LEVELS.map((level) => (
-                <button
-                  key={level.value}
-                  className={`py-2 px-2 rounded-lg text-xs font-medium transition-all ${
-                    errorLevel === level.value
-                      ? 'bg-[#7C3AED] text-white shadow-lg shadow-[#7C3AED]/30'
-                      : 'bg-white/5 text-white/60 hover:bg-white/10'
-                  } clickable`}
-                  onClick={() => setErrorLevel(level.value)}
-                  title={level.description}
-                >
-                  {level.label}
-                </button>
-              ))}
-            </div>
-            <div className="mt-2 text-xs text-white/30">
-              {ERROR_LEVELS.find(l => l.value === errorLevel)?.description}
-            </div>
+          <div className="mb-1 mt-4">
+            <Field label="纠错级别">
+              <Segmented<ErrorCorrectionLevel>
+                options={ERROR_LEVELS.map((level) => ({
+                  value: level.value,
+                  label: level.label,
+                }))}
+                value={errorLevel}
+                onChange={setErrorLevel}
+              />
+            </Field>
+            <p className="field-hint">
+              {ERROR_LEVELS.find((l) => l.value === errorLevel)?.description}
+            </p>
           </div>
-        </div>
 
-        {/* 边距选项 */}
-        <div className="mb-8">
-          <label className="flex items-center gap-3 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={includeMargin}
-              onChange={(e) => setIncludeMargin(e.target.checked)}
-              className="w-4 h-4 rounded border-white/20 bg-white/5 text-[#7C3AED] focus:ring-[#7C3AED]/50"
-            />
-            <span className="text-sm text-white/70">添加边距</span>
-          </label>
-        </div>
-
-        {/* 保存目录显示 */}
-        <div className="mb-6 p-3 rounded-lg bg-white/5 border border-white/10">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-white/60">保存位置:</span>
-            <span className="text-sm text-white/80">{saveDir}</span>
+          {/* 边距 */}
+          <div className="hairline-t mt-4">
+            <Field horizontal label="添加边距" hint="在二维码四周保留空白区域，便于扫描">
+              <Toggle checked={includeMargin} onChange={setIncludeMargin} label="添加边距" />
+            </Field>
           </div>
-        </div>
+        </Card>
 
-        {/* 二维码预览区域 */}
-        <div className="flex flex-col items-center">
+        {/* 保存位置 */}
+        <div className="card-inset flex items-center gap-2.5 px-4 py-3">
+          <Icon name="folder" size={15} color="var(--color-text-3)" className="shrink-0" />
+          <span className="shrink-0 text-[12px] text-text-3">保存位置</span>
+          <span className="min-w-0 flex-1 truncate select-text font-mono text-[12px] text-text-2" title={saveDir}>
+            {saveDir}
+          </span>
+        </div>
+      </div>
+
+      {/* 右列：预览 */}
+      <div className="min-w-0 space-y-5">
+        <Card className="p-4">
+          <SectionTitle title="预览" className="mb-3" />
           {showQrcode ? (
             <>
-              {/* 二维码显示 */}
-              <div className="relative">
-                <div className="p-6 bg-white rounded-2xl shadow-2xl">
+              {/* 二维码白底容器：12px 内边距，圆角 */}
+              <div className="flex justify-center">
+                <div className="max-w-full rounded-[9px] bg-white p-3">
                   <QRCodeCanvas
                     ref={canvasRef}
                     value={content}
                     size={actualSize}
                     level={errorLevel}
                     includeMargin={includeMargin}
+                    style={{ width: '100%', height: 'auto', maxWidth: actualSize }}
                   />
                 </div>
-                {/* 尺寸标注 */}
-                <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 text-xs text-white/30">
-                  {actualSize} × {actualSize} px
-                </div>
               </div>
+              <p className="tnum mt-3 text-center text-[11.5px] text-text-4">
+                {actualSize} × {actualSize} px
+              </p>
 
               {/* 操作按钮 */}
-              <div className="flex gap-4 mt-12">
-                <button
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                <Button
+                  variant="primary"
+                  icon={copied ? 'check' : 'copy'}
                   onClick={copyToClipboard}
-                  className="flex items-center gap-2 px-6 py-3 bg-[#7C3AED] hover:bg-[#6D28D9] text-white rounded-xl font-medium transition-all shadow-lg shadow-[#7C3AED]/30 clickable"
                 >
-                  <Icon name={copied ? 'check' : 'copy'} size={18} />
-                  {copied ? '已复制!' : '复制到剪贴板'}
-                </button>
-                <button
-                  onClick={saveToFile}
-                  className="flex items-center gap-2 px-6 py-3 bg-white/10 hover:bg-white/15 text-white rounded-xl font-medium transition-all clickable"
-                >
-                  <Icon name="download" size={18} />
-                  保存为文件
-                </button>
+                  {copied ? '已复制' : '复制'}
+                </Button>
+                <Button variant="secondary" icon="download" onClick={saveToFile}>
+                  保存
+                </Button>
               </div>
             </>
           ) : (
-            /* 空状态 */
-            <div className="py-16 text-center">
-              <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-white/5 flex items-center justify-center">
-                <Icon name="qrcode" size={36} color="rgba(167, 139, 250, 0.2)" />
-              </div>
-              <p className="text-white/40 text-sm">输入内容后将自动生成二维码</p>
-            </div>
+            <EmptyState
+              icon="qrcode"
+              title="尚未生成"
+              description="输入内容后将自动生成二维码"
+              className="py-10"
+            />
           )}
-        </div>
+        </Card>
 
         {/* 使用提示 */}
-        <div className="mt-12 pt-6 border-t border-white/10">
-          <h3 className="text-sm font-medium text-white/60 mb-3">使用提示</h3>
-          <ul className="space-y-2 text-xs text-white/40">
-            <li>• 较高的纠错级别可以在二维码部分损坏时仍能扫描</li>
-            <li>• WiFi 二维码格式: WIFI:S:网络名;T:加密方式;P:密码;;</li>
-            <li>• 保存位置: ~/Pictures/QRCodes/</li>
-            <li>• 支持纯前端复制和后端保存两种方式</li>
+        <Card inset className="p-4">
+          <SectionTitle title="使用提示" className="mb-2.5" />
+          <ul className="space-y-1.5 text-[11.5px] leading-relaxed text-text-3">
+            <li>较高的纠错级别可以在二维码部分损坏时仍能扫描</li>
+            <li>WiFi 二维码格式：WIFI:S:网络名;T:加密方式;P:密码;;</li>
+            <li>支持前端复制与后端保存两种方式</li>
           </ul>
-        </div>
+        </Card>
       </div>
     </div>
   );

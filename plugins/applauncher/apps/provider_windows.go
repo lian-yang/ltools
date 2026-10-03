@@ -3,10 +3,17 @@
 package apps
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/lxn/win"
+	"golang.org/x/sys/windows"
+	"golang.org/x/sys/windows/registry"
+	"ltools/internal/processutil"
 )
 
 // windowsProvider Windows 应用提供者
@@ -32,6 +39,7 @@ func (p *windowsProvider) ListApps() ([]*AppInfo, error) {
 	for _, regPath := range registryPaths {
 		p.readRegistryApps(regPath, apps)
 	}
+	p.readStartApps(apps)
 
 	// 转换为切片
 	result := make([]*AppInfo, 0, len(apps))
@@ -44,79 +52,39 @@ func (p *windowsProvider) ListApps() ([]*AppInfo, error) {
 
 // readRegistryApps 从注册表路径读取应用信息
 func (p *windowsProvider) readRegistryApps(regPath string, apps map[string]*AppInfo) {
-	// 使用 reg query 命令读取注册表
-	// 格式: reg query "HKLM\path" /s
-	cmd := exec.Command("reg", "query", regPath, "/s")
-	output, err := cmd.Output()
+	root := registry.LOCAL_MACHINE
+	if strings.HasPrefix(regPath, "HKCU") {
+		root = registry.CURRENT_USER
+	}
+	key, err := registry.OpenKey(root, strings.SplitN(regPath, `\`, 2)[1], registry.READ)
 	if err != nil {
 		return
 	}
-
-	// 解析输出
-	lines := strings.Split(string(output), "\r\n")
-	var currentApp *AppInfo
-
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-
-		if line == "" {
+	defer key.Close()
+	names, _ := key.ReadSubKeyNames(-1)
+	for _, subName := range names {
+		sub, err := registry.OpenKey(key, subName, registry.QUERY_VALUE)
+		if err != nil {
 			continue
 		}
-
-		// 检查是否是注册表键（应用）
-		if strings.Contains(line, "HKEY") && !strings.Contains(line, "REG_") {
-			// 保存前一个应用
-			if currentApp != nil && currentApp.Name != "" {
-				apps[currentApp.ID] = currentApp
-			}
-
-			// 创建新应用
-			currentApp = &AppInfo{
-				ID:          line,
-				Type:        ResultTypeApp,
-				RegistryKey: line,
-			}
+		name, _, _ := sub.GetStringValue("DisplayName")
+		icon, _, _ := sub.GetStringValue("DisplayIcon")
+		location, _, _ := sub.GetStringValue("InstallLocation")
+		version, _, _ := sub.GetStringValue("DisplayVersion")
+		sub.Close()
+		if name == "" {
+			continue
 		}
-
-		// 解析值
-		if currentApp != nil && strings.Contains(line, "REG_") {
-			parts := strings.SplitN(line, "    ", 3)
-			if len(parts) >= 3 {
-				name := strings.TrimSpace(parts[0])
-				typeStr := strings.TrimSpace(parts[1])
-				value := strings.TrimSpace(parts[2])
-
-				if typeStr == "REG_SZ" || typeStr == "REG_EXPAND_SZ" {
-					// 提取有用的信息
-					switch {
-					case strings.HasSuffix(strings.ToUpper(name), "DISPLAYNAME"):
-						currentApp.Name = value
-					case strings.HasSuffix(strings.ToUpper(name), "DISPLAYVERSION"):
-						if currentApp.Name != "" {
-							currentApp.Description = fmt.Sprintf("%s %s", currentApp.Name, value)
-						}
-					case strings.HasSuffix(strings.ToUpper(name), "INSTALLLOCATION"):
-						if value != "" {
-							iconPath := p.findIconInDir(value)
-							if iconPath != "" {
-								currentApp.IconPath = iconPath
-							}
-						}
-					case strings.HasSuffix(strings.ToUpper(name), "DISPLAYICON"):
-						currentApp.IconPath = value
-						currentApp.ExecutablePath = value
-					}
-				}
-			}
+		if icon == "" {
+			icon = p.findIconInDir(location)
 		}
-	}
-
-	// 保存最后一个应用
-	if currentApp != nil && currentApp.Name != "" {
-		if currentApp.Description == "" {
-			currentApp.Description = currentApp.Name
+		executable, _ := parseWindowsIconPath(icon)
+		if !strings.EqualFold(filepath.Ext(executable), ".exe") {
+			continue
 		}
-		apps[currentApp.ID] = currentApp
+		id := regPath + `\` + subName
+		apps[id] = &AppInfo{ID: id, Name: name, Description: strings.TrimSpace(name + " " + version),
+			IconPath: icon, ExecutablePath: executable, RegistryKey: id, Type: ResultTypeApp}
 	}
 }
 
@@ -138,8 +106,7 @@ func (p *windowsProvider) findIconInDir(dir string) string {
 
 	for _, iconName := range iconNames {
 		iconPath := filepath.Join(dir, iconName)
-		cmd := exec.Command("if", "exist", iconPath, "echo", "found")
-		if output, _ := cmd.Output(); strings.TrimSpace(string(output)) == "found" {
+		if _, err := os.Stat(iconPath); err == nil {
 			return iconPath
 		}
 	}
@@ -149,6 +116,17 @@ func (p *windowsProvider) findIconInDir(dir string) string {
 
 // LaunchApp 启动应用程序
 func (p *windowsProvider) LaunchApp(appInfo *AppInfo) error {
+	if strings.HasPrefix(appInfo.ExecutablePath, "shell:") {
+		file, err := windows.UTF16PtrFromString(appInfo.ExecutablePath)
+		if err != nil {
+			return err
+		}
+		verb, _ := windows.UTF16PtrFromString("open")
+		if !win.ShellExecute(0, verb, file, nil, nil, win.SW_SHOWNORMAL) {
+			return fmt.Errorf("failed to launch application: %s", appInfo.Name)
+		}
+		return nil
+	}
 	var exePath string
 
 	if appInfo.ExecutablePath != "" {
@@ -159,9 +137,69 @@ func (p *windowsProvider) LaunchApp(appInfo *AppInfo) error {
 		return fmt.Errorf("no executable path for app: %s", appInfo.Name)
 	}
 
-	// 使用 start 命令启动应用
-	cmd := exec.Command("cmd", "/c", "start", "", exePath)
-	return cmd.Start()
+	exePath, _ = parseWindowsIconPath(exePath)
+	if !strings.EqualFold(filepath.Ext(exePath), ".exe") {
+		return fmt.Errorf("application does not have an executable path: %s", appInfo.Name)
+	}
+	file, err := windows.UTF16PtrFromString(exePath)
+	if err != nil {
+		return err
+	}
+	verb, _ := windows.UTF16PtrFromString("open")
+	if !win.ShellExecute(0, verb, file, nil, nil, win.SW_SHOWNORMAL) {
+		return fmt.Errorf("failed to launch application: %s", appInfo.Name)
+	}
+	return nil
+}
+
+// readStartApps includes Start Menu shortcuts and Microsoft Store apps. The
+// command returns the canonical shell AppsFolder identifier, which can be
+// launched without resolving a fragile shortcut target ourselves.
+func (p *windowsProvider) readStartApps(apps map[string]*AppInfo) {
+	cmd := exec.Command("powershell", "-NoProfile", "-NonInteractive", "-Command", "[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false); @(Get-StartApps) | ConvertTo-Json -Compress")
+	processutil.Background(cmd)
+	output, err := cmd.Output()
+	if err != nil || len(output) == 0 {
+		return
+	}
+	var entries []struct {
+		Name  string `json:"Name"`
+		AppID string `json:"AppID"`
+	}
+	if err := json.Unmarshal(output, &entries); err != nil {
+		var entry struct {
+			Name  string `json:"Name"`
+			AppID string `json:"AppID"`
+		}
+		if json.Unmarshal(output, &entry) == nil {
+			entries = append(entries, entry)
+		}
+	}
+	for _, entry := range entries {
+		name := strings.TrimSpace(entry.Name)
+		id := strings.TrimSpace(entry.AppID)
+		if name == "" || id == "" {
+			continue
+		}
+		key := "startapp:" + id
+		if _, exists := apps[key]; exists {
+			continue
+		}
+		// Prefer the Shell entry, which has an actual launch target.
+		for oldID, app := range apps {
+			if strings.EqualFold(app.Name, name) {
+				delete(apps, oldID)
+			}
+		}
+		apps[key] = &AppInfo{
+			ID:             key,
+			Name:           name,
+			Description:    name,
+			ExecutablePath: "shell:AppsFolder\\" + id,
+			IconData:       startAppIcon(id),
+			Type:           ResultTypeApp,
+		}
+	}
 }
 
 // RefreshCache 刷新缓存

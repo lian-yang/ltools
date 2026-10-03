@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Icon } from './Icon';
+import { Button, Card, KeyCap, SectionTitle } from './ui';
 
 interface HistoryItem {
   expression: string;
@@ -19,20 +20,19 @@ interface CalculatorButtonProps {
 }
 
 function CalculatorButton({ label, value, onClick, variant = 'number', span = 1 }: CalculatorButtonProps): JSX.Element {
-  const baseClasses = 'rounded-xl font-semibold text-lg transition-all duration-150 clickable';
   const spanClasses = span === 2 ? 'col-span-2' : '';
 
   const variantClasses: Record<string, string> = {
-    number: 'bg-white/5 hover:bg-white/10 text-white',
-    operator: 'bg-[#7C3AED]/20 hover:bg-[#7C3AED]/30 text-[#A78BFA]',
-    function: 'bg-white/5 hover:bg-white/10 text-white/70',
-    equals: 'bg-[#7C3AED] hover:bg-[#6D28D9] text-white shadow-lg shadow-[#7C3AED]/30',
-    clear: 'bg-[#EF4444]/10 hover:bg-[#EF4444]/20 text-[#EF4444]',
+    number: 'bg-surface-3 text-text-1 hover:bg-surface-4',
+    operator: 'bg-surface-3 text-accent-text hover:bg-surface-4',
+    function: 'bg-surface-3 text-text-2 hover:bg-surface-4',
+    equals: 'btn-primary',
+    clear: 'btn-danger',
   };
 
   return (
     <button
-      className={`${baseClasses} ${variantClasses[variant]} ${spanClasses} py-4`}
+      className={`btn ${variantClasses[variant]} ${spanClasses} h-12 rounded-[6px] font-mono text-[16px] font-medium`}
       onClick={() => onClick(value)}
     >
       {label}
@@ -55,18 +55,22 @@ function HistoryRecord({ item, onClick }: HistoryItemProps): JSX.Element {
   };
 
   return (
-    <div
-      className="glass-light rounded-lg p-3 hover:bg-white/5 transition-all duration-200 cursor-pointer clickable"
+    <button
+      type="button"
+      className="row row-clickable w-full text-left"
+      title={item.expression}
       onClick={() => onClick(item.expression)}
     >
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex-1 min-w-0">
-          <p className="text-sm text-white/60 font-mono truncate">{item.expression}</p>
-          <p className="text-lg font-semibold text-[#A78BFA] font-mono">{item.result}</p>
-        </div>
-        <span className="text-xs text-white/30 whitespace-nowrap">{formatTime(item.timestamp)}</span>
-      </div>
-    </div>
+      <span className="tnum min-w-0 flex-1 truncate font-mono text-[12px] text-text-3">
+        {item.expression}
+      </span>
+      <span className="tnum max-w-[40%] shrink-0 truncate font-mono text-[12.5px] font-medium text-text-1">
+        {item.result}
+      </span>
+      <span className="tnum w-12 shrink-0 text-right text-[11px] text-text-4">
+        {formatTime(item.timestamp)}
+      </span>
+    </button>
   );
 }
 
@@ -200,6 +204,21 @@ export function CalculatorWidget(): JSX.Element {
   // 键盘支持
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
+      // 修复:插件页通过 KeepAlive 隐藏时监听仍然存活,
+      // 会劫持其他插件输入框的按键(尤其是 '/' 的 preventDefault)。
+      // 只在焦点不在可编辑元素时响应;只读输入框(计算器显示屏)除外。
+      const target = e.target as HTMLElement | null;
+      if (target instanceof HTMLInputElement && target.readOnly) {
+        // 计算器自身显示屏,继续处理
+      } else if (
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+
       const key = e.key;
 
       // 数字
@@ -256,31 +275,27 @@ export function CalculatorWidget(): JSX.Element {
   };
 
   return (
-    <div className="flex justify-center gap-6">
+    <div className="flex flex-wrap justify-center gap-6">
       {/* 计算器主体 */}
-      <div className="max-w-md">
-        <div className="glass-heavy rounded-2xl p-6">
+      <div className="max-w-md min-w-0">
+        <Card className="p-5">
           {/* 显示屏 */}
-          <div className="mb-6">
-            {/* 表达式显示 */}
-            {expression && (
-              <div className="text-right text-white/50 text-sm mb-2 h-6 font-mono">
-                {expression.replace(/\*/g, '×').replace(/\//g, '÷')}
-              </div>
-            )}
-            {/* 主显示屏 */}
-            <div className="text-right">
-              <input
-                type="text"
-                className="w-full bg-transparent text-right text-5xl font-bold text-white placeholder-white/20 focus:outline-none font-mono"
-                value={formatDisplay(display)}
-                readOnly
-              />
+          <div className="card-inset mb-4 rounded-[6px] px-4 py-3">
+            {/* 表达式显示(占位避免高度跳动) */}
+            <div className="tnum mb-1 h-[18px] truncate text-right font-mono text-[12px] leading-[18px] text-text-3">
+              {expression ? expression.replace(/\*/g, '×').replace(/\//g, '÷') : ''}
             </div>
+            {/* 主显示屏 */}
+            <input
+              type="text"
+              className="tnum w-full bg-transparent text-right font-mono text-[32px] font-light leading-tight text-text-1 placeholder-text-4 focus:outline-none"
+              value={formatDisplay(display)}
+              readOnly
+            />
           </div>
 
           {/* 计算器按钮网格 */}
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-4 gap-2">
             {/* 第一行 */}
             <CalculatorButton label="C" value="C" onClick={handleButtonClick} variant="clear" />
             <CalculatorButton label="⌫" value="⌫" onClick={handleButtonClick} variant="function" />
@@ -314,79 +329,83 @@ export function CalculatorWidget(): JSX.Element {
 
           {/* 上次结果 */}
           {lastResult && (
-            <div className="mt-4 pt-4 border-t border-white/10">
+            <div className="hairline-t mt-4 pt-3">
               <button
-                className="w-full text-center text-sm text-white/40 hover:text-white/60 transition-colors clickable"
+                type="button"
+                className="tnum w-full text-center font-mono text-[12px] text-text-3 transition-colors duration-150 hover:text-text-1"
                 onClick={() => setDisplay(lastResult)}
               >
                 使用上次结果: {lastResult}
               </button>
             </div>
           )}
-        </div>
+        </Card>
 
         {/* 键盘提示 */}
-        <div className="mt-4 text-center text-xs text-white/30">
-          支持键盘输入 | Enter = | Esc = 清除
+        <div className="mt-3 flex items-center justify-center gap-1.5 text-[11.5px] text-text-4">
+          <span>支持键盘输入</span>
+          <KeyCap>Enter</KeyCap>
+          <span>计算</span>
+          <KeyCap>Esc</KeyCap>
+          <span>清除</span>
         </div>
       </div>
 
       {/* 历史记录侧边栏 */}
-      <div className={`w-72 transition-all duration-300 ${showHistory ? 'opacity-100' : 'opacity-60 hover:opacity-100'}`}>
-        <div className="glass-light rounded-xl p-4 h-full flex flex-col">
+      <div
+        className={`w-72 min-w-0 shrink-0 transition-opacity duration-150 ${
+          showHistory ? 'opacity-100' : 'opacity-60 hover:opacity-100'
+        }`}
+      >
+        <Card inset className="flex h-full flex-col p-3">
           {/* 历史记录标题 */}
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-medium text-white/60 flex items-center gap-2">
-              <Icon name="clock" size={14} color="#A78BFA" />
-              计算历史
-            </h3>
-            <div className="flex items-center gap-2">
-              {history.length > 0 && (
-                <button
-                  className="text-xs text-white/30 hover:text-[#EF4444] transition-colors clickable"
-                  onClick={clearHistory}
-                >
-                  清空
-                </button>
-              )}
-              <button
-                className="text-xs text-white/30 hover:text-white/60 transition-colors clickable"
-                onClick={() => setShowHistory(!showHistory)}
-              >
-                {showHistory ? '收起' : '展开'}
-              </button>
-            </div>
-          </div>
+          <SectionTitle
+            title="计算历史"
+            action={
+              <div className="flex items-center gap-1">
+                {history.length > 0 && (
+                  <Button variant="ghost" size="sm" onClick={clearHistory}>
+                    清空
+                  </Button>
+                )}
+                <Button variant="ghost" size="sm" onClick={() => setShowHistory(!showHistory)}>
+                  {showHistory ? '收起' : '展开'}
+                </Button>
+              </div>
+            }
+          />
 
           {/* 历史记录列表 */}
           {showHistory && (
-            <div className="flex-1 overflow-y-auto space-y-2 min-h-0">
+            <div className="mt-2 min-h-0 max-h-[460px] flex-1 overflow-y-auto">
               {history.length === 0 ? (
-                <div className="text-center py-8 text-white/30 text-sm">
-                  <Icon name="clock" size={24} color="rgba(255,255,255,0.2)" />
-                  <p className="mt-2">暂无计算历史</p>
+                <div className="flex flex-col items-center gap-1.5 px-4 py-10 text-center">
+                  <Icon name="clock" size={18} className="text-text-4" />
+                  <p className="text-[12px] text-text-3">暂无计算历史</p>
                 </div>
               ) : (
-                history.map((item, index) => (
-                  <HistoryRecord
-                    key={`${item.timestamp}-${index}`}
-                    item={item}
-                    onClick={loadFromHistory}
-                  />
-                ))
+                <div className="flex flex-col gap-0.5">
+                  {history.map((item) => (
+                    <HistoryRecord
+                      key={`${item.timestamp}-${item.expression}`}
+                      item={item}
+                      onClick={loadFromHistory}
+                    />
+                  ))}
+                </div>
               )}
             </div>
           )}
 
           {/* 历史统计 */}
           {history.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-white/10">
-              <p className="text-xs text-white/30">
+            <div className="hairline-t mt-3 pt-2.5">
+              <p className="tnum text-[11px] text-text-4">
                 共 {history.length} 条记录
               </p>
             </div>
           )}
-        </div>
+        </Card>
       </div>
     </div>
   );
@@ -426,16 +445,26 @@ export function MiniCalculator(): JSX.Element {
     }
   };
 
+  const keyClass = (btn: string): string => {
+    if (btn === '=') return 'btn-primary';
+    if (btn === 'C') return 'bg-surface-3 text-error-text hover:bg-surface-4';
+    if ('+-×÷'.includes(btn)) return 'bg-surface-3 text-accent-text hover:bg-surface-4';
+    return 'bg-surface-3 text-text-1 hover:bg-surface-4';
+  };
+
   return (
     <div className="p-2">
-      <div className="text-right text-lg font-semibold text-white mb-2 font-mono">
+      <div
+        className="tnum mb-2 truncate text-right font-mono text-[15px] text-text-1"
+        title={display}
+      >
         {display}
       </div>
       <div className="grid grid-cols-4 gap-1">
         {['7', '8', '9', '÷', '4', '5', '6', '×', '1', '2', '3', '-', 'C', '0', '=', '+'].map((btn) => (
           <button
             key={btn}
-            className="p-2 text-xs rounded bg-white/5 hover:bg-white/10 text-white/70 hover:text-white transition-colors clickable"
+            className={`btn h-8 rounded-[6px] px-0 font-mono text-[12.5px] ${keyClass(btn)}`}
             onClick={() => handleButtonClick(btn)}
           >
             {btn}

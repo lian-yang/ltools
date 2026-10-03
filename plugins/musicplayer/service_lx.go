@@ -92,6 +92,11 @@ func (s *ServiceLX) startLXService() error {
 	if err := s.processManager.Start(); err != nil {
 		return fmt.Errorf("failed to start LX process: %w", err)
 	}
+	defer func() {
+		if !s.initialized {
+			_ = s.processManager.Stop()
+		}
+	}()
 
 	// 创建客户端
 	lxClient, err := NewLXClient(s.processManager)
@@ -697,10 +702,16 @@ func (s *ServiceLX) ToggleWindow() error {
 
 // Close 关闭服务
 func (s *ServiceLX) Close() error {
+	s.initialized = false
 	if s.processManager != nil {
 		return s.processManager.Stop()
 	}
 	return nil
+}
+
+// ServiceShutdown releases the Node process when Wails exits.
+func (s *ServiceLX) ServiceShutdown() error {
+	return s.Close()
 }
 
 // DownloadSong 下载歌曲到指定路径（暴露给前端）

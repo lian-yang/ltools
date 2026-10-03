@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { Icon } from './Icon';
 import { useToast } from '../hooks/useToast';
+import { Badge, Button, Card, Field, KeyCap, ProgressBar, SectionTitle, Toggle, type BadgeTone } from './ui';
 
 /**
  * 密码选项接口
@@ -30,14 +31,22 @@ interface PasswordHistoryItem {
  */
 type PasswordStrength = 'weak' | 'medium' | 'strong' | 'very-strong';
 
+type StrengthTone = 'error' | 'warning' | 'success';
+
 /**
- * 密码强度配置
+ * 密码强度配置（红 / 橙 / 绿三档 tone，宽度区分四档）
  */
-const STRENGTH_CONFIG = {
-  weak: { color: '#EF4444', label: '弱', width: '25%' },
-  medium: { color: '#F59E0B', label: '中', width: '50%' },
-  strong: { color: '#22C55E', label: '强', width: '75%' },
-  'very-strong': { color: '#7C3AED', label: '很强', width: '100%' },
+const STRENGTH_CONFIG: Record<PasswordStrength, { tone: StrengthTone; label: string; width: number }> = {
+  weak: { tone: 'error', label: '弱', width: 25 },
+  medium: { tone: 'warning', label: '中', width: 50 },
+  strong: { tone: 'success', label: '强', width: 75 },
+  'very-strong': { tone: 'success', label: '很强', width: 100 },
+};
+
+const STRENGTH_BADGE_TONE: Record<StrengthTone, BadgeTone> = {
+  error: 'error',
+  warning: 'warning',
+  success: 'success',
 };
 
 /**
@@ -141,30 +150,20 @@ function HistoryRecord({ item, onClick }: HistoryRecordProps): JSX.Element {
     : item.password;
 
   return (
-    <div
-      className="glass-light rounded-lg p-3 hover:bg-white/5 transition-all duration-200 cursor-pointer clickable"
+    <button
+      className="row row-clickable w-full flex-col items-start gap-1 py-2 text-left"
       onClick={() => onClick(item)}
+      title="点击恢复此密码及选项"
     >
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-mono text-white/90 truncate">{displayPassword}</p>
-          <div className="flex items-center gap-2 mt-1">
-            <span className="text-xs text-white/40">{item.length} 位</span>
-            <span
-              className="text-xs px-1.5 py-0.5 rounded"
-              style={{
-                backgroundColor: `${strengthConfig.color}20`,
-                color: strengthConfig.color,
-                border: `1px solid ${strengthConfig.color}40`,
-              }}
-            >
-              {strengthConfig.label}
-            </span>
-          </div>
-        </div>
-        <span className="text-xs text-white/30 whitespace-nowrap">{formatTime(item.timestamp)}</span>
-      </div>
-    </div>
+      <span className="w-full truncate font-mono text-[12.5px] text-text-1">{displayPassword}</span>
+      <span className="flex w-full items-center gap-2">
+        <Badge tone={STRENGTH_BADGE_TONE[strengthConfig.tone]}>{strengthConfig.label}</Badge>
+        <span className="tnum text-[11px] text-text-3">{item.length} 位</span>
+        <span className="tnum ml-auto whitespace-nowrap text-[11px] text-text-4">
+          {formatTime(item.timestamp)}
+        </span>
+      </span>
+    </button>
   );
 }
 
@@ -260,8 +259,19 @@ export function PasswordGeneratorWidget(): JSX.Element {
   // 键盘快捷键支持
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
+      // 焦点在交互元素上时跳过，避免 Enter/Space 双触发（按钮 click + 全局快捷键）
+      const target = e.target as HTMLElement | null;
+      const isInteractive = !!target && (
+        target.tagName === 'BUTTON' ||
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.tagName === 'SELECT' ||
+        target.isContentEditable
+      );
+
       // Enter 或 Space：生成新密码
       if (e.key === 'Enter' || (e.key === ' ' && !e.repeat)) {
+        if (isInteractive) return;
         e.preventDefault();
         generateNewPassword();
       }
@@ -278,6 +288,7 @@ export function PasswordGeneratorWidget(): JSX.Element {
       }
       // Esc：清空显示
       else if (e.key === 'Escape') {
+        if (isInteractive) return;
         setPassword('');
       }
     };
@@ -291,254 +302,244 @@ export function PasswordGeneratorWidget(): JSX.Element {
     if (!password) {
       generateNewPassword();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
-    <div className="flex justify-center gap-6">
+    <div className="flex flex-col gap-5 lg:flex-row lg:items-start">
       {/* 密码生成器主体 */}
-      <div className="max-w-md">
-        {/* 密码显示区域 */}
-        <div className="glass-heavy rounded-2xl p-6 mb-6">
-          <div className="mb-4">
-            <label className="text-sm text-white/50 mb-2 block">生成的密码</label>
-            <div className="relative">
-              <input
-                type="text"
-                className={`w-full px-4 py-4 bg-[#0D0F1A]/50 border border-white/10 rounded-xl text-2xl text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/50 focus:border-[#7C3AED]/50 transition-all duration-200 font-mono ${
-                  !password ? 'text-white/30' : ''
-                }`}
-                value={password || '点击生成按钮创建密码'}
-                readOnly
-                placeholder="点击生成按钮创建密码"
-              />
-              <button
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg hover:bg-white/10 transition-colors clickable"
-                onClick={copyPassword}
-                disabled={!password}
-                title="复制密码"
-              >
-                <Icon name="copy" size={20} color={!password ? 'rgba(255,255,255,0.2)' : '#A78BFA'} />
-              </button>
-            </div>
-          </div>
-
-          {/* 强度指示条 */}
-          <div className="mb-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-white/60">密码强度</span>
-              <span
-                className="text-sm font-medium"
-                style={{ color: strengthConfig.color }}
-              >
+      <div className="min-w-0 flex-1 space-y-5">
+        {/* 密码显示与生成 */}
+        <Card className="p-5">
+          <div className="mb-2 flex items-center justify-between">
+            <span className="text-[12px] font-medium text-text-2">生成的密码</span>
+            {password && (
+              <span className={`text-[12px] font-medium ${
+                strengthConfig.tone === 'error'
+                  ? 'text-error-text'
+                  : strengthConfig.tone === 'warning'
+                    ? 'text-warning-text'
+                    : 'text-success-text'
+              }`}>
                 {strengthConfig.label}
               </span>
-            </div>
-            <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-              <div
-                className="h-full transition-all duration-300 ease-out"
-                style={{
-                  width: password ? strengthConfig.width : '0%',
-                  backgroundColor: strengthConfig.color,
-                }}
-              />
-            </div>
+            )}
           </div>
 
-          {/* 操作按钮 */}
-          <div className="flex gap-3">
+          {/* 密码展示（card-inset + font-mono 15px） */}
+          <div className="card-inset relative px-3.5 py-3">
+            {password ? (
+              <p className="min-w-0 break-all pr-8 font-mono text-[15px] leading-relaxed text-text-1 select-text">
+                {password}
+              </p>
+            ) : (
+              <p className="py-0.5 pr-8 font-mono text-[15px] text-text-4">
+                点击生成按钮创建密码
+              </p>
+            )}
             <button
-              className="flex-1 px-6 py-3 bg-[#7C3AED] hover:bg-[#6D28D9] text-white rounded-xl transition-all duration-200 font-medium clickable hover-lift flex items-center justify-center gap-2"
-              onClick={generateNewPassword}
-              disabled={!hasValidOptions}
-            >
-              <Icon name="refresh" size={18} color="white" />
-              生成密码
-            </button>
-            <button
-              className="px-6 py-3 bg-white/5 hover:bg-white/10 text-white rounded-xl transition-all duration-200 font-medium clickable border border-white/10"
+              className="icon-btn absolute right-1.5 top-1/2 -translate-y-1/2"
               onClick={copyPassword}
               disabled={!password}
               title="复制密码"
+              aria-label="复制密码"
             >
-              <Icon name="copy" size={18} color={!password ? 'rgba(255,255,255,0.2)' : '#A78BFA'} />
+              <Icon name="copy" size={15} />
             </button>
+          </div>
+
+          {/* 强度指示条 */}
+          <div className="mt-3">
+            <ProgressBar
+              value={password ? strengthConfig.width : 0}
+              tone={strengthConfig.tone}
+            />
+          </div>
+
+          {/* 操作按钮 */}
+          <div className="mt-4 flex gap-2">
+            <Button
+              variant="primary"
+              size="lg"
+              icon="refresh"
+              className="flex-1"
+              onClick={generateNewPassword}
+              disabled={!hasValidOptions}
+            >
+              生成密码
+            </Button>
+            <Button
+              variant="secondary"
+              size="lg"
+              icon="copy"
+              className="w-11 px-0"
+              onClick={copyPassword}
+              disabled={!password}
+              title="复制密码"
+              aria-label="复制密码"
+            />
           </div>
 
           {/* 警告信息 */}
           {!hasValidOptions && (
-            <div className="mt-4 p-3 rounded-lg bg-[#EF4444]/10 border border-[#EF4444]/20">
-              <p className="text-sm text-[#EF4444] flex items-center gap-2">
-                <Icon name="exclamation-circle" size={16} color="#EF4444" />
-                请至少选择一种字符类型
-              </p>
+            <div
+              className="mt-4 flex items-center gap-2 rounded-[6px] px-3 py-2.5"
+              style={{ background: 'rgba(255,69,58,0.12)' }}
+            >
+              <Icon name="exclamation-circle" size={14} color="var(--color-error-text)" className="shrink-0" />
+              <p className="text-[12px] text-error-text">请至少选择一种字符类型</p>
             </div>
           )}
-        </div>
+        </Card>
 
         {/* 控制面板 */}
-        <div className="glass-light rounded-xl p-5 mb-6">
-          <h3 className="text-sm font-medium text-white/60 mb-4 flex items-center gap-2">
-            <Icon name="funnel" size={16} color="#A78BFA" />
-            密码选项
-          </h3>
+        <Card className="p-4">
+          <SectionTitle title="密码选项" className="mb-1" />
 
           {/* 长度控制 */}
-          <div className="mb-6">
-            <div className="flex items-center justify-between mb-2">
-              <label className="text-sm text-white/70">密码长度</label>
-              <span className="text-sm font-mono text-[#A78BFA] bg-[#7C3AED]/10 px-2 py-1 rounded">
+          <div className="hairline-b py-2">
+            <Field horizontal label="密码长度">
+              <span className="tnum rounded-[5px] bg-surface-1 px-2 py-1 font-mono text-[12px] text-text-1">
                 {options.length}
               </span>
-            </div>
+            </Field>
             <input
               type="range"
               min="4"
               max="64"
               value={options.length}
               onChange={(e) => updateOption('length', parseInt(e.target.value))}
-              className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer clickable [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#7C3AED] [&::-webkit-slider-thumb]:hover:bg-[#6D28D9] [&::-webkit-slider-thumb]:transition-all [&::-webkit-slider-thumb]:duration-200"
+              aria-label="密码长度"
+              className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-surface-4 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-accent [&::-webkit-slider-thumb]:transition-colors"
             />
-            <div className="flex justify-between mt-1">
-              <span className="text-xs text-white/30">4</span>
-              <span className="text-xs text-white/30">64</span>
+            <div className="tnum mt-1 flex justify-between text-[10.5px] text-text-4">
+              <span>4</span>
+              <span>64</span>
             </div>
           </div>
 
           {/* 字符类型选择 */}
-          <div className="space-y-3">
-            <label className="text-sm text-white/70 block mb-2">字符类型</label>
-
-            <label className="flex items-center gap-3 cursor-pointer clickable group">
-              <input
-                type="checkbox"
+          <div className="hairline-b">
+            <Field horizontal label="小写字母 (a-z)">
+              <Toggle
                 checked={options.includeLowercase}
-                onChange={(e) => updateOption('includeLowercase', e.target.checked)}
-                className="w-4 h-4 rounded border-white/20 bg-white/5 text-[#7C3AED] focus:ring-[#7C3AED]/50 cursor-pointer clickable"
+                onChange={(checked) => updateOption('includeLowercase', checked)}
+                label="包含小写字母"
               />
-              <span className="text-sm text-white/70 group-hover:text-white/90 transition-colors">
-                小写字母 (a-z)
-              </span>
-            </label>
-
-            <label className="flex items-center gap-3 cursor-pointer clickable group">
-              <input
-                type="checkbox"
-                checked={options.includeUppercase}
-                onChange={(e) => updateOption('includeUppercase', e.target.checked)}
-                className="w-4 h-4 rounded border-white/20 bg-white/5 text-[#7C3AED] focus:ring-[#7C3AED]/50 cursor-pointer clickable"
-              />
-              <span className="text-sm text-white/70 group-hover:text-white/90 transition-colors">
-                大写字母 (A-Z)
-              </span>
-            </label>
-
-            <label className="flex items-center gap-3 cursor-pointer clickable group">
-              <input
-                type="checkbox"
-                checked={options.includeNumbers}
-                onChange={(e) => updateOption('includeNumbers', e.target.checked)}
-                className="w-4 h-4 rounded border-white/20 bg-white/5 text-[#7C3AED] focus:ring-[#7C3AED]/50 cursor-pointer clickable"
-              />
-              <span className="text-sm text-white/70 group-hover:text-white/90 transition-colors">
-                数字 (0-9)
-              </span>
-            </label>
-
-            <label className="flex items-center gap-3 cursor-pointer clickable group">
-              <input
-                type="checkbox"
-                checked={options.includeSpecialChars}
-                onChange={(e) => updateOption('includeSpecialChars', e.target.checked)}
-                className="w-4 h-4 rounded border-white/20 bg-white/5 text-[#7C3AED] focus:ring-[#7C3AED]/50 cursor-pointer clickable"
-              />
-              <span className="text-sm text-white/70 group-hover:text-white/90 transition-colors">
-                特殊字符 (!@#$%...)
-              </span>
-            </label>
-
-            <label className="flex items-center gap-3 cursor-pointer clickable group mt-4 pt-4 border-t border-white/10">
-              <input
-                type="checkbox"
-                checked={options.excludeSimilar}
-                onChange={(e) => updateOption('excludeSimilar', e.target.checked)}
-                className="w-4 h-4 rounded border-white/20 bg-white/5 text-[#7C3AED] focus:ring-[#7C3AED]/50 cursor-pointer clickable"
-              />
-              <div className="flex-1">
-                <span className="text-sm text-white/70 group-hover:text-white/90 transition-colors">
-                  排除相似字符
-                </span>
-                <p className="text-xs text-white/40 mt-0.5">
-                  如 0/o、1/l/I 等容易混淆的字符
-                </p>
-              </div>
-            </label>
+            </Field>
           </div>
-        </div>
+          <div className="hairline-b">
+            <Field horizontal label="大写字母 (A-Z)">
+              <Toggle
+                checked={options.includeUppercase}
+                onChange={(checked) => updateOption('includeUppercase', checked)}
+                label="包含大写字母"
+              />
+            </Field>
+          </div>
+          <div className="hairline-b">
+            <Field horizontal label="数字 (0-9)">
+              <Toggle
+                checked={options.includeNumbers}
+                onChange={(checked) => updateOption('includeNumbers', checked)}
+                label="包含数字"
+              />
+            </Field>
+          </div>
+          <div className="hairline-b">
+            <Field horizontal label="特殊字符 (!@#$%...)">
+              <Toggle
+                checked={options.includeSpecialChars}
+                onChange={(checked) => updateOption('includeSpecialChars', checked)}
+                label="包含特殊字符"
+              />
+            </Field>
+          </div>
+          <div>
+            <Field horizontal label="排除相似字符" hint="如 0/o、1/l/I 等容易混淆的字符">
+              <Toggle
+                checked={options.excludeSimilar}
+                onChange={(checked) => updateOption('excludeSimilar', checked)}
+                label="排除相似字符"
+              />
+            </Field>
+          </div>
+        </Card>
 
         {/* 键盘快捷键提示 */}
-        <div className="text-center text-xs text-white/30">
-          Enter/Space = 生成 | Ctrl+C = 复制 | Esc = 清空
+        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-[11.5px] text-text-4">
+          <span className="flex items-center gap-1.5">
+            <KeyCap>Enter</KeyCap>
+            <KeyCap>Space</KeyCap>
+            生成
+          </span>
+          <span className="flex items-center gap-1.5">
+            <KeyCap>Ctrl C</KeyCap>
+            复制
+          </span>
+          <span className="flex items-center gap-1.5">
+            <KeyCap>Esc</KeyCap>
+            清空
+          </span>
         </div>
       </div>
 
       {/* 历史记录侧边栏 */}
-      <div className={`w-72 transition-all duration-300 ${showHistory ? 'opacity-100' : 'opacity-60 hover:opacity-100'}`}>
-        <div className="glass-light rounded-xl p-4 h-full flex flex-col">
+      <aside className="w-full shrink-0 lg:w-72">
+        <Card className="flex flex-col p-4">
           {/* 历史记录标题 */}
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-medium text-white/60 flex items-center gap-2">
-              <Icon name="clock" size={14} color="#A78BFA" />
-              生成历史
-            </h3>
-            <div className="flex items-center gap-2">
-              {history.length > 0 && (
-                <button
-                  className="text-xs text-white/30 hover:text-[#EF4444] transition-colors clickable flex items-center gap-1"
-                  onClick={clearHistory}
-                >
-                  <Icon name="trash" size={12} />
-                  清空
-                </button>
-              )}
-              <button
-                className="text-xs text-white/30 hover:text-white/60 transition-colors clickable"
-                onClick={() => setShowHistory(!showHistory)}
-              >
-                {showHistory ? '收起' : '展开'}
-              </button>
-            </div>
-          </div>
+          <SectionTitle
+            title="生成历史"
+            action={
+              <div className="flex items-center gap-1">
+                {history.length > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    icon="trash"
+                    className="text-error-text"
+                    onClick={clearHistory}
+                  >
+                    清空
+                  </Button>
+                )}
+                <Button variant="ghost" size="sm" onClick={() => setShowHistory(!showHistory)}>
+                  {showHistory ? '收起' : '展开'}
+                </Button>
+              </div>
+            }
+          />
 
           {/* 历史记录列表 */}
           {showHistory && (
-            <div className="flex-1 overflow-y-auto space-y-2 min-h-0 scrollbar-thin">
+            <div className="mt-1.5 max-h-[440px] min-h-0 flex-1 space-y-1 overflow-y-auto">
               {history.length === 0 ? (
-                <div className="text-center py-8 text-white/30 text-sm">
-                  <Icon name="shield-check" size={24} color="rgba(255,255,255,0.2)" />
-                  <p className="mt-2">暂无生成历史</p>
+                <div className="flex flex-col items-center gap-1.5 px-4 py-8 text-center">
+                  <Icon name="shield-check" size={18} color="var(--color-text-4)" />
+                  <p className="text-[12px] text-text-3">暂无生成历史</p>
                 </div>
               ) : (
-                history.map((item, index) => (
-                  <HistoryRecord
-                    key={`${item.timestamp}-${index}`}
-                    item={item}
-                    onClick={loadFromHistory}
-                  />
-                ))
+                <Card inset className="p-1.5">
+                  {history.map((item) => (
+                    <HistoryRecord
+                      key={item.password}
+                      item={item}
+                      onClick={loadFromHistory}
+                    />
+                  ))}
+                </Card>
               )}
             </div>
           )}
 
           {/* 历史统计 */}
           {history.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-white/10">
-              <p className="text-xs text-white/30">
-                共 {history.length} 条记录
-              </p>
-            </div>
+            <p className="tnum hairline-t mt-3 pt-3 text-[11.5px] text-text-4">
+              共 {history.length} 条记录
+            </p>
           )}
-        </div>
-      </div>
+        </Card>
+      </aside>
     </div>
   );
 }

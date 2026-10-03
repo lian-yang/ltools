@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, type Dispatch, type SetStateAction } from 'react';
 import * as TunnelService from '../../bindings/ltools/plugins/tunnel/tunnelservice';
 import {
   Tunnel,
@@ -21,6 +21,20 @@ import {
   SelectValue,
 } from './ui/select';
 import { Events } from '@wailsio/runtime';
+import {
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  Field,
+  IconButton,
+  Input,
+  Modal,
+  Segmented,
+  Skeleton,
+  Toggle,
+  type BadgeTone,
+} from './ui';
 
 type View = 'tunnels' | 'create' | 'edit' | 'settings';
 
@@ -41,6 +55,139 @@ interface TunnelWidgetProps {
   onBack: () => void;
 }
 
+/**
+ * 隧道状态 → 徽章(文案 + 色调)
+ */
+function getStatusDisplay(status?: TunnelRuntimeInfo): { text: string; tone: BadgeTone } {
+  if (!status) return { text: '已停止', tone: 'neutral' };
+  switch (status.status) {
+    case 'running':
+      return { text: '运行中', tone: 'success' };
+    case 'starting':
+      return { text: '启动中', tone: 'warning' };
+    case 'error':
+      return { text: '错误', tone: 'error' };
+    default:
+      return { text: '已停止', tone: 'neutral' };
+  }
+}
+
+/**
+ * 表单字段组(创建 / 编辑共用,仅渲染)
+ */
+function TunnelFormFields({
+  formData,
+  setFormData,
+  isEdit,
+}: {
+  formData: TunnelFormData;
+  setFormData: Dispatch<SetStateAction<TunnelFormData>>;
+  isEdit: boolean;
+}): JSX.Element {
+  return (
+    <div className="space-y-4">
+      {/* 基本信息 */}
+      <div className="space-y-3.5">
+        <Field label={isEdit ? '隧道名称' : '隧道名称 *'}>
+          <Input
+            type="text"
+            value={formData.name}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            placeholder="例如: 我的 Web 服务"
+          />
+        </Field>
+
+        <div className="grid grid-cols-2 gap-3">
+          <Field label={isEdit ? '本地地址' : '本地地址 *'}>
+            <Input
+              type="text"
+              value={formData.localHost}
+              onChange={(e) => setFormData({ ...formData, localHost: e.target.value })}
+              placeholder="127.0.0.1"
+              className="font-mono"
+            />
+          </Field>
+          <Field label={isEdit ? '本地端口' : '本地端口 *'}>
+            <Input
+              type="number"
+              value={formData.localPort}
+              onChange={(e) => setFormData({ ...formData, localPort: e.target.value })}
+              placeholder="3000"
+              min="1"
+              max="65535"
+              className="tnum font-mono"
+            />
+          </Field>
+        </div>
+      </div>
+
+      {/* FRP 配置 */}
+      <div className="hairline-t space-y-3.5 pt-4">
+        <h3 className="text-[12px] font-semibold text-text-2">FRP 配置</h3>
+
+        <Field label="代理类型">
+          <Select
+            value={formData.proxyType}
+            onValueChange={(value) => setFormData({ ...formData, proxyType: value as ProxyType })}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="选择代理类型" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ProxyType.ProxyTypeHTTP}>HTTP</SelectItem>
+              <SelectItem value={ProxyType.ProxyTypeHTTPS}>HTTPS</SelectItem>
+              <SelectItem value={ProxyType.ProxyTypeTCP}>TCP</SelectItem>
+              <SelectItem value={ProxyType.ProxyTypeSTCP}>STCP (秘密 TCP)</SelectItem>
+              <SelectItem value={ProxyType.ProxyTypeXTCP}>XTCP (P2P TCP)</SelectItem>
+            </SelectContent>
+          </Select>
+        </Field>
+
+        <Field label="子域名 (可选)" hint={isEdit ? undefined : '需要服务端支持自定义域名'}>
+          <Input
+            type="text"
+            value={formData.subdomain}
+            onChange={(e) => setFormData({ ...formData, subdomain: e.target.value })}
+            placeholder="例如: myapp"
+            className="font-mono"
+          />
+        </Field>
+
+        <Field label={isEdit ? '服务器地址' : '服务器地址 *'}>
+          <Input
+            type="text"
+            value={formData.frpServerAddress}
+            onChange={(e) => setFormData({ ...formData, frpServerAddress: e.target.value })}
+            placeholder="例如: frp.example.com:7000"
+            className="font-mono"
+          />
+        </Field>
+
+        <Field label={isEdit ? '认证 Token' : '认证 Token *'}>
+          <Input
+            type="password"
+            value={formData.frpServerToken}
+            onChange={(e) => setFormData({ ...formData, frpServerToken: e.target.value })}
+            placeholder="输入服务器 Token"
+            className="font-mono"
+          />
+        </Field>
+      </div>
+
+      {/* 其他选项 */}
+      <div className="hairline-t pt-1">
+        <Field horizontal label="自启动" hint="应用启动时自动启动此隧道">
+          <Toggle
+            checked={formData.autoStart}
+            onChange={(v) => setFormData({ ...formData, autoStart: v })}
+            label="自启动"
+          />
+        </Field>
+      </div>
+    </div>
+  );
+}
+
 export function TunnelWidget({ onBack }: TunnelWidgetProps): JSX.Element {
   const [view, setView] = useState<View>('tunnels');
   const [tunnels, setTunnels] = useState<Tunnel[]>([]);
@@ -52,7 +199,10 @@ export function TunnelWidget({ onBack }: TunnelWidgetProps): JSX.Element {
   const [currentLog, setCurrentLog] = useState<string>('');
   const [currentLogTitle, setCurrentLogTitle] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const toast = useToast();
+  const { success: notifySuccess, info: notifyInfo, error: notifyError } = toast;
 
   // 表单状态
   const [formData, setFormData] = useState<TunnelFormData>({
@@ -79,8 +229,10 @@ export function TunnelWidget({ onBack }: TunnelWidgetProps): JSX.Element {
     try {
       const result = await TunnelService.GetTunnels();
       setTunnels(result || []);
+      setLoadError(false);
     } catch (error) {
       console.error('Failed to load tunnels:', error);
+      setLoadError(true);
     }
   }, []);
 
@@ -116,9 +268,9 @@ export function TunnelWidget({ onBack }: TunnelWidgetProps): JSX.Element {
 
   // 初始加载
   useEffect(() => {
-    loadTunnels();
-    loadStatuses();
-    loadGlobalOptions();
+    Promise.all([loadTunnels(), loadStatuses(), loadGlobalOptions()]).finally(() => {
+      setInitialLoading(false);
+    });
   }, [loadTunnels, loadStatuses, loadGlobalOptions]);
 
   // 定时刷新状态
@@ -135,25 +287,25 @@ export function TunnelWidget({ onBack }: TunnelWidgetProps): JSX.Element {
 
     // 隧道启动成功
     unsubscribers.push(Events.On('tunnel:started', (ev: { data: string }) => {
-      toast.success(`隧道 "${ev.data}" 已启动`);
+      notifySuccess(`隧道 "${ev.data}" 已启动`);
       loadStatuses();
     }));
 
     // 隧道停止
     unsubscribers.push(Events.On('tunnel:stopped', (ev: { data: string }) => {
-      toast.info(`隧道 "${ev.data}" 已停止`);
+      notifyInfo(`隧道 "${ev.data}" 已停止`);
       loadStatuses();
     }));
 
     // 隧道错误
     unsubscribers.push(Events.On('tunnel:error', (ev: { data: { tunnelId: string; error: string } }) => {
-      toast.error(`隧道 "${ev.data.tunnelId}" 错误: ${ev.data.error}`);
+      notifyError(`隧道 "${ev.data.tunnelId}" 错误: ${ev.data.error}`);
       loadStatuses();
     }));
 
     // 隧道 URL 更新
     unsubscribers.push(Events.On('tunnel:url', (ev: { data: { tunnelId: string; url: string } }) => {
-      toast.success(`隧道 "${ev.data.tunnelId}" 公网地址: ${ev.data.url}`);
+      notifySuccess(`隧道 "${ev.data.tunnelId}" 公网地址: ${ev.data.url}`);
       loadStatuses();
     }));
 
@@ -165,7 +317,7 @@ export function TunnelWidget({ onBack }: TunnelWidgetProps): JSX.Element {
     return () => {
       unsubscribers.forEach(unsub => unsub());
     };
-  }, [loadStatuses, toast]);
+  }, [loadStatuses, notifySuccess, notifyInfo, notifyError]);
 
   const handleDeleteTunnel = async (id: string) => {
     if (!confirm('确定要删除此隧道吗？')) return;
@@ -272,7 +424,7 @@ export function TunnelWidget({ onBack }: TunnelWidgetProps): JSX.Element {
     try {
       await navigator.clipboard.writeText(text);
       toast.success(`${label}已复制到剪贴板`);
-    } catch (err) {
+    } catch {
       toast.error('复制失败');
     }
   };
@@ -505,214 +657,201 @@ export function TunnelWidget({ onBack }: TunnelWidgetProps): JSX.Element {
     return statuses.find(s => s.tunnelId === tunnelId);
   };
 
-  const getStatusDisplay = (status?: TunnelRuntimeInfo) => {
-    if (!status) return { text: '已停止', color: 'bg-white/10 text-white/60', icon: 'x-circle' };
-    switch (status.status) {
-      case 'running':
-        return { text: '运行中', color: 'bg-[#22C55E] text-white', icon: 'check-circle' };
-      case 'starting':
-        return { text: '启动中', color: 'bg-[#F59E0B] text-white', icon: 'refresh' };
-      case 'error':
-        return { text: '错误', color: 'bg-[#EF4444] text-white', icon: 'alert-circle' };
-      default:
-        return { text: '已停止', color: 'bg-white/10 text-white/60', icon: 'x-circle' };
+  const renderTunnelsView = () => {
+    if (initialLoading) {
+      return (
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2" aria-busy="true">
+          {[0, 1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-[176px] rounded-[9px]" />
+          ))}
+        </div>
+      );
     }
+
+    if (loadError && tunnels.length === 0) {
+      return (
+        <Card inset>
+          <EmptyState
+            icon="exclamation-circle"
+            title="隧道列表加载失败"
+            description="无法获取隧道配置,请重试"
+            action={
+              <Button variant="primary" icon="refresh" onClick={() => { setInitialLoading(true); Promise.all([loadTunnels(), loadStatuses()]).finally(() => setInitialLoading(false)); }}>
+                重新加载
+              </Button>
+            }
+          />
+        </Card>
+      );
+    }
+
+    return (
+      <div className="space-y-4">
+        {/* FRP 安装状态提示 */}
+        {installStatus && !installStatus.frpInstalled && (
+          <div className="card flex flex-wrap items-center gap-3 px-4 py-3">
+            <Icon name="alert-circle" size={16} className="shrink-0 text-warning-text" />
+            <div className="min-w-0 flex-1">
+              <p className="text-[12.5px] font-medium text-text-1">FRP 未安装</p>
+              <p className="text-[11.5px] text-text-3">请先安装 FRP 或配置 FRP 路径</p>
+            </div>
+            <Button size="sm" variant="secondary" onClick={() => setView('settings')}>
+              去设置
+            </Button>
+          </div>
+        )}
+
+        {tunnels.length === 0 ? (
+          <Card inset>
+            <EmptyState
+              icon="network"
+              title="暂无隧道配置"
+              description="创建您的第一个隧道以开始内网穿透"
+              action={
+                <Button variant="primary" icon="plus" onClick={handleSwitchToCreate} disabled={isLoading}>
+                  创建隧道
+                </Button>
+              }
+            />
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            {tunnels.map(tunnel => {
+              const status = getTunnelStatus(tunnel.id);
+              const statusDisplay = getStatusDisplay(status);
+              const isRunning = status?.status === 'running';
+              const isStarting = status?.status === 'starting';
+
+              return (
+                <Card key={tunnel.id} className="flex flex-col p-4">
+                  {/* 头部:名称 + 状态徽章 */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <h3 className="truncate text-[13px] font-semibold text-text-1" title={tunnel.name}>
+                        {tunnel.name}
+                      </h3>
+                      <p className="mt-0.5 truncate font-mono text-[10.5px] text-text-4" title={tunnel.id}>
+                        {tunnel.id}
+                      </p>
+                    </div>
+                    <Badge tone={statusDisplay.tone} className="shrink-0">
+                      {statusDisplay.text}
+                    </Badge>
+                  </div>
+
+                  {/* 信息区 */}
+                  <div className="mt-3 space-y-1.5 text-[12px]">
+                    <div className="flex items-center gap-2">
+                      <span className="w-12 shrink-0 text-[11.5px] text-text-4">类型</span>
+                      <Badge tone="neutral">{tunnel.proxyType || 'FRP'}</Badge>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="w-12 shrink-0 text-[11.5px] text-text-4">本地</span>
+                      <code className="truncate select-text font-mono text-[11.5px] text-text-1">
+                        {tunnel.localHost}:{tunnel.localPort}
+                      </code>
+                    </div>
+                    {tunnel.subdomain && (
+                      <div className="flex items-center gap-2">
+                        <span className="w-12 shrink-0 text-[11.5px] text-text-4">子域名</span>
+                        <span className="truncate text-text-2">{tunnel.subdomain}</span>
+                      </div>
+                    )}
+                    {status?.publicUrl && (
+                      <div className="flex items-center gap-2">
+                        <span className="w-12 shrink-0 text-[11.5px] text-text-4">公网</span>
+                        <a
+                          href={status.publicUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="min-w-0 flex-1 truncate text-accent-text hover:underline"
+                          title={status.publicUrl}
+                        >
+                          {status.publicUrl}
+                        </a>
+                        <IconButton
+                          name="copy"
+                          label="复制公网地址"
+                          size="sm"
+                          onClick={() => handleCopy(status.publicUrl!, '公网地址')}
+                        />
+                      </div>
+                    )}
+                    {status?.lastError && (
+                      <div className="card-inset mt-2 px-3 py-2 text-[11.5px] leading-relaxed text-error-text">
+                        <span className="font-medium">错误: </span>
+                        {status.lastError}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 操作栏 */}
+                  <div className="hairline-t mt-3 flex items-center justify-between gap-2 pt-3">
+                    <div className="flex items-center gap-0.5">
+                      {isRunning ? (
+                        <IconButton
+                          name="stop"
+                          label="停止"
+                          tone="danger"
+                          onClick={() => handleStopTunnel(tunnel.id)}
+                          disabled={isLoading}
+                        />
+                      ) : (
+                        <IconButton
+                          name="play"
+                          label="启动"
+                          onClick={() => handleStartTunnel(tunnel.id)}
+                          disabled={isLoading || isStarting}
+                        />
+                      )}
+                      <IconButton
+                        name="refresh"
+                        label="重启"
+                        onClick={() => handleRestartTunnel(tunnel.id)}
+                        disabled={isLoading || isStarting}
+                      />
+                      <IconButton name="log" label="查看日志" onClick={() => handleViewLog(tunnel)} />
+                      <IconButton name="pencil" label="编辑" onClick={() => handleSwitchToEdit(tunnel)} />
+                      <IconButton
+                        name="trash"
+                        label="删除"
+                        tone="danger"
+                        onClick={() => handleDeleteTunnel(tunnel.id)}
+                        disabled={isLoading}
+                      />
+                    </div>
+                    {tunnel.autoStart && (
+                      <span className="flex shrink-0 items-center gap-1 text-[11px] text-text-3">
+                        <Icon name="check" size={12} />
+                        自启动
+                      </span>
+                    )}
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
   };
 
-  const renderTunnelsView = () => (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="text-xl font-semibold text-white">隧道管理</h2>
-          <p className="text-sm text-white/50 mt-1">管理 FRP 内网穿透隧道</p>
-        </div>
-        <button
-          className="px-4 py-2 bg-[#7C3AED] hover:bg-[#6D28D9] rounded-lg text-white font-medium clickable flex items-center"
-          onClick={handleSwitchToCreate}
-          disabled={isLoading}
-        >
-          <Icon name="plus" size={16} />
-          <span className="ml-2">创建隧道</span>
-        </button>
-      </div>
-
-      {/* FRP 安装状态提示 */}
-      {installStatus && !installStatus.frpInstalled && (
-        <div className="glass-light p-4 rounded-xl mb-4 border border-[#F59E0B]/30">
-          <div className="flex items-center gap-3">
-            <Icon name="alert-circle" size={20} color="#F59E0B" />
-            <div className="flex-1">
-              <p className="text-white/80">FRP 未安装</p>
-              <p className="text-sm text-white/50">请先安装 FRP 或配置 FRP 路径</p>
-            </div>
-            <button
-              className="px-3 py-1.5 bg-[#7C3AED] hover:bg-[#6D28D9] rounded-lg text-white text-sm clickable"
-              onClick={() => setView('settings')}
-            >
-              去设置
-            </button>
-          </div>
-        </div>
-      )}
-
-      {tunnels.length === 0 ? (
-        <div className="glass-light p-8 rounded-xl text-center text-white/60">
-          <Icon name="network" size={48} className="mx-auto mb-4 text-white/40" />
-          <p className="text-lg">暂无隧道配置</p>
-          <p className="text-sm mt-2">点击上方按钮创建您的第一个隧道</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {tunnels.map(tunnel => {
-            const status = getTunnelStatus(tunnel.id);
-            const statusDisplay = getStatusDisplay(status);
-            const isRunning = status?.status === 'running';
-            const isStarting = status?.status === 'starting';
-
-            return (
-              <div key={tunnel.id} className="glass-light p-4 rounded-xl">
-                <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <h3 className="font-semibold text-white text-lg">{tunnel.name}</h3>
-                    <p className="text-xs text-white/40 mt-0.5">{tunnel.id}</p>
-                  </div>
-                  <span className={`px-2 py-0.5 rounded text-xs font-medium flex items-center gap-1 ${statusDisplay.color}`}>
-                    <Icon name={statusDisplay.icon as any} size={12} />
-                    {statusDisplay.text}
-                  </span>
-                </div>
-
-                <div className="space-y-1.5 text-sm text-white/70">
-                  <div className="flex items-center gap-2">
-                    <span className="text-white/40 w-12">类型:</span>
-                    {tunnel.proxyType ? (
-                      <span className="px-1.5 py-0.5 rounded bg-[#7C3AED]/20 text-[#A78BFA] text-xs">
-                        {tunnel.proxyType}
-                      </span>
-                    ) : (
-                      <span className="px-1.5 py-0.5 rounded bg-white/10 text-xs">FRP</span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-white/40 w-12">本地:</span>
-                    <code className="text-xs bg-white/5 px-1.5 py-0.5 rounded">{tunnel.localHost}:{tunnel.localPort}</code>
-                  </div>
-                  {tunnel.subdomain && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-white/40 w-12">子域名:</span>
-                      <span>{tunnel.subdomain}</span>
-                    </div>
-                  )}
-                  {status?.publicUrl && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-white/40 w-12">公网:</span>
-                      <a href={status.publicUrl} target="_blank" rel="noopener noreferrer"
-                         className="text-[#7C3AED] hover:underline truncate flex-1">
-                        {status.publicUrl}
-                      </a>
-                      <button
-                        className="p-1 rounded hover:bg-white/10 clickable"
-                        onClick={() => handleCopy(status.publicUrl!, '公网地址')}
-                        title="复制地址"
-                      >
-                        <Icon name="copy" size={14} />
-                      </button>
-                    </div>
-                  )}
-                  {status?.lastError && (
-                    <div className="text-[#EF4444] text-xs bg-[#EF4444]/10 p-2 rounded mt-2">
-                      <span className="font-medium">错误:</span> {status.lastError}
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex items-center justify-between mt-4 pt-4 border-t border-white/10">
-                  <div className="flex gap-1.5">
-                    {isRunning ? (
-                      <button
-                        className="p-2 rounded-lg bg-[#EF4444]/20 hover:bg-[#EF4444]/30 clickable text-[#EF4444]"
-                        onClick={() => handleStopTunnel(tunnel.id)}
-                        disabled={isLoading}
-                        title="停止"
-                      >
-                        <Icon name="stop" size={16} />
-                      </button>
-                    ) : (
-                      <button
-                        className="p-2 rounded-lg bg-[#22C55E]/20 hover:bg-[#22C55E]/30 clickable text-[#22C55E]"
-                        onClick={() => handleStartTunnel(tunnel.id)}
-                        disabled={isLoading || isStarting}
-                        title="启动"
-                      >
-                        <Icon name="play" size={16} />
-                      </button>
-                    )}
-                    <button
-                      className="p-2 rounded-lg bg-white/10 hover:bg-white/20 clickable text-white/70"
-                      onClick={() => handleRestartTunnel(tunnel.id)}
-                      disabled={isLoading || isStarting}
-                      title="重启"
-                    >
-                      <Icon name="refresh" size={16} />
-                    </button>
-                    <button
-                      className="p-2 rounded-lg bg-white/10 hover:bg-white/20 clickable text-white/70"
-                      onClick={() => handleViewLog(tunnel)}
-                      title="查看日志"
-                    >
-                      <Icon name="log" size={16} />
-                    </button>
-                    <button
-                      className="p-2 rounded-lg bg-white/10 hover:bg-white/20 clickable text-white/70"
-                      onClick={() => handleSwitchToEdit(tunnel)}
-                      title="编辑"
-                    >
-                      <Icon name="pencil" size={16} />
-                    </button>
-                    <button
-                      className="p-2 rounded-lg bg-[#EF4444]/20 hover:bg-[#EF4444]/30 clickable text-[#EF4444]"
-                      onClick={() => handleDeleteTunnel(tunnel.id)}
-                      disabled={isLoading}
-                      title="删除"
-                    >
-                      <Icon name="trash" size={16} />
-                    </button>
-                  </div>
-                  {tunnel.autoStart && (
-                    <span className="text-xs text-white/40 flex items-center gap-1">
-                      <Icon name="check" size={12} />
-                      自启动
-                    </span>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-
   const renderSettingsView = () => (
-    <div className="space-y-4">
-      <div className="mb-6">
-        <h2 className="text-xl font-semibold text-white">FRP 设置</h2>
-        <p className="text-sm text-white/50 mt-1">配置默认 FRP 服务器和安装选项</p>
-      </div>
-
+    <div className="max-w-2xl space-y-4">
       {/* 安装状态 */}
-      <div className="glass-light p-4 rounded-xl">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-              installStatus?.frpInstalled ? 'bg-[#22C55E]/20' : 'bg-[#F59E0B]/20'
-            }`}>
-              <Icon name={installStatus?.frpInstalled ? 'check-circle' : 'alert-circle'} size={20}
-                color={installStatus?.frpInstalled ? '#22C55E' : '#F59E0B'} />
+      <Card className="p-4">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="card-inset flex h-10 w-10 shrink-0 items-center justify-center">
+              <Icon
+                name={installStatus?.frpInstalled ? 'check-circle' : 'alert-circle'}
+                size={18}
+                className={installStatus?.frpInstalled ? 'text-success-text' : 'text-warning-text'}
+              />
             </div>
-            <div>
-              <h3 className="font-semibold text-white">FRP 安装状态</h3>
-              <p className="text-sm text-white/50">
+            <div className="min-w-0">
+              <h3 className="text-[13px] font-semibold text-text-1">FRP 安装状态</h3>
+              <p className="truncate text-[12px] text-text-3">
                 {installStatus?.frpInstalled
                   ? `已安装${installStatus.frpVersion ? ` (${installStatus.frpVersion})` : ''}`
                   : '未安装'}
@@ -720,471 +859,218 @@ export function TunnelWidget({ onBack }: TunnelWidgetProps): JSX.Element {
             </div>
           </div>
           {!installStatus?.frpInstalled && (
-            <button
-              className="px-4 py-2 bg-[#7C3AED] hover:bg-[#6D28D9] rounded-lg text-white font-medium clickable"
-              onClick={handleInstallFRP}
-              disabled={isLoading}
-            >
-              {isLoading ? '安装中...' : '安装 FRP'}
-            </button>
+            <Button variant="primary" onClick={handleInstallFRP} loading={isLoading} disabled={isLoading} className="shrink-0">
+              安装 FRP
+            </Button>
           )}
         </div>
 
         {!installStatus?.frpInstalled && (
-          <div className="text-sm text-white/50 bg-white/5 p-3 rounded-lg">
+          <div className="card-inset mt-3 px-3.5 py-3 text-[12px] leading-relaxed text-text-2">
             <p>FRP 是一个高性能的反向代理应用，用于内网穿透。</p>
-            <p className="mt-1">也可以手动从 <a href="https://github.com/fatedier/frp/releases" target="_blank" rel="noopener noreferrer"
-                            className="text-[#7C3AED] hover:underline">GitHub Releases</a> 下载并安装到系统 PATH。</p>
+            <p className="mt-1">
+              也可以手动从{' '}
+              <a
+                href="https://github.com/fatedier/frp/releases"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-accent-text hover:underline"
+              >
+                GitHub Releases
+              </a>{' '}
+              下载并安装到系统 PATH。
+            </p>
           </div>
         )}
-      </div>
+      </Card>
 
       {/* 默认服务器配置 */}
-      <div className="glass-light p-4 rounded-xl">
-        <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
-          <Icon name="server" size={18} />
+      <Card className="p-4">
+        <h3 className="mb-3.5 flex items-center gap-2 text-[13px] font-semibold text-text-1">
+          <Icon name="server" size={15} className="text-text-3" />
           默认 FRP 服务器
         </h3>
 
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-white/70 mb-2">服务器地址</label>
-            <input
+        <div className="space-y-3.5">
+          <Field label="服务器地址" hint="FRP 服务器的地址和端口">
+            <Input
               type="text"
               value={settingsForm.frpServerAddress}
               onChange={(e) => setSettingsForm({ ...settingsForm, frpServerAddress: e.target.value })}
-              className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-[#7C3AED]"
               placeholder="例如: frp.example.com:7000"
+              className="font-mono"
             />
-            <p className="text-xs text-white/40 mt-1">FRP 服务器的地址和端口</p>
-          </div>
+          </Field>
 
-          <div>
-            <label className="block text-sm font-medium text-white/70 mb-2">认证 Token</label>
-            <input
+          <Field label="认证 Token" hint="用于连接 FRP 服务器的认证令牌">
+            <Input
               type="password"
               value={settingsForm.frpServerToken}
               onChange={(e) => setSettingsForm({ ...settingsForm, frpServerToken: e.target.value })}
-              className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-[#7C3AED]"
               placeholder="输入服务器 Token"
+              className="font-mono"
             />
-            <p className="text-xs text-white/40 mt-1">用于连接 FRP 服务器的认证令牌</p>
-          </div>
+          </Field>
 
-          <div className="pt-4 border-t border-white/10">
-            <button
-              className="px-6 py-2 bg-[#7C3AED] hover:bg-[#6D28D9] rounded-lg text-white font-medium clickable"
-              onClick={handleSaveSettings}
-              disabled={isLoading}
-            >
-              {isLoading ? '保存中...' : '保存设置'}
-            </button>
+          <div className="hairline-t pt-3.5">
+            <Button variant="primary" icon="save" onClick={handleSaveSettings} loading={isLoading} disabled={isLoading}>
+              保存设置
+            </Button>
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* 使用说明 */}
-      <div className="glass-light p-4 rounded-xl">
-        <h3 className="font-semibold text-white mb-3 flex items-center gap-2">
-          <Icon name="information-circle" size={18} />
+      <Card className="p-4">
+        <h3 className="mb-3 flex items-center gap-2 text-[13px] font-semibold text-text-1">
+          <Icon name="information-circle" size={15} className="text-text-3" />
           使用说明
         </h3>
-        <div className="text-sm text-white/60 space-y-2">
+        <div className="space-y-1.5 text-[12px] leading-relaxed text-text-2">
           <p>1. 确保 FRP 服务端 (frps) 已部署并运行</p>
           <p>2. 在设置中配置默认 FRP 服务器地址和 Token</p>
           <p>3. 创建隧道时选择代理类型（HTTP、HTTPS、TCP 等）</p>
           <p>4. 启动隧道后，系统会分配公网访问地址</p>
           <p>5. 支持子域名配置（需要服务端支持）</p>
         </div>
-      </div>
+      </Card>
     </div>
   );
 
   // 渲染创建表单
   const renderCreateForm = () => (
-    <div className="glass-light p-6 rounded-xl">
-      <h2 className="text-xl font-semibold text-white mb-6">创建新隧道</h2>
+    <Card className="max-w-2xl p-5">
+      <h2 className="mb-4 text-[14px] font-semibold text-text-1">创建新隧道</h2>
 
-      <div className="space-y-4">
-        {/* 基本信息 */}
-        <div className="space-y-3">
-          <div>
-            <label className="block text-sm font-medium text-white/70 mb-2">隧道名称 *</label>
-            <input
-              type="text"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-[#7C3AED]"
-              placeholder="例如: 我的 Web 服务"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">本地地址 *</label>
-              <input
-                type="text"
-                value={formData.localHost}
-                onChange={(e) => setFormData({ ...formData, localHost: e.target.value })}
-                className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-[#7C3AED]"
-                placeholder="127.0.0.1"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">本地端口 *</label>
-              <input
-                type="number"
-                value={formData.localPort}
-                onChange={(e) => setFormData({ ...formData, localPort: e.target.value })}
-                className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-[#7C3AED]"
-                placeholder="3000"
-                min="1"
-                max="65535"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* FRP 配置 */}
-        <div className="space-y-3 pt-4 border-t border-white/10">
-          <h3 className="text-lg font-medium text-white mb-2">FRP 配置</h3>
-
-            <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">代理类型</label>
-              <Select
-                value={formData.proxyType}
-                onValueChange={(value) => setFormData({ ...formData, proxyType: value as ProxyType })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="选择代理类型" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={ProxyType.ProxyTypeHTTP}>HTTP</SelectItem>
-                  <SelectItem value={ProxyType.ProxyTypeHTTPS}>HTTPS</SelectItem>
-                  <SelectItem value={ProxyType.ProxyTypeTCP}>TCP</SelectItem>
-                  <SelectItem value={ProxyType.ProxyTypeSTCP}>STCP (秘密 TCP)</SelectItem>
-                  <SelectItem value={ProxyType.ProxyTypeXTCP}>XTCP (P2P TCP)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">子域名 (可选)</label>
-              <input
-                type="text"
-                value={formData.subdomain}
-                onChange={(e) => setFormData({ ...formData, subdomain: e.target.value })}
-                className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-[#7C3AED]"
-                placeholder="例如: myapp"
-              />
-              <p className="text-xs text-white/40 mt-1">需要服务端支持自定义域名</p>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">服务器地址 *</label>
-              <input
-                type="text"
-                value={formData.frpServerAddress}
-                onChange={(e) => setFormData({ ...formData, frpServerAddress: e.target.value })}
-                className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-[#7C3AED]"
-                placeholder="例如: frp.example.com:7000"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">认证 Token *</label>
-              <input
-                type="password"
-                value={formData.frpServerToken}
-                onChange={(e) => setFormData({ ...formData, frpServerToken: e.target.value })}
-                className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-[#7C3AED]"
-                placeholder="输入服务器 Token"
-              />
-            </div>
-        </div>
-
-        {/* 其他选项 */}
-        <div className="space-y-3 pt-4 border-t border-white/10">
-          <label className="flex items-center gap-3 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={formData.autoStart}
-              onChange={(e) => setFormData({ ...formData, autoStart: e.target.checked })}
-              className="w-5 h-5 rounded border-white/20 accent-[#7C3AED]"
-            />
-            <span className="text-sm text-white/70">应用启动时自动启动此隧道</span>
-          </label>
-        </div>
-      </div>
+      <TunnelFormFields formData={formData} setFormData={setFormData} isEdit={false} />
 
       {/* 按钮组 */}
-      <div className="flex gap-3 mt-6 pt-6 border-t border-white/10">
-        <button
-          className="px-6 py-2 bg-[#7C3AED] hover:bg-[#6D28D9] rounded-lg text-white font-medium clickable disabled:opacity-50"
-          onClick={handleCreateTunnel}
-          disabled={isLoading}
-        >
-          {isLoading ? '创建中...' : '创建隧道'}
-        </button>
-        <button
-          className="px-6 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white font-medium clickable"
-          onClick={() => setView('tunnels')}
-          disabled={isLoading}
-        >
+      <div className="hairline-t mt-5 flex gap-2 pt-4">
+        <Button variant="primary" onClick={handleCreateTunnel} loading={isLoading} disabled={isLoading}>
+          创建隧道
+        </Button>
+        <Button variant="secondary" onClick={() => setView('tunnels')} disabled={isLoading}>
           取消
-        </button>
+        </Button>
       </div>
-    </div>
+    </Card>
   );
 
   // 渲染编辑表单
   const renderEditForm = () => (
-    <div className="glass-light p-6 rounded-xl">
-      <h2 className="text-xl font-semibold text-white mb-6">编辑隧道: {editingTunnel?.name}</h2>
+    <Card className="max-w-2xl p-5">
+      <h2 className="mb-4 truncate text-[14px] font-semibold text-text-1">
+        编辑隧道: {editingTunnel?.name ?? ''}
+      </h2>
 
-      <div className="space-y-4">
-        {/* 基本信息 */}
-        <div className="space-y-3">
-          <div>
-            <label className="block text-sm font-medium text-white/70 mb-2">隧道名称</label>
-            <input
-              type="text"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-[#7C3AED]"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">本地地址</label>
-              <input
-                type="text"
-                value={formData.localHost}
-                onChange={(e) => setFormData({ ...formData, localHost: e.target.value })}
-                className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-[#7C3AED]"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">本地端口</label>
-              <input
-                type="number"
-                value={formData.localPort}
-                onChange={(e) => setFormData({ ...formData, localPort: e.target.value })}
-                className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-[#7C3AED]"
-                min="1"
-                max="65535"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* FRP 专用配置 */}
-        <div className="space-y-3 pt-4 border-t border-white/10">
-          <h3 className="text-lg font-medium text-white mb-2">FRP 服务器配置</h3>
-
-            <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">代理类型</label>
-              <Select
-                value={formData.proxyType}
-                onValueChange={(value) => setFormData({ ...formData, proxyType: value as ProxyType })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="选择代理类型" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={ProxyType.ProxyTypeHTTP}>HTTP</SelectItem>
-                  <SelectItem value={ProxyType.ProxyTypeHTTPS}>HTTPS</SelectItem>
-                  <SelectItem value={ProxyType.ProxyTypeTCP}>TCP</SelectItem>
-                  <SelectItem value={ProxyType.ProxyTypeSTCP}>STCP (秘密 TCP)</SelectItem>
-                  <SelectItem value={ProxyType.ProxyTypeXTCP}>XTCP (P2P TCP)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">子域名 (可选)</label>
-              <input
-                type="text"
-                value={formData.subdomain}
-                onChange={(e) => setFormData({ ...formData, subdomain: e.target.value })}
-                className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-[#7C3AED]"
-                placeholder="例如: myapp"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">服务器地址</label>
-              <input
-                type="text"
-                value={formData.frpServerAddress}
-                onChange={(e) => setFormData({ ...formData, frpServerAddress: e.target.value })}
-                className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-[#7C3AED]"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">认证 Token</label>
-              <input
-                type="password"
-                value={formData.frpServerToken}
-                onChange={(e) => setFormData({ ...formData, frpServerToken: e.target.value })}
-                className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-[#7C3AED]"
-              />
-            </div>
-        </div>
-
-        {/* 其他选项 */}
-        <div className="space-y-3 pt-4 border-t border-white/10">
-          <label className="flex items-center gap-3 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={formData.autoStart}
-              onChange={(e) => setFormData({ ...formData, autoStart: e.target.checked })}
-              className="w-5 h-5 rounded border-white/20 accent-[#7C3AED]"
-            />
-            <span className="text-sm text-white/70">应用启动时自动启动此隧道</span>
-          </label>
-        </div>
-      </div>
+      <TunnelFormFields formData={formData} setFormData={setFormData} isEdit={true} />
 
       {/* 按钮组 */}
-      <div className="flex gap-3 mt-6 pt-6 border-t border-white/10">
-        <button
-          className="px-6 py-2 bg-[#7C3AED] hover:bg-[#6D28D9] rounded-lg text-white font-medium clickable disabled:opacity-50"
-          onClick={handleUpdateTunnel}
-          disabled={isLoading}
-        >
-          {isLoading ? '保存中...' : '保存更改'}
-        </button>
-        <button
-          className="px-6 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white font-medium clickable"
-          onClick={() => setView('tunnels')}
-          disabled={isLoading}
-        >
+      <div className="hairline-t mt-5 flex gap-2 pt-4">
+        <Button variant="primary" onClick={handleUpdateTunnel} loading={isLoading} disabled={isLoading}>
+          保存更改
+        </Button>
+        <Button variant="secondary" onClick={() => setView('tunnels')} disabled={isLoading}>
           取消
-        </button>
+        </Button>
       </div>
-    </div>
+    </Card>
   );
 
   // 日志查看弹窗
-  const renderLogModal = () => {
-    if (!showLogModal) return null;
-
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-        <div className="glass-heavy w-full max-w-4xl max-h-[85vh] rounded-xl overflow-hidden flex flex-col">
-          <div className="flex items-center justify-between p-4 border-b border-white/10">
-            <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-              <Icon name="terminal" size={18} />
-              {currentLogTitle}
-            </h3>
-            <div className="flex items-center gap-2">
-              <button
-                className="p-2 rounded-lg hover:bg-white/10 clickable text-white/70"
-                onClick={() => loadLogContent(currentLogTunnelId, 100)}
-                title="手动刷新"
-              >
-                <Icon name="refresh" size={16} />
-              </button>
-              <button
-                className="p-2 rounded-lg hover:bg-white/10 clickable"
-                onClick={handleCloseLogModal}
-              >
-                <Icon name="close" size={18} />
-              </button>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between px-4 py-2 border-b border-white/10 bg-white/5">
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-white/50">显示最后 100 行</span>
-              {autoRefreshLog && (
-                <span className="flex items-center gap-1 text-xs text-[#22C55E]">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#22C55E] animate-pulse"></span>
-                  实时刷新中
-                </span>
-              )}
-            </div>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={autoRefreshLog}
-                onChange={(e) => setAutoRefreshLog(e.target.checked)}
-                className="w-4 h-4 rounded border-white/20 accent-[#7C3AED]"
+  const renderLogModal = () => (
+    <Modal
+      open={showLogModal}
+      onClose={handleCloseLogModal}
+      title={
+        <span className="flex items-center gap-2">
+          <Icon name="terminal" size={15} className="text-text-2" />
+          {currentLogTitle}
+        </span>
+      }
+      width={880}
+      footer={
+        <>
+          <Button
+            variant="secondary"
+            size="sm"
+            icon="refresh"
+            onClick={() => loadLogContent(currentLogTunnelId, 100)}
+          >
+            刷新
+          </Button>
+          <Button variant="primary" size="sm" onClick={handleCloseLogModal}>
+            关闭
+          </Button>
+        </>
+      }
+    >
+      {/* 工具栏 */}
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2.5">
+          <span className="text-[11.5px] text-text-3">显示最后 100 行</span>
+          {autoRefreshLog && (
+            <span className="flex items-center gap-1.5 text-[11.5px] text-success-text">
+              <span
+                className="h-1.5 w-1.5 rounded-full"
+                style={{ background: 'var(--color-success)' }}
               />
-              <span className="text-sm text-white/70">自动刷新</span>
-            </label>
-          </div>
-
-          <div className="flex-1 overflow-auto p-4 bg-black/30">
-            <pre className="text-sm text-white/80 font-mono whitespace-pre-wrap leading-relaxed">{currentLog || '(暂无日志)'}</pre>
-          </div>
-
-          <div className="p-4 border-t border-white/10 flex justify-end gap-2">
-            <button
-              className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white clickable flex items-center gap-2"
-              onClick={() => loadLogContent(currentLogTunnelId, 100)}
-            >
-              <Icon name="refresh" size={14} />
-              刷新
-            </button>
-            <button
-              className="px-4 py-2 bg-[#7C3AED] hover:bg-[#6D28D9] rounded-lg text-white clickable"
-              onClick={handleCloseLogModal}
-            >
-              关闭
-            </button>
-          </div>
+              实时刷新中
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="select-none text-[12px] text-text-2">自动刷新</span>
+          <Toggle
+            checked={autoRefreshLog}
+            onChange={setAutoRefreshLog}
+            label="自动刷新日志"
+          />
         </div>
       </div>
-    );
-  };
+
+      {/* 日志内容 */}
+      <div className="card-inset max-h-[50vh] overflow-auto p-3.5">
+        <pre className="whitespace-pre-wrap break-words font-mono text-[11.5px] leading-relaxed text-text-2">
+          {currentLog || '(暂无日志)'}
+        </pre>
+      </div>
+    </Modal>
+  );
+
+  // 顶部页签(编辑态高亮"创建隧道")
+  const tabValue: 'tunnels' | 'create' | 'settings' = view === 'edit' ? 'create' : view;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0D0F1A] to-[#1A1D2E] p-6">
+    <div className="mx-auto min-w-0 max-w-5xl">
       {renderLogModal()}
 
-      <button
-        className="mb-6 flex items-center gap-2 text-white/60 hover:text-white clickable"
-        onClick={onBack}
-      >
-        <Icon name="arrow-left" size={16} />
-        <span>返回</span>
-      </button>
+      {/* 返回 */}
+      <div className="mb-3">
+        <IconButton name="arrow-left" label="返回" onClick={onBack} />
+      </div>
 
-      <div className="flex gap-4 mb-6">
-        <button
-          className={`px-4 py-2 rounded-lg font-medium transition-all ${
-            view === 'tunnels'
-              ? 'bg-[#7C3AED] text-white'
-              : 'bg-white/10 text-white/60 hover:bg-white/20'
-          }`}
-          onClick={() => setView('tunnels')}
-        >
-          隧道列表
-        </button>
-        <button
-          className={`px-4 py-2 rounded-lg font-medium transition-all ${
-            view === 'create' || view === 'edit'
-              ? 'bg-[#7C3AED] text-white'
-              : 'bg-white/10 text-white/60 hover:bg-white/20'
-          }`}
-          onClick={handleSwitchToCreate}
-        >
-          创建隧道
-        </button>
-        <button
-          className={`px-4 py-2 rounded-lg font-medium transition-all ${
-            view === 'settings'
-              ? 'bg-[#7C3AED] text-white'
-              : 'bg-white/10 text-white/60 hover:bg-white/20'
-          }`}
-          onClick={() => setView('settings')}
-        >
-          设置
-        </button>
+      {/* 页头 + 页签 */}
+      <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="page-title">隧道管理</h1>
+          <p className="page-subtitle">管理 FRP 内网穿透隧道</p>
+        </div>
+        <Segmented<'tunnels' | 'create' | 'settings'>
+          options={[
+            { value: 'tunnels', label: '隧道列表' },
+            { value: 'create', label: '创建隧道' },
+            { value: 'settings', label: '设置' },
+          ]}
+          value={tabValue}
+          onChange={(v) => {
+            if (v === 'create') {
+              handleSwitchToCreate();
+            } else {
+              setView(v);
+            }
+          }}
+        />
       </div>
 
       {view === 'tunnels' && renderTunnelsView()}

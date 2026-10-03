@@ -1,11 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useBookmarks, SearchResult } from '../hooks/useBookmarks';
 import { Icon } from './Icon';
+import { EmptyState, Spinner } from './ui';
 
 interface BookmarkWidgetProps {
   query: string;
   onSelect?: () => void;
 }
+
+const browserIcon: Record<string, Parameters<typeof Icon>[0]['name']> = {
+  chrome: 'globe',
+  safari: 'globe',
+  firefox: 'globe',
+};
 
 export const BookmarkWidget: React.FC<BookmarkWidgetProps> = ({ query, onSelect }) => {
   const { search, openURL } = useBookmarks();
@@ -64,75 +71,52 @@ export const BookmarkWidget: React.FC<BookmarkWidgetProps> = ({ query, onSelect 
     onSelect?.();
   };
 
-  // 获取浏览器图标
-  const getBrowserIcon = (browser: string) => {
-    const icons: Record<string, string> = {
-      chrome: '🌐',
-      safari: '🧭',
-      firefox: '🦊',
-    };
-    return icons[browser] || '🔖';
-  };
-
   if (!query.trim()) {
     return (
-      <div className="p-4 text-center text-gray-400">
-        输入关键词搜索浏览器书签
-      </div>
+      <EmptyState icon="bookmark" title="搜索浏览器书签" description="输入关键词搜索 Chrome、Safari、Firefox 的书签" />
     );
   }
 
   if (searching) {
     return (
-      <div className="p-4 text-center text-gray-400">
-        <Icon name="refresh" className="inline animate-spin mr-2" size={16} />
-        搜索中...
+      <div className="flex items-center justify-center gap-2 p-4 text-[12px] text-text-3">
+        <Spinner size={14} />
+        搜索中…
       </div>
     );
   }
 
   if (results.length === 0) {
-    return (
-      <div className="p-4 text-center text-gray-400">
-        未找到匹配的书签
-      </div>
-    );
+    return <EmptyState icon="search" title="未找到匹配的书签" description="尝试其他关键词" />;
   }
 
   return (
-    <div ref={containerRef} className="max-h-96 overflow-y-auto">
+    <div ref={containerRef} className="max-h-96 space-y-0.5 overflow-y-auto p-1.5">
       {results.map((result, index) => (
         <div
           key={result.bookmark.id}
-          className={`px-4 py-3 cursor-pointer transition-colors ${
-            index === selectedIndex
-              ? 'bg-purple-500/20 border-l-2 border-purple-500'
-              : 'hover:bg-white/5'
-          }`}
+          className={`row row-clickable ${index === selectedIndex ? 'row-selected' : ''}`}
           onClick={() => handleSelect(result)}
           onMouseEnter={() => setSelectedIndex(index)}
         >
-          <div className="flex items-start gap-3">
-            <span className="text-xl flex-shrink-0">
-              {getBrowserIcon(result.bookmark.browser)}
-            </span>
-            <div className="flex-1 min-w-0">
-              <div className="text-white font-medium truncate">
-                {result.bookmark.title}
-              </div>
-              <div className="text-gray-400 text-sm truncate">
-                {result.bookmark.url}
-              </div>
-              {result.bookmark.folder && (
-                <div className="text-gray-500 text-xs mt-1 truncate">
-                  📁 {result.bookmark.folder}
-                </div>
-              )}
-            </div>
-            <div className="text-xs text-gray-500 flex-shrink-0">
-              {result.match_type}
-            </div>
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[6px] border border-hairline bg-surface-2">
+            <Icon name={browserIcon[result.bookmark.browser] ?? 'bookmark'} size={14} color="var(--color-text-2)" />
           </div>
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-[12.5px] font-medium text-text-1">
+              {result.bookmark.title}
+            </div>
+            <div className="truncate text-[11px] text-text-3 select-text">
+              {result.bookmark.url}
+            </div>
+            {result.bookmark.folder && (
+              <div className="mt-0.5 flex items-center gap-1 text-[10.5px] text-text-4">
+                <Icon name="folder" size={10} />
+                <span className="truncate">{result.bookmark.folder}</span>
+              </div>
+            )}
+          </div>
+          <span className="badge badge-neutral shrink-0">{result.match_type}</span>
         </div>
       ))}
     </div>

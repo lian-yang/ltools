@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Icon } from './Icon';
+import { Button, IconButton, KeyCap, Spinner } from './ui';
 
 /**
  * 快捷键信息接口
@@ -18,7 +19,7 @@ interface ShortcutEditorProps {
   pluginName: string;
   currentShortcut?: ShortcutInfo;
   existingShortcuts: Record<string, string>;
-  onSave: (keyCombo: string) => void;
+  onSave: (keyCombo: string) => Promise<void>;
   onCancel: () => void;
 }
 
@@ -122,9 +123,10 @@ export function ShortcutEditor({ pluginId, pluginName, currentShortcut, existing
     if (e.altKey) keys.push('alt');
 
     // 收集主键（排除修饰键）
-    const mainKey = e.key.toLowerCase();
-    if (!['control', 'meta', 'shift', 'alt'].includes(mainKey) && mainKey !== ' ') {
-      keys.push(mainKey);
+    const mainKey = /^Digit[0-9]$/.test(e.code) ? e.code.slice(5)
+      : /^Key[A-Z]$/.test(e.code) ? e.code.slice(3).toLowerCase() : e.key.toLowerCase();
+    if (!['control', 'meta', 'shift', 'alt'].includes(mainKey)) {
+      keys.push(mainKey === ' ' ? 'space' : mainKey);
     }
 
     // 至少需要一个主键
@@ -205,7 +207,7 @@ export function ShortcutEditor({ pluginId, pluginName, currentShortcut, existing
         return;
       }
 
-      onSave(keyCombo);
+      await onSave(keyCombo);
     } catch (err: any) {
       setError(err.message || '保存失败');
     } finally {
@@ -221,129 +223,139 @@ export function ShortcutEditor({ pluginId, pluginName, currentShortcut, existing
     setError(null);
   };
 
+  const displayParts = displayShortcut && displayShortcut !== '按下快捷键组合...'
+    ? displayShortcut.split('+').filter(Boolean)
+    : [];
+
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="glass rounded-2xl p-6 w-full max-w-md animate-fade-in">
+    <div className="scrim fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div
+        className="animate-scale-in w-full max-w-md rounded-[12px] border border-hairline-strong bg-surface-2 p-5"
+        style={{ boxShadow: 'var(--shadow-modal)' }}
+        role="dialog"
+        aria-modal="true"
+      >
         {/* 标题 */}
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold text-white">
-            设置快捷键
-          </h2>
-          <button
-            className="p-2 hover:bg-white/10 rounded-lg transition-all duration-200 clickable"
-            onClick={onCancel}
-            disabled={saving}
-          >
-            <Icon name="x-circle" size={20} color="rgba(255,255,255,0.6)" />
-          </button>
+        <div className="hairline-b mb-4 flex items-center justify-between pb-3">
+          <h2 className="text-[14px] font-semibold text-text-1">设置快捷键</h2>
+          <IconButton name="x" label="关闭" size="sm" onClick={onCancel} disabled={saving} />
         </div>
 
         {/* 插件名称 */}
-        <div className="mb-6">
-          <p className="text-white/60 text-sm">插件</p>
-          <p className="text-white font-medium">{pluginName}</p>
+        <div className="mb-4">
+          <p className="text-[11.5px] text-text-3">插件</p>
+          <p className="mt-0.5 text-[12.5px] font-medium text-text-1">{pluginName}</p>
         </div>
 
         {/* 快捷键录制区域 */}
-        <div className="mb-6">
-          <p className="text-white/60 text-sm mb-3">快捷键组合</p>
+        <div className="mb-4">
+          <p className="field-label">快捷键组合</p>
           <div
-            className={`
-              relative p-4 rounded-lg border-2 border-dashed transition-all duration-200
-              ${isRecording
-                ? 'border-[#7C3AED] bg-[#7C3AED]/10'
-                : 'border-white/20 bg-[#0D0F1A]/50 hover:border-white/30'
-              }
-              ${saving ? 'opacity-50 pointer-events-none' : 'clickable'}
-            `}
+            className={`rounded-[7px] border border-dashed p-4 transition-colors duration-150 ${
+              isRecording
+                ? 'border-accent bg-accent-subtle'
+                : 'border-hairline-strong bg-surface-1 hover:border-white/20'
+            } ${saving ? 'pointer-events-none opacity-50' : 'cursor-pointer'}`}
             onClick={isRecording ? undefined : startRecording}
           >
             {isRecording ? (
               <div className="text-center">
-                <div className="flex items-center justify-center gap-2 mb-2">
-                  <div className="w-2 h-2 rounded-full bg-[#EF4444] animate-pulse" />
-                  <span className="text-white/80">录制中...</span>
+                <div className="mb-1.5 flex items-center justify-center gap-2">
+                  <span className="h-2 w-2 animate-pulse rounded-full bg-error" />
+                  <span className="text-[12.5px] text-text-1">录制中...</span>
                 </div>
-                <p className="text-white/50 text-sm">按下快捷键组合，松开完成</p>
+                <p className="text-[11.5px] text-text-3">按下快捷键组合，松开完成</p>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="mt-3 w-full"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    stopRecording();
+                  }}
+                >
+                  取消录制
+                </Button>
               </div>
             ) : (
-              <div className="text-center">
-                {displayShortcut ? (
-                  <div className="flex items-center justify-center gap-3">
-                    <Icon name="keyboard" size={20} color="#A78BFA" />
-                    <span className="text-[#A78BFA] font-mono text-lg">{displayShortcut}</span>
-                  </div>
+              <div className="flex min-h-[38px] items-center justify-center gap-1.5">
+                {displayParts.length > 0 ? (
+                  displayParts.map((part, i) => (
+                    <span key={`${part}-${i}`} className="flex items-center gap-1.5">
+                      {i > 0 && <span className="text-text-4">+</span>}
+                      <KeyCap>{part}</KeyCap>
+                    </span>
+                  ))
                 ) : (
-                  <div className="text-white/40">
-                    点击开始录制快捷键
-                  </div>
+                  <span className="text-[12.5px] text-text-3">点击开始录制快捷键</span>
                 )}
               </div>
-            )}
-
-            {isRecording && (
-              <button
-                className="mt-3 w-full py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white/80 text-sm transition-all duration-200 clickable"
-                onClick={stopRecording}
-              >
-                取消录制
-              </button>
             )}
           </div>
         </div>
 
         {/* 错误提示 */}
         {error && (
-          <div className="mb-6 p-3 bg-[#EF4444]/10 border border-[#EF4444]/20 rounded-lg">
-            <div className="flex items-center gap-2 text-[#EF4444] text-sm">
-              <Icon name="exclamation-circle" size={16} />
-              <span>{error}</span>
-            </div>
+          <div className="mb-4 flex items-center gap-2 rounded-[7px] border border-error/20 bg-error/10 px-3 py-2">
+            <Icon name="exclamation-circle" size={15} className="shrink-0 text-error-text" />
+            <span className="text-[12.5px] text-error-text">{error}</span>
           </div>
         )}
 
         {/* 操作按钮 */}
-        <div className="flex gap-3">
-          <button
-            className="flex-1 py-3 bg-white/5 hover:bg-white/10 text-white/80 rounded-lg transition-all duration-200 clickable font-medium"
-            onClick={onCancel}
-            disabled={saving}
-          >
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" className="flex-1" onClick={onCancel} disabled={saving}>
             取消
-          </button>
+          </Button>
           {recordedKeys.length > 0 && (
-            <button
-              className="px-4 py-3 bg-[#EF4444]/20 hover:bg-[#EF4444]/30 text-[#EF4444] rounded-lg transition-all duration-200 clickable font-medium"
+            <IconButton
+              name="trash"
+              label="清除已录制的按键"
+              tone="danger"
               onClick={handleClear}
               disabled={saving}
-            >
-              <Icon name="x-circle" size={16} />
-            </button>
+            />
           )}
-          <button
-            className={`
-              flex-1 py-3 rounded-lg transition-all duration-200 clickable font-medium
-              ${recordedKeys.length > 0
-                ? 'bg-[#7C3AED] hover:bg-[#6D28D9] text-white'
-                : 'bg-white/5 text-white/40 cursor-not-allowed'
-              }
-            `}
+          <Button
+            variant="primary"
+            className="flex-1"
             onClick={handleSave}
             disabled={saving || recordedKeys.length === 0}
           >
-            {saving ? '保存中...' : '保存'}
-          </button>
+            {saving ? (
+              <>
+                <Spinner size={12} />
+                保存中...
+              </>
+            ) : (
+              '保存'
+            )}
+          </Button>
         </div>
 
         {/* 提示信息 */}
-        <div className="mt-6 p-3 bg-white/5 rounded-lg">
-          <p className="text-white/40 text-xs">
-            💡 提示：可以使用 Ctrl、Shift、Alt、Cmd (macOS) 等修饰键组合。例如：
+        <div className="card-inset mt-4 p-3">
+          <p className="flex items-center gap-1.5 text-[11.5px] text-text-3">
+            <Icon name="information-circle" size={13} className="shrink-0 text-text-4" />
+            提示：可以使用 Ctrl、Shift、Alt、Cmd (macOS) 等修饰键组合。例如：
           </p>
-          <div className="mt-2 space-y-1">
-            <p className="text-white/30 text-xs font-mono">• Cmd+Shift+D (macOS)</p>
-            <p className="text-white/30 text-xs font-mono">• Ctrl+Shift+D (Windows/Linux)</p>
-            <p className="text-white/30 text-xs font-mono">• Alt+Space</p>
+          <div className="mt-2 flex flex-col items-start gap-1.5 pl-[19px]">
+            {[
+              ['Cmd', 'Shift', 'D'],
+              ['Ctrl', 'Shift', 'D'],
+              ['Alt', 'Space'],
+            ].map((keys, i) => (
+              <span key={i} className="flex items-center gap-1">
+                {keys.map((k, j) => (
+                  <span key={k} className="flex items-center gap-1">
+                    {j > 0 && <span className="text-[11px] text-text-4">+</span>}
+                    <KeyCap>{k}</KeyCap>
+                  </span>
+                ))}
+                {i === 0 && <span className="ml-1 text-[11px] text-text-4">(macOS)</span>}
+                {i === 1 && <span className="ml-1 text-[11px] text-text-4">(Windows/Linux)</span>}
+              </span>
+            ))}
           </div>
         </div>
       </div>

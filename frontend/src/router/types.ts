@@ -1,15 +1,8 @@
 /**
- * 图标名称类型
+ * 图标名称类型 — 以 components/Icon.tsx 的定义为准,避免两处脱节
  */
-export type IconName = 'home' | 'puzzle-piece' | 'clock' | 'cog' | 'key' | 'shield-check' | 'funnel' |
-  'check-circle' | 'x-circle' | 'exclamation-circle' | 'information-circle' |
-  'search' | 'chevron-down' | 'chevron-right' | 'external-link' | 'refresh' | 'plus' | 'minus' |
-  'clipboard' | 'document' | 'copy' | 'sparkles' | 'cube' | 'keyboard' | 'command' |
-  'calculator' | 'cpu' | 'memory' | 'disk' | 'network' | 'server' | 'chip' |
-  'code' | 'alert-circle' | 'check' | 'download' | 'upload' | 'process' | 'close' |
-  'trash' | 'x-mark' | 'camera' | 'qrcode' | 'folder' | 'folder-open' | 'wrench' |
-  'arrow-left' | 'arrow-right' | 'stop' | 'play' | 'pencil' | 'log' | 'terminal' |
-  'view-columns' | 'pin'
+import type { IconName } from '../components/Icon'
+export type { IconName }
 
 /**
  * 基础路由配置接口

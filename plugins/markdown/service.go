@@ -171,6 +171,7 @@ const htmlTemplate = `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; img-src https: http: data:; style-src 'unsafe-inline' https://cdn.jsdelivr.net; font-src https://cdn.jsdelivr.net">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{.Title}}</title>
     <style>
@@ -272,6 +273,8 @@ const htmlTemplate = `<!DOCTYPE html>
             margin: 2em 0;
         }
     </style>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.33/dist/katex.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.11.1/styles/github-dark.min.css">
 </head>
 <body>
 {{.Content}}
@@ -280,6 +283,7 @@ const htmlTemplate = `<!DOCTYPE html>
 
 // generateHTMLDocument 生成完整的 HTML 文档
 func generateHTMLDocument(title, content string) string {
+	content = exportHTMLPolicy.Sanitize(content)
 	tmpl, err := template.New("html").Parse(htmlTemplate)
 	if err != nil {
 		return fmt.Sprintf("<!DOCTYPE html><html><body>%s</body></html>", content)

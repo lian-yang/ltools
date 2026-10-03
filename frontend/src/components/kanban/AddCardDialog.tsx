@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Priority } from '../../../bindings/ltools/plugins/kanban/models';
+import { Button, Input, Modal } from '../ui';
 
 interface AddCardDialogProps {
   isOpen: boolean;
@@ -8,9 +9,9 @@ interface AddCardDialogProps {
 }
 
 const priorityOptions: { value: Priority; label: string; color: string }[] = [
-  { value: Priority.PriorityHigh, label: '高优先级', color: '#EF4444' },
-  { value: Priority.PriorityMedium, label: '中优先级', color: '#F59E0B' },
-  { value: Priority.PriorityLow, label: '低优先级', color: '#22C55E' },
+  { value: Priority.PriorityHigh, label: '高优先级', color: 'var(--color-error-text)' },
+  { value: Priority.PriorityMedium, label: '中优先级', color: 'var(--color-warning-text)' },
+  { value: Priority.PriorityLow, label: '低优先级', color: 'var(--color-success-text)' },
 ];
 
 export function AddCardDialog({
@@ -37,87 +38,62 @@ export function AddCardDialog({
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      onCancel();
-    }
-  };
-
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/50"
-        onClick={onCancel}
-      />
+    <Modal
+      open={isOpen}
+      onClose={onCancel}
+      title="添加卡片"
+      width={380}
+      footer={
+        <>
+          <Button variant="ghost" onClick={onCancel}>
+            取消
+          </Button>
+          <Button variant="primary" type="submit" form="kanban-add-card-form" disabled={!title.trim()}>
+            添加
+          </Button>
+        </>
+      }
+    >
+      <form id="kanban-add-card-form" onSubmit={handleSubmit} className="space-y-4">
+        {/* Title Input */}
+        <div>
+          <label className="field-label">卡片标题</label>
+          <Input
+            ref={inputRef}
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="请输入卡片标题"
+          />
+        </div>
 
-      {/* Dialog */}
-      <div className="relative glass-heavy rounded-xl p-6 w-96 max-w-[90vw]">
-        <h3 className="text-lg font-semibold text-white mb-4">添加卡片</h3>
-
-        <form onSubmit={handleSubmit}>
-          {/* Title Input */}
-          <div className="mb-4">
-            <label className="block text-sm text-white/60 mb-2">卡片标题</label>
-            <input
-              ref={inputRef}
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="请输入卡片标题"
-              className="w-full px-3 py-2 bg-white/10 border border-white/10 rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-[#7C3AED] transition-colors"
-            />
-          </div>
-
-          {/* Priority Selection */}
-          <div className="mb-6">
-            <label className="block text-sm text-white/60 mb-2">优先级</label>
-            <div className="flex gap-2">
-              {priorityOptions.map((option) => (
+        {/* Priority Selection */}
+        <div>
+          <label className="field-label">优先级</label>
+          <div className="flex gap-2">
+            {priorityOptions.map((option) => {
+              const active = priority === option.value;
+              return (
                 <button
                   key={option.value}
                   type="button"
                   onClick={() => setPriority(option.value)}
-                  className={`flex-1 px-3 py-2 rounded-lg border-2 transition-all ${
-                    priority === option.value
-                      ? 'border-current'
-                      : 'border-white/10 hover:border-white/20'
-                  }`}
+                  className="flex-1 rounded-[6px] border px-3 py-1.5 text-[12px] font-medium transition-colors duration-150"
                   style={{
-                    borderColor: priority === option.value ? option.color : undefined,
-                    backgroundColor: priority === option.value ? `${option.color}20` : 'transparent',
-                    color: priority === option.value ? option.color : 'rgba(255,255,255,0.6)',
+                    borderColor: active ? option.color : 'var(--color-hairline-strong)',
+                    backgroundColor: active ? 'rgba(255,255,255,0.04)' : 'transparent',
+                    color: active ? option.color : 'var(--color-text-3)',
                   }}
                 >
-                  <span className="text-sm font-medium">{option.label}</span>
+                  {option.label}
                 </button>
-              ))}
-            </div>
+              );
+            })}
           </div>
-
-          {/* Actions */}
-          <div className="flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={onCancel}
-              className="px-4 py-2 rounded-lg bg-white/10 text-white/60 hover:bg-white/20 hover:text-white transition-colors"
-            >
-              取消
-            </button>
-            <button
-              type="submit"
-              disabled={!title.trim()}
-              className="px-4 py-2 rounded-lg bg-[#7C3AED] text-white hover:bg-[#6D28D9] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              添加
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        </div>
+      </form>
+    </Modal>
   );
 }
 

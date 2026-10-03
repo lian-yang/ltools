@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import * as VaultService from '../../../bindings/ltools/plugins/vault/vaultservice';
 import { VaultEntry, CreateEntryRequest, UpdateEntryRequest } from '../../../bindings/ltools/plugins/vault/models';
 import { Icon } from '../Icon';
+import { Button, Field, Input, Textarea, Toggle, ProgressBar } from '../ui';
 
 interface EntryEditorProps {
   mode: 'create' | 'edit';
@@ -41,8 +42,8 @@ const EntryEditor: React.FC<EntryEditorProps> = ({
   };
 
   // 密码强度检查
-  const getPasswordStrength = (pwd: string): { level: number; color: string } => {
-    if (!pwd) return { level: 0, color: 'bg-gray-700' };
+  const getPasswordStrength = (pwd: string): { level: number; tone: 'accent' | 'error' | 'warning' | 'success' } => {
+    if (!pwd) return { level: 0, tone: 'accent' };
 
     let score = 0;
     if (pwd.length >= 8) score++;
@@ -51,10 +52,10 @@ const EntryEditor: React.FC<EntryEditorProps> = ({
     if (/\d/.test(pwd)) score++;
     if (/[^a-zA-Z0-9]/.test(pwd)) score++;
 
-    if (score <= 2) return { level: 1, color: 'bg-red-500' };
-    if (score <= 3) return { level: 2, color: 'bg-yellow-500' };
-    if (score <= 4) return { level: 3, color: 'bg-green-500' };
-    return { level: 4, color: 'bg-green-600' };
+    if (score <= 2) return { level: 1, tone: 'error' };
+    if (score <= 3) return { level: 2, tone: 'warning' };
+    if (score <= 4) return { level: 3, tone: 'success' };
+    return { level: 4, tone: 'success' };
   };
 
   const strength = getPasswordStrength(password);
@@ -114,209 +115,108 @@ const EntryEditor: React.FC<EntryEditorProps> = ({
 
   return (
     <div className="h-full overflow-auto p-6">
-      <div className="max-w-2xl mx-auto">
+      <div className="mx-auto max-w-[520px]">
         {/* 头部 */}
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-white">
+        <div className="mb-5 flex items-center justify-between">
+          <h2 className="text-[15px] font-semibold text-text-1">
             {mode === 'create' ? '新建密码条目' : '编辑密码条目'}
           </h2>
-          <button
-            onClick={onCancel}
-            className="p-2 rounded-lg hover:bg-white/10 transition-colors"
-          >
-            <Icon name="x" className="w-5 h-5 text-gray-400" />
+          <button onClick={onCancel} className="icon-btn" aria-label="关闭">
+            <Icon name="close" size={15} />
           </button>
         </div>
 
         {/* 表单 */}
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* 标题 */}
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              标题 <span className="text-red-400">*</span>
-            </label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg
-                       text-white placeholder-gray-400 focus:outline-none focus:border-primary"
-              placeholder="例如：GitHub 账号"
-            />
-          </div>
+        <form onSubmit={handleSubmit} className="card space-y-4 p-5">
+          <Field label={<>标题 <span style={{ color: 'var(--color-error-text)' }}>*</span></>}>
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="例如:GitHub 账号" />
+          </Field>
 
-          {/* 网站 */}
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              网站
-            </label>
-            <input
-              type="text"
-              value={website}
-              onChange={(e) => setWebsite(e.target.value)}
-              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg
-                       text-white placeholder-gray-400 focus:outline-none focus:border-primary"
-              placeholder="例如：github.com"
-            />
-          </div>
+          <Field label="网站">
+            <Input value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="例如:github.com" />
+          </Field>
 
-          {/* 用户名 */}
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              用户名 <span className="text-red-400">*</span>
-            </label>
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg
-                       text-white placeholder-gray-400 focus:outline-none focus:border-primary"
-              placeholder="输入用户名或邮箱"
-            />
-          </div>
+          <Field label={<>用户名 <span style={{ color: 'var(--color-error-text)' }}>*</span></>}>
+            <Input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="输入用户名或邮箱" />
+          </Field>
 
           {/* 密码 */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              密码 <span className="text-red-400">*</span>
+            <label className="field-label">
+              密码 <span style={{ color: 'var(--color-error-text)' }}>*</span>
             </label>
             <div className="flex gap-2">
               <div className="relative flex-1">
-                <input
+                <Input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg
-                           text-white placeholder-gray-400 focus:outline-none focus:border-primary
-                           pr-12 font-mono"
+                  className="pr-10 font-mono"
                   placeholder="输入密码"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+                  className="icon-btn icon-btn-sm absolute right-1 top-1"
+                  aria-label={showPassword ? '隐藏密码' : '显示密码'}
                 >
-                  <Icon name={showPassword ? 'eye-off' : 'eye'} className="w-5 h-5" />
+                  <Icon name={showPassword ? 'eye-off' : 'eye'} size={14} />
                 </button>
               </div>
-              <button
-                type="button"
-                onClick={generatePassword}
-                className="px-4 py-3 bg-white/10 hover:bg-white/20 rounded-lg transition-colors
-                         text-gray-300 hover:text-white flex items-center gap-2"
-                title="生成随机密码"
-              >
-                <Icon name="refresh-cw" className="w-4 h-4" />
-                <span>生成</span>
-              </button>
+              <Button type="button" variant="secondary" icon="refresh-cw" onClick={generatePassword} title="生成随机密码">
+                生成
+              </Button>
             </div>
 
             {/* 密码强度 */}
             {password && (
               <div className="mt-2">
-                <div className="flex gap-1 mb-1">
-                  {[1, 2, 3, 4].map((level) => (
-                    <div
-                      key={level}
-                      className={`h-1 flex-1 rounded-full transition-colors ${
-                        level <= strength.level ? strength.color : 'bg-gray-700'
-                      }`}
-                    />
-                  ))}
-                </div>
+                <ProgressBar value={(strength.level / 4) * 100} tone={strength.tone} />
               </div>
             )}
           </div>
 
           {/* 分类 */}
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              分类
-            </label>
+          <Field label="分类">
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg
-                       text-white focus:outline-none focus:border-primary appearance-none
-                       cursor-pointer"
+              className="input cursor-pointer appearance-none"
             >
-              <option value="" className="bg-gray-800">选择分类</option>
+              <option value="">选择分类</option>
               {categories.map((cat) => (
-                <option key={cat} value={cat} className="bg-gray-800">
+                <option key={cat} value={cat}>
                   {cat}
                 </option>
               ))}
             </select>
-          </div>
+          </Field>
 
           {/* 备注 */}
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              备注
-            </label>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              rows={3}
-              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg
-                       text-white placeholder-gray-400 focus:outline-none focus:border-primary
-                       resize-none"
-              placeholder="添加备注信息..."
-            />
-          </div>
+          <Field label="备注">
+            <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className="resize-none" placeholder="添加备注信息…" />
+          </Field>
 
           {/* 收藏 */}
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setFavorite(!favorite)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-                favorite
-                  ? 'bg-yellow-500/20 text-yellow-500'
-                  : 'bg-white/5 text-gray-400 hover:bg-white/10'
-              }`}
-            >
-              <Icon name="star" className={`w-4 h-4 ${favorite ? 'fill-current' : ''}`} />
-              <span>收藏</span>
-            </button>
-          </div>
+          <Field horizontal label="收藏" hint="收藏的条目会排在列表最前">
+            <Toggle checked={favorite} onChange={setFavorite} label="收藏" />
+          </Field>
 
           {/* 错误信息 */}
           {error && (
-            <div className="p-3 bg-red-500/20 border border-red-500/30 rounded-lg text-red-400 text-sm">
+            <div className="rounded-[6px] px-3 py-2 text-[12px]" style={{ background: 'rgba(255,69,58,0.12)', color: 'var(--color-error-text)' }}>
               {error}
             </div>
           )}
 
           {/* 按钮组 */}
-          <div className="flex items-center gap-3 pt-4">
-            <button
-              type="button"
-              onClick={onCancel}
-              className="flex-1 py-3 bg-white/10 hover:bg-white/20 rounded-lg
-                       text-gray-300 transition-colors"
-            >
+          <div className="flex items-center justify-end gap-2 border-t border-hairline pt-4">
+            <Button type="button" variant="ghost" onClick={onCancel}>
               取消
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex-1 py-3 bg-primary hover:bg-primary/80 disabled:bg-gray-600
-                       disabled:cursor-not-allowed rounded-lg text-white font-medium
-                       transition-colors flex items-center justify-center gap-2"
-            >
-              {loading ? (
-                <>
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                  <span>保存中...</span>
-                </>
-              ) : (
-                <>
-                  <Icon name="save" className="w-5 h-5" />
-                  <span>保存</span>
-                </>
-              )}
-            </button>
+            </Button>
+            <Button type="submit" variant="primary" loading={loading} icon="save">
+              {loading ? '保存中…' : '保存'}
+            </Button>
           </div>
         </form>
       </div>

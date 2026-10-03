@@ -8,6 +8,7 @@ import EntryEditor from './EntryEditor';
 import CategorySidebar from './CategorySidebar';
 import ChangePasswordDialog from './ChangePasswordDialog';
 import { Icon } from '../Icon';
+import { Button, Input } from '../ui';
 
 type ViewMode = 'setup' | 'unlock' | 'list' | 'edit';
 
@@ -155,8 +156,8 @@ const VaultWidget: React.FC = () => {
   // 加载中状态
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <div className="flex h-full items-center justify-center">
+        <span className="spinner" />
       </div>
     );
   }
@@ -216,54 +217,40 @@ const VaultWidget: React.FC = () => {
       )}
 
       {/* 主内容区 */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         {/* 顶部工具栏 */}
-        <div className="flex items-center justify-between p-4 border-b border-white/10">
-          <div className="flex items-center gap-3">
+        <div className="flex items-center justify-between gap-3 border-b border-hairline px-4 py-2.5">
+          <div className="flex min-w-0 items-center gap-2">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+              className="icon-btn shrink-0"
               title={sidebarOpen ? '隐藏侧边栏' : '显示侧边栏'}
             >
-              <Icon name="sidebar" className="w-5 h-5" />
+              <Icon name="sidebar" size={15} />
             </button>
 
             {/* 搜索框 */}
-            <div className="relative">
-              <Icon name="search" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
+            <div className="relative w-56 min-w-0">
+              <Icon name="search" size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-text-4" />
+              <Input
                 type="text"
-                placeholder="搜索密码..."
+                placeholder="搜索密码…"
                 value={searchQuery}
                 onChange={(e) => handleSearch(e.target.value)}
-                className="pl-10 pr-4 py-2 w-64 bg-white/5 border border-white/10 rounded-lg
-                         text-white placeholder-gray-400 focus:outline-none focus:border-primary"
+                className="pl-8"
               />
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleCreateEntry}
-              className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/80
-                       rounded-lg transition-colors text-white"
-            >
-              <Icon name="plus" className="w-4 h-4" />
-              <span>新建</span>
+          <div className="flex shrink-0 items-center gap-1.5">
+            <Button variant="primary" size="sm" icon="plus" onClick={handleCreateEntry}>
+              新建
+            </Button>
+            <button onClick={() => setShowChangePassword(true)} className="icon-btn" title="修改主密码">
+              <Icon name="key" size={15} />
             </button>
-            <button
-              onClick={() => setShowChangePassword(true)}
-              className="p-2 rounded-lg hover:bg-white/10 transition-colors"
-              title="修改主密码"
-            >
-              <Icon name="key" className="w-5 h-5" />
-            </button>
-            <button
-              onClick={handleLock}
-              className="p-2 rounded-lg hover:bg-white/10 transition-colors"
-              title="锁定保险库"
-            >
-              <Icon name="lock" className="w-5 h-5" />
+            <button onClick={handleLock} className="icon-btn" title="锁定保险库">
+              <Icon name="lock" size={15} />
             </button>
           </div>
         </div>

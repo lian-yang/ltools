@@ -1,8 +1,10 @@
 import { useParams, useNavigate } from 'react-router-dom'
-import { useMemo } from 'react'
-import { Icon } from '../components/Icon'
+import { useMemo, useState, type ReactNode } from 'react'
+import { Icon, type IconName } from '../components/Icon'
 import { usePlugins } from '../plugins/usePlugins'
-import { getPluginIcon } from '../utils/pluginHelpers'
+import { getPluginIconName } from '../utils/pluginHelpers'
+import { PluginMetadata, PluginType } from '../../bindings/ltools/internal/plugins'
+import { Badge, Button, Card, EmptyState, IconButton, Skeleton } from '../components/ui'
 
 // 导入所有插件组件
 import { DateTimeWidget, TimestampConverter } from '../components/DateTimeWidget'
@@ -26,6 +28,183 @@ import { ImageBedWidget } from '../components/ImageBedWidget'
 import { ImageProcessorWidget } from '../components/ImageProcessorWidget'
 import { LocalTranslateWidget } from '../components/LocalTranslateWidget'
 
+// ==================== 通用子组件 ====================
+
+const PLUGIN_TYPE_LABELS: Record<PluginType, string> = {
+  [PluginType.$zero]: '未知',
+  [PluginType.PluginTypeBuiltIn]: '内置',
+  [PluginType.PluginTypeWeb]: 'Web',
+  [PluginType.PluginTypeNative]: '原生',
+}
+
+/**
+ * 插件页头：返回操作 + 图标 + 标题（19px）+ 描述 + 次级元信息（12px）
+ */
+function PluginHeader({
+  icon,
+  title,
+  description,
+  meta,
+  onBack,
+}: {
+  icon: IconName
+  title: string
+  description?: string
+  meta?: string
+  onBack?: () => void
+}) {
+  return (
+    <div className="mb-5">
+      {onBack && (
+        <div className="mb-3">
+          <IconButton name="arrow-left" label="返回" onClick={onBack} />
+        </div>
+      )}
+      <div className="flex items-center gap-3">
+        <div className="card-inset flex h-10 w-10 shrink-0 items-center justify-center">
+          <Icon name={icon} size={20} className="text-text-2" />
+        </div>
+        <div className="min-w-0">
+          <h1 className="page-title truncate">{title}</h1>
+          {description && (
+            <p className="mt-0.5 line-clamp-2 text-[12.5px] text-text-2">{description}</p>
+          )}
+        </div>
+      </div>
+      {meta && <p className="tnum mt-2 text-[12px] text-text-3">{meta}</p>}
+    </div>
+  )
+}
+
+/**
+ * 标准插件布局：页容器 + 插件页头 + 内容
+ */
+function StandardPluginLayout({
+  plugin,
+  onBack,
+  width = 'max-w-4xl',
+  children,
+}: {
+  plugin: PluginMetadata
+  onBack: () => void
+  width?: string
+  children: ReactNode
+}) {
+  return (
+    <div className="page-wide animate-fade-in">
+      <div className={`mx-auto min-w-0 ${width}`}>
+        <PluginHeader
+          icon={getPluginIconName(plugin)}
+          title={plugin.name}
+          description={plugin.description}
+          meta={`v${plugin.version} · by ${plugin.author}`}
+          onBack={onBack}
+        />
+        {children}
+      </div>
+    </div>
+  )
+}
+
+/**
+ * 元信息行：label 左对齐灰，值右对齐
+ */
+function MetaRow({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="hairline-b flex items-center justify-between gap-6 px-4 py-2.5 [&:last-child]:border-b-0">
+      <span className="shrink-0 text-[12px] text-text-3">{label}</span>
+      <div className="flex min-w-0 flex-wrap items-center justify-end gap-1.5 text-[12.5px] text-text-2">
+        {children}
+      </div>
+    </div>
+  )
+}
+
+/**
+ * 插件元信息卡：版本 / 作者 / 类型 / 许可 / 主页 / 权限 / 关键词
+ */
+function PluginMetaCard({ plugin }: { plugin: PluginMetadata }) {
+  const permissions = plugin.permissions ?? []
+  const keywords = plugin.keywords ?? []
+
+  return (
+    <Card>
+      <MetaRow label="版本">
+        <span className="tnum">v{plugin.version}</span>
+      </MetaRow>
+      <MetaRow label="作者">{plugin.author}</MetaRow>
+      <MetaRow label="类型">{PLUGIN_TYPE_LABELS[plugin.type] ?? '未知'}</MetaRow>
+      {plugin.license && <MetaRow label="许可证">{plugin.license}</MetaRow>}
+      {plugin.homepage && (
+        <MetaRow label="主页">
+          <a
+            href={plugin.homepage}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex min-w-0 items-center gap-1"
+          >
+            <span className="truncate">{plugin.homepage}</span>
+            <Icon name="external-link" size={12} className="shrink-0" />
+          </a>
+        </MetaRow>
+      )}
+      {permissions.length > 0 && (
+        <MetaRow label="所需权限">
+          {permissions.map((permission, i) => (
+            <Badge key={`${permission}-${i}`} tone="neutral">
+              {permission}
+            </Badge>
+          ))}
+        </MetaRow>
+      )}
+      {keywords.length > 0 && (
+        <MetaRow label="关键词">
+          {keywords.map((keyword, i) => (
+            <Badge key={`${keyword}-${i}`} tone="neutral">
+              {keyword}
+            </Badge>
+          ))}
+        </MetaRow>
+      )}
+    </Card>
+  )
+}
+
+/**
+ * 音乐播放器启动器 — 打开独立播放器窗口
+ */
+function MusicPlayerLauncher() {
+  const [opening, setOpening] = useState(false)
+  const [failed, setFailed] = useState(false)
+
+  const openPlayer = async () => {
+    if (opening) return
+    setOpening(true)
+    setFailed(false)
+    try {
+      // 使用 LX Music 服务（新版本）
+      const MusicPlayerService = await import('../../bindings/ltools/plugins/musicplayer/servicelx')
+      await MusicPlayerService.ShowWindow()
+    } catch (error) {
+      console.error('Failed to open music player:', error)
+      setFailed(true)
+    } finally {
+      setOpening(false)
+    }
+  }
+
+  return (
+    <div className="flex flex-col items-center py-2 text-center">
+      <Button variant="primary" size="lg" icon="play" loading={opening} onClick={openPlayer}>
+        打开播放器
+      </Button>
+      <p className="mt-2 text-[12px] text-text-3">
+        {failed ? '打开播放器失败，请重试' : '点击打开独立的音乐播放器窗口'}
+      </p>
+    </div>
+  )
+}
+
 /**
  * 插件页面组件
  * 支持状态缓存（KeepAlive）
@@ -46,31 +225,33 @@ function PluginPage() {
   // 加载中显示骨架屏
   if (loading) {
     return (
-      <div className="p-8">
-        <div className="max-w-4xl mx-auto">
-          <div className="animate-pulse">
-            <div className="text-center mb-8">
-              <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-white/10 mb-6" />
-              <div className="h-8 bg-white/10 rounded w-48 mx-auto mb-2" />
-              <div className="h-4 bg-white/10 rounded w-64 mx-auto" />
-            </div>
-            <div className="glass-light rounded-xl p-8">
-              <div className="h-32 bg-white/10 rounded" />
-            </div>
+      <div className="page" aria-busy="true">
+        <div className="mb-6 flex items-center gap-3">
+          <Skeleton className="h-10 w-10 rounded-[9px]" />
+          <div className="min-w-0 flex-1">
+            <Skeleton className="h-5 w-40" />
+            <Skeleton className="mt-1.5 h-3 w-64" />
           </div>
         </div>
+        <Skeleton className="h-72 rounded-[9px]" />
       </div>
     )
   }
 
   if (!plugin) {
     return (
-      <div className="p-8 text-center">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[#EF4444]/10 mb-4">
-          <Icon name="exclamation-circle" size={32} color="#EF4444" />
-        </div>
-        <h2 className="text-xl font-semibold text-white mb-2">插件未找到</h2>
-        <p className="text-white/60">插件 "{pluginId}" 不存在或未启用</p>
+      <div className="page">
+        <EmptyState
+          icon="exclamation-circle"
+          title="插件未找到"
+          description={`插件 "${pluginId}" 不存在或未启用`}
+          className="min-h-[calc(100vh-200px)]"
+          action={
+            <Button icon="arrow-left" onClick={handleBack}>
+              返回首页
+            </Button>
+          }
+        />
       </div>
     )
   }
@@ -78,43 +259,40 @@ function PluginPage() {
   // 处理 hasPage: false 的插件
   if (plugin.hasPage === false) {
     return (
-      <div className="p-8">
-        <div className="max-w-2xl mx-auto text-center">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-[#7C3AED] to-[#A78BFA] mb-6">
-            <Icon name="cube" size={36} color="white" />
-          </div>
-          <h1 className="text-3xl font-bold mb-2">{plugin.name}</h1>
-          <p className="text-white/50 mb-4">{plugin.description}</p>
-          <div className="glass-light rounded-xl p-6">
-            <p className="text-white/60">
-              此插件通过快捷键或其他方式调用，无需独立页面。
-            </p>
-            {plugin.keywords && plugin.keywords.length > 0 && (
-              <div className="mt-4">
-                <p className="text-sm text-white/40 mb-2">关键词：</p>
-                <div className="flex flex-wrap justify-center gap-2">
-                  {plugin.keywords.map((kw: string, i: number) => (
-                    <span key={i} className="px-2 py-1 rounded bg-[#7C3AED]/10 text-[#A78BFA] text-xs border border-[#7C3AED]/20">
-                      {kw}
-                    </span>
-                  ))}
-                </div>
+      <div className="page animate-fade-in">
+        <PluginHeader
+          icon={getPluginIconName(plugin)}
+          title={plugin.name}
+          description={plugin.description}
+          meta={`v${plugin.version} · by ${plugin.author}`}
+          onBack={handleBack}
+        />
+        <Card inset className="p-5">
+          <p className="text-[12.5px] text-text-2">
+            此插件通过快捷键或其他方式调用，无需独立页面。
+          </p>
+          {plugin.keywords && plugin.keywords.length > 0 && (
+            <div className="mt-4">
+              <p className="mb-2 text-[12px] text-text-3">关键词</p>
+              <div className="flex flex-wrap gap-1.5">
+                {plugin.keywords.map((kw: string, i: number) => (
+                  <Badge key={`${kw}-${i}`} tone="neutral">
+                    {kw}
+                  </Badge>
+                ))}
               </div>
-            )}
-          </div>
-        </div>
+            </div>
+          )}
+        </Card>
       </div>
     )
   }
-
-  const pluginIcon = getPluginIcon(plugin)
 
   // 渲染插件内容
   return (
     <PluginContent
       pluginId={pluginId!}
       plugin={plugin}
-      pluginIcon={pluginIcon}
       onBack={handleBack}
       isActive={true}
     />
@@ -127,13 +305,12 @@ function PluginPage() {
  */
 interface PluginContentProps {
   pluginId: string
-  plugin: any
-  pluginIcon: string
+  plugin: PluginMetadata
   onBack: () => void
   isActive: boolean
 }
 
-function PluginContent({ pluginId, plugin, pluginIcon, onBack, isActive }: PluginContentProps) {
+function PluginContent({ pluginId, plugin, onBack, isActive }: PluginContentProps) {
   // 使用 CSS hidden 保持组件状态（KeepAlive）
   const visibilityClass = isActive ? '' : 'hidden'
 
@@ -142,181 +319,75 @@ function PluginContent({ pluginId, plugin, pluginIcon, onBack, isActive }: Plugi
     switch (pluginId) {
       case 'clipboard.builtin':
         return (
-          <div className="p-6">
-            <div className="max-w-4xl mx-auto">
-              <div className="mb-6">
-                <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#7C3AED] to-[#A78BFA] flex items-center justify-center">
-                    <Icon name="clipboard" size={28} color="white" />
-                  </div>
-                  <div>
-                    <h1 className="text-3xl font-bold mb-1">剪贴板管理器</h1>
-                    <p className="text-white/50">管理系统剪贴板历史记录</p>
-                    <p className="text-sm text-white/30 mt-1">v1.0.0 · by LTools</p>
-                  </div>
-                </div>
-              </div>
-              <ClipboardWidget />
-            </div>
-          </div>
+          <StandardPluginLayout plugin={plugin} onBack={onBack}>
+            <ClipboardWidget />
+          </StandardPluginLayout>
         )
 
       case 'sysinfo.builtin':
         return (
-          <div className="p-6">
-            <div className="max-w-4xl mx-auto">
-              <div className="text-center mb-8">
-                <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-[#7C3AED] to-[#A78BFA] mb-6">
-                  <Icon name="information-circle" size={36} color="white" />
-                </div>
-                <h1 className="text-3xl font-bold mb-2">系统信息</h1>
-                <p className="text-white/50">查看系统硬件和运行信息</p>
-                <p className="text-sm text-white/30 mt-2">v1.0.0 · by LTools</p>
-              </div>
-              <SystemInfoWidget />
-            </div>
-          </div>
+          <StandardPluginLayout plugin={plugin} onBack={onBack}>
+            <SystemInfoWidget />
+          </StandardPluginLayout>
         )
 
       case 'calculator.builtin':
         return (
-          <div className="p-6">
-            <div className="max-w-6xl mx-auto">
-              <div className="text-center mb-8">
-                <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-[#7C3AED] to-[#A78BFA] mb-6">
-                  <Icon name="calculator" size={36} color="white" />
-                </div>
-                <h1 className="text-3xl font-bold mb-2">计算器</h1>
-                <p className="text-white/50">支持基本运算和科学计算</p>
-                <p className="text-sm text-white/30 mt-2">v1.0.0 · by LTools</p>
-              </div>
-              <CalculatorWidget />
-            </div>
-          </div>
+          <StandardPluginLayout plugin={plugin} onBack={onBack} width="max-w-6xl">
+            <CalculatorWidget />
+          </StandardPluginLayout>
         )
 
       case 'jsoneditor.builtin':
         return (
-          <div className="p-6">
-            <div className="max-w-6xl mx-auto">
-              <div className="text-center mb-8">
-                <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-[#7C3AED] to-[#A78BFA] mb-6">
-                  <Icon name="code" size={36} color="white" />
-                </div>
-                <h1 className="text-3xl font-bold mb-2">JSON 编辑器</h1>
-                <p className="text-white/50">格式化、验证和编辑 JSON 数据</p>
-                <p className="text-sm text-white/30 mt-2">v1.0.0 · by LTools</p>
-              </div>
-              <JSONEditorWidget />
-            </div>
-          </div>
+          <StandardPluginLayout plugin={plugin} onBack={onBack} width="max-w-6xl">
+            <JSONEditorWidget />
+          </StandardPluginLayout>
         )
 
       case 'processmanager.builtin':
         return (
-          <div className="p-6">
-            <div className="max-w-6xl mx-auto">
-              <div className="text-center mb-8">
-                <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-[#7C3AED] to-[#A78BFA] mb-6">
-                  <Icon name="process" size={36} color="white" />
-                </div>
-                <h1 className="text-3xl font-bold mb-2">进程管理器</h1>
-                <p className="text-white/50">查看和管理系统运行中的进程</p>
-                <p className="text-sm text-white/30 mt-2">v1.0.0 · by LTools</p>
-              </div>
-              <ProcessManagerWidget />
-            </div>
-          </div>
+          <StandardPluginLayout plugin={plugin} onBack={onBack} width="max-w-6xl">
+            <ProcessManagerWidget />
+          </StandardPluginLayout>
         )
 
       case 'qrcode.builtin':
         return (
-          <div className="p-6">
-            <div className="max-w-4xl mx-auto">
-              <div className="text-center mb-8">
-                <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-[#7C3AED] to-[#A78BFA] mb-6">
-                  <Icon name="qrcode" size={36} color="white" />
-                </div>
-                <h1 className="text-3xl font-bold mb-2">二维码生成器</h1>
-                <p className="text-white/50">快速生成二维码，支持一键复制到剪贴板</p>
-                <p className="text-sm text-white/30 mt-2">v1.0.0 · by LTools</p>
-              </div>
-              <QrcodeWidget />
-            </div>
-          </div>
+          <StandardPluginLayout plugin={plugin} onBack={onBack}>
+            <QrcodeWidget />
+          </StandardPluginLayout>
         )
 
       case 'hosts.builtin':
         return (
-          <div className="p-6">
-            <div className="max-w-6xl mx-auto">
-              <div className="text-center mb-8">
-                <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-[#7C3AED] to-[#A78BFA] mb-6">
-                  <Icon name="server" size={36} color="white" />
-                </div>
-                <h1 className="text-3xl font-bold mb-2">Hosts 管理器</h1>
-                <p className="text-white/50">场景化 hosts 文件切换工具</p>
-                <p className="text-sm text-white/30 mt-2">v1.0.0 · by LTools</p>
-              </div>
-              <HostsWidget />
-            </div>
-          </div>
+          <StandardPluginLayout plugin={plugin} onBack={onBack} width="max-w-6xl">
+            <HostsWidget />
+          </StandardPluginLayout>
         )
 
       case 'datetime.builtin':
         return (
-          <div className="p-8">
-            <div className="max-w-2xl mx-auto">
-              <div className="text-center mb-8">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-xl bg-gradient-to-br from-[#7C3AED] to-[#A78BFA] mb-4">
-                  <Icon name="clock" size={28} color="white" />
-                </div>
-                <h1 className="text-3xl font-bold mb-2">日期时间插件</h1>
-                <p className="text-white/50">实时显示当前时间和日期</p>
-                <p className="text-sm text-white/30 mt-2">v1.0.0 · by LTools</p>
-              </div>
-              <div className="space-y-8">
-                <DateTimeWidget />
-                <TimestampConverter />
-              </div>
+          <StandardPluginLayout plugin={plugin} onBack={onBack} width="max-w-2xl">
+            <div className="space-y-8">
+              <DateTimeWidget />
+              <TimestampConverter />
             </div>
-          </div>
+          </StandardPluginLayout>
         )
 
       case 'screenshot2.builtin':
         return (
-          <div className="p-8">
-            <div className="max-w-2xl mx-auto">
-              <div className="text-center mb-8">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-xl bg-gradient-to-br from-[#7C3AED] to-[#A78BFA] mb-4">
-                  <Icon name="camera" size={28} color="white" />
-                </div>
-                <h1 className="text-3xl font-bold mb-2">截图工具</h1>
-                <p className="text-white/50">微信风格的屏幕截图和标注工具</p>
-                <p className="text-sm text-white/30 mt-2">v1.0.0 · by LTools</p>
-              </div>
-              <div className="space-y-8">
-                <Screenshot2Widget />
-              </div>
-            </div>
-          </div>
+          <StandardPluginLayout plugin={plugin} onBack={onBack} width="max-w-2xl">
+            <Screenshot2Widget />
+          </StandardPluginLayout>
         )
 
       case 'password.builtin':
         return (
-          <div className="p-8">
-            <div className="max-w-6xl mx-auto">
-              <div className="text-center mb-8">
-                <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-[#7C3AED] to-[#A78BFA] mb-6">
-                  <Icon name="key" size={36} color="white" />
-                </div>
-                <h1 className="text-3xl font-bold mb-2">随机密码生成器</h1>
-                <p className="text-white/50">生成安全的随机密码，支持自定义选项</p>
-                <p className="text-sm text-white/30 mt-2">v1.0.0 · by LTools</p>
-              </div>
-              <PasswordGeneratorWidget />
-            </div>
-          </div>
+          <StandardPluginLayout plugin={plugin} onBack={onBack} width="max-w-6xl">
+            <PasswordGeneratorWidget />
+          </StandardPluginLayout>
         )
 
       case 'tunnel.builtin':
@@ -363,36 +434,16 @@ function PluginContent({ pluginId, plugin, pluginIcon, onBack, isActive }: Plugi
 
       case 'sticky.builtin':
         return (
-          <div className="p-6">
-            <div className="max-w-6xl mx-auto">
-              <div className="text-center mb-8">
-                <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-[#7C3AED] to-[#A78BFA] mb-6">
-                  <Icon name="document" size={36} color="white" />
-                </div>
-                <h1 className="text-3xl font-bold mb-2">便利贴</h1>
-                <p className="text-white/50">创建和管理多个便利贴窗口</p>
-                <p className="text-sm text-white/30 mt-2">v1.0.0 · by LTools</p>
-              </div>
-              <StickyWidget />
-            </div>
-          </div>
+          <StandardPluginLayout plugin={plugin} onBack={onBack} width="max-w-6xl">
+            <StickyWidget />
+          </StandardPluginLayout>
         )
 
       case 'imagebed.builtin':
         return (
-          <div className="p-6">
-            <div className="max-w-6xl mx-auto">
-              <div className="text-center mb-8">
-                <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-[#7C3AED] to-[#A78BFA] mb-6">
-                  <Icon name="photo" size={36} color="white" />
-                </div>
-                <h1 className="text-3xl font-bold mb-2">图床</h1>
-                <p className="text-white/50">使用 GitHub + jsDelivr 搭建个人图床</p>
-                <p className="text-sm text-white/30 mt-2">v1.0.0 · by LTools</p>
-              </div>
-              <ImageBedWidget />
-            </div>
-          </div>
+          <StandardPluginLayout plugin={plugin} onBack={onBack} width="max-w-6xl">
+            <ImageBedWidget />
+          </StandardPluginLayout>
         )
 
       case 'imageprocessor.builtin':
@@ -404,140 +455,57 @@ function PluginContent({ pluginId, plugin, pluginIcon, onBack, isActive }: Plugi
 
       case 'localtranslate.builtin':
         return (
-          <div className="p-6">
-            <div className="max-w-4xl mx-auto">
-              <div className="text-center mb-8">
-                <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-[#7C3AED] to-[#A78BFA] mb-6">
-                  <Icon name="language" size={36} color="white" />
-                </div>
-                <h1 className="text-3xl font-bold mb-2">AI翻译</h1>
-                <p className="text-white/50">支持 Ollama、OpenAI、Anthropic、DeepSeek 等，提供本地和云端翻译服务</p>
-                <p className="text-sm text-white/30 mt-2">v1.0.0 · by LTools Team</p>
-              </div>
-              <LocalTranslateWidget />
-            </div>
-          </div>
+          <StandardPluginLayout plugin={plugin} onBack={onBack}>
+            <LocalTranslateWidget />
+          </StandardPluginLayout>
         )
 
       case 'musicplayer.builtin':
         return (
-          <div className="p-8">
-            <div className="max-w-2xl mx-auto text-center">
-              <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-[#7C3AED] to-[#A78BFA] mb-6">
-                <Icon name="play" size={36} color="white" />
-              </div>
-              <h1 className="text-3xl font-bold mb-2">随机音乐播放器</h1>
-              <p className="text-white/50 mb-8">基于 Meting API 的随机音乐播放器，支持网易云、腾讯、酷狗等多个平台</p>
-
-              <div className="glass-light rounded-xl p-8 mb-6">
-                <button
-                  onClick={async () => {
-                    try {
-                      // 使用 LX Music 服务（新版本）
-                      const MusicPlayerService = await import('../../bindings/ltools/plugins/musicplayer/servicelx')
-                      await MusicPlayerService.ShowWindow()
-                    } catch (error) {
-                      console.error('Failed to open music player:', error)
-                    }
-                  }}
-                  className="px-8 py-4 rounded-xl bg-gradient-to-r from-[#7C3AED] to-[#A78BFA] text-white font-semibold text-lg hover:opacity-90 transition-opacity"
-                >
-                  <div className="flex items-center gap-3">
-                    <Icon name="play" size={24} color="white" />
-                    <span>打开播放器</span>
-                  </div>
-                </button>
-                <p className="text-white/40 text-sm mt-4">
-                  点击打开独立的音乐播放器窗口
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="glass-light rounded-xl p-4 text-left">
-                  <h3 className="text-sm font-medium text-white/60 mb-2">功能特性</h3>
-                  <ul className="text-sm text-white/40 space-y-1">
-                    <li>• 多平台音乐源支持</li>
-                    <li>• 随机播放模式</li>
-                    <li>• 自动播放下一曲</li>
-                    <li>• 预加载队列优化</li>
-                  </ul>
+          <StandardPluginLayout plugin={plugin} onBack={onBack} width="max-w-2xl">
+            <Card className="p-6">
+              <MusicPlayerLauncher />
+            </Card>
+            <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+              <Card className="p-4">
+                <h3 className="mb-2 text-[12px] font-semibold text-text-3">功能特性</h3>
+                <ul className="list-disc space-y-1 pl-4 text-[12px] text-text-2">
+                  <li>多平台音乐源支持</li>
+                  <li>随机播放模式</li>
+                  <li>自动播放下一曲</li>
+                  <li>预加载队列优化</li>
+                </ul>
+              </Card>
+              <Card className="p-4">
+                <h3 className="mb-2 text-[12px] font-semibold text-text-3">支持平台</h3>
+                <div className="flex flex-wrap gap-1.5">
+                  <Badge tone="neutral">网易云音乐</Badge>
+                  <Badge tone="neutral">腾讯音乐</Badge>
+                  <Badge tone="neutral">酷狗音乐</Badge>
                 </div>
-                <div className="glass-light rounded-xl p-4 text-left">
-                  <h3 className="text-sm font-medium text-white/60 mb-2">支持平台</h3>
-                  <div className="flex flex-wrap gap-2">
-                    <span className="px-2 py-1 rounded bg-[#7C3AED]/10 text-[#A78BFA] text-xs border border-[#7C3AED]/20">
-                      网易云音乐
-                    </span>
-                    <span className="px-2 py-1 rounded bg-[#7C3AED]/10 text-[#A78BFA] text-xs border border-[#7C3AED]/20">
-                      腾讯音乐
-                    </span>
-                    <span className="px-2 py-1 rounded bg-[#7C3AED]/10 text-[#A78BFA] text-xs border border-[#7C3AED]/20">
-                      酷狗音乐
-                    </span>
-                  </div>
-                </div>
-              </div>
+              </Card>
             </div>
-          </div>
+          </StandardPluginLayout>
         )
 
       default:
         // 默认插件界面
         return (
-          <div className="p-8">
-            <div className="max-w-4xl mx-auto">
-              {/* 插件页头 */}
-              <div className="text-center mb-8">
-                <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-[#7C3AED] to-[#A78BFA] mb-6">
-                  <span className="text-4xl">{pluginIcon}</span>
-                </div>
-                <h1 className="text-3xl font-bold mb-2">{plugin.name}</h1>
-                <p className="text-white/50">{plugin.description}</p>
-                <p className="text-sm text-white/30 mt-2">
-                  v{plugin.version} · by {plugin.author}
-                </p>
-              </div>
+          <StandardPluginLayout plugin={plugin} onBack={onBack}>
+            {/* 插件内容区域 */}
+            <Card className="p-6">
+              <EmptyState
+                icon="cube"
+                title="插件功能正在开发中"
+                description={`此插件 (${plugin.id}) 已成功启用，但尚未实现用户界面。`}
+              />
+            </Card>
 
-              {/* 插件内容区域 */}
-              <div className="glass-light rounded-xl p-8">
-                <div className="text-center py-12">
-                  <Icon name="cube" size={48} color="rgba(167, 139, 250, 0.3)" />
-                  <p className="text-white/40 mt-4">插件功能正在开发中...</p>
-                  <p className="text-white/30 text-sm mt-2">
-                    此插件 ({plugin.id}) 已成功启用，但尚未实现用户界面。
-                  </p>
-                </div>
-              </div>
-
-              {/* 插件信息 */}
-              <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                {plugin.permissions && plugin.permissions.length > 0 && (
-                  <div className="glass-light rounded-xl p-4">
-                    <h3 className="text-sm font-medium text-white/60 mb-2">所需权限</h3>
-                    <div className="flex flex-wrap gap-2">
-                      {plugin.permissions.map((perm: string, i: number) => (
-                        <span key={i} className="px-2 py-1 rounded bg-[#F59E0B]/10 text-[#F59E0B] text-xs border border-[#F59E0B]/20">
-                          {perm}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {plugin.keywords && plugin.keywords.length > 0 && (
-                  <div className="glass-light rounded-xl p-4">
-                    <h3 className="text-sm font-medium text-white/60 mb-2">关键词</h3>
-                    <div className="flex flex-wrap gap-2">
-                      {plugin.keywords.map((kw: string, i: number) => (
-                        <span key={i} className="px-2 py-1 rounded bg-[#7C3AED]/10 text-[#A78BFA] text-xs border border-[#7C3AED]/20">
-                          {kw}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
+            {/* 插件信息 */}
+            <div className="mt-3">
+              <PluginMetaCard plugin={plugin} />
             </div>
-          </div>
+          </StandardPluginLayout>
         )
     }
   }

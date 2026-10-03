@@ -143,67 +143,60 @@ export function UpdateNotification() {
   }
 
   return (
-    <div className="fixed bottom-4 right-4 max-w-md bg-gradient-to-r from-purple-500/90 to-pink-500/90 backdrop-blur-lg rounded-xl shadow-2xl text-white p-4 animate-slide-up">
+    <div
+      className="animate-slide-up fixed right-4 bottom-4 z-[950] w-[340px] rounded-[10px] p-4"
+      style={{
+        background: 'var(--color-surface-3)',
+        border: '1px solid var(--color-hairline-strong)',
+        boxShadow: 'var(--shadow-pop)',
+      }}
+    >
       <div className="flex items-start gap-3">
-        <div className="flex-shrink-0">
-          <Icon name="download" className="w-6 h-6 mt-1" />
+        <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] bg-accent-subtle">
+          <Icon name="download" size={15} color="var(--color-accent-text)" />
         </div>
 
-        <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-lg mb-1">
+        <div className="min-w-0 flex-1">
+          <h3 className="text-[13.5px] font-semibold text-text-1">
             发现新版本 {updateInfo.version}
           </h3>
 
-          <div className="text-sm text-white/80 mb-2">
-            大小: {updateInfo.hasPatch
-              ? `${(updateInfo.patchSize / 1024).toFixed(0)} KB (补丁)`
+          <div className="mt-0.5 text-[11.5px] text-text-3 tnum">
+            大小:{updateInfo.hasPatch
+              ? `${(updateInfo.patchSize / 1024).toFixed(0)} KB(补丁)`
               : `${(updateInfo.size / 1024 / 1024).toFixed(1)} MB`
             }
           </div>
 
           {updateInfo.releaseNotes && (
-            <div className="text-sm text-white/70 mb-3 max-h-32 overflow-y-auto">
-              <pre className="whitespace-pre-wrap font-sans">
-                {updateInfo.releaseNotes}
-              </pre>
+            <div className="mt-2 max-h-28 overflow-y-auto text-[11.5px] leading-relaxed text-text-2">
+              <pre className="whitespace-pre-wrap font-sans">{updateInfo.releaseNotes}</pre>
             </div>
           )}
 
           {error && (
-            <div className="bg-red-500/50 text-white px-3 py-2 rounded mb-3 text-sm">
+            <div className="mt-2 rounded-[6px] px-2.5 py-1.5 text-[11.5px]" style={{ background: 'rgba(255,69,58,0.12)', color: 'var(--color-error-text)' }}>
               {error}
             </div>
           )}
 
           {downloading && (
-            <div className="mb-3">
-              <div className="bg-white/20 rounded-full h-2 mb-1">
-                <div
-                  className="bg-white h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${downloadProgress}%` }}
-                />
+            <div className="mt-3">
+              <div className="progress">
+                <div className="progress-bar" style={{ width: `${downloadProgress}%` }} />
               </div>
-              <div className="text-sm text-white/80">
-                下载中... {downloadProgress}%
-              </div>
+              <div className="mt-1.5 text-[11px] text-text-3 tnum">下载中… {downloadProgress}%</div>
             </div>
           )}
 
-          <div className="flex gap-2">
+          <div className="mt-3 flex gap-2">
             {!downloading && !downloaded && !installing && (
               <>
-                <button
-                  onClick={handleDownload}
-                  className="flex-1 bg-white text-purple-600 font-medium px-4 py-2 rounded-lg hover:bg-white/90 transition-colors"
-                >
+                <button onClick={handleDownload} className="btn btn-primary flex-1">
                   立即下载
                 </button>
-
                 {!updateInfo.mandatory && (
-                  <button
-                    onClick={handleDismiss}
-                    className="px-4 py-2 rounded-lg hover:bg-white/20 transition-colors"
-                  >
+                  <button onClick={handleDismiss} className="btn btn-ghost">
                     稍后提醒
                   </button>
                 )}
@@ -212,18 +205,11 @@ export function UpdateNotification() {
 
             {downloaded && !installing && (
               <>
-                <button
-                  onClick={handleInstall}
-                  className="flex-1 bg-white text-purple-600 font-medium px-4 py-2 rounded-lg hover:bg-white/90 transition-colors"
-                >
+                <button onClick={handleInstall} className="btn btn-primary flex-1">
                   安装更新
                 </button>
-
                 {!updateInfo.mandatory && (
-                  <button
-                    onClick={handleDismiss}
-                    className="px-4 py-2 rounded-lg hover:bg-white/20 transition-colors"
-                  >
+                  <button onClick={handleDismiss} className="btn btn-ghost">
                     稍后安装
                   </button>
                 )}
@@ -233,11 +219,8 @@ export function UpdateNotification() {
         </div>
 
         {!updateInfo.mandatory && !downloading && (
-          <button
-            onClick={handleDismiss}
-            className="flex-shrink-0 text-white/60 hover:text-white transition-colors"
-          >
-            <Icon name="x" className="w-5 h-5" />
+          <button onClick={handleDismiss} className="icon-btn icon-btn-sm shrink-0" aria-label="关闭">
+            <Icon name="close" size={13} />
           </button>
         )}
       </div>

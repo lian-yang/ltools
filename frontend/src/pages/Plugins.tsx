@@ -5,7 +5,7 @@ import { PluginMarket } from '../components/PluginMarket'
  */
 function Plugins() {
   return (
-    <div className="p-6">
+    <div className="page-wide animate-fade-in">
       <PluginMarket />
     </div>
   )

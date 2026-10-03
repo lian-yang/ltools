@@ -1,11 +1,19 @@
 import React, { useState } from 'react';
 import * as VaultService from '../../../bindings/ltools/plugins/vault/vaultservice';
 import { Icon } from '../Icon';
+import { Button, Input, Modal, ProgressBar } from '../ui';
 
 interface ChangePasswordDialogProps {
   isOpen: boolean;
   onClose: () => void;
 }
+
+const strengthLevels = [
+  { max: 2, text: '弱', tone: 'error' as const },
+  { max: 3, text: '中等', tone: 'warning' as const },
+  { max: 4, text: '强', tone: 'success' as const },
+  { max: 5, text: '非常强', tone: 'success' as const },
+];
 
 const ChangePasswordDialog: React.FC<ChangePasswordDialogProps> = ({ isOpen, onClose }) => {
   const [currentPassword, setCurrentPassword] = useState('');
@@ -18,8 +26,8 @@ const ChangePasswordDialog: React.FC<ChangePasswordDialogProps> = ({ isOpen, onC
   const [success, setSuccess] = useState(false);
 
   // 密码强度检查
-  const getPasswordStrength = (password: string): { level: number; text: string; color: string } => {
-    if (!password) return { level: 0, text: '', color: '' };
+  const getPasswordStrength = (password: string): { level: number; text: string; tone: 'error' | 'warning' | 'success' } => {
+    if (!password) return { level: 0, text: '', tone: 'error' };
 
     let score = 0;
     if (password.length >= 8) score++;
@@ -28,10 +36,8 @@ const ChangePasswordDialog: React.FC<ChangePasswordDialogProps> = ({ isOpen, onC
     if (/\d/.test(password)) score++;
     if (/[^a-zA-Z0-9]/.test(password)) score++;
 
-    if (score <= 2) return { level: 1, text: '弱', color: 'bg-red-500' };
-    if (score <= 3) return { level: 2, text: '中等', color: 'bg-yellow-500' };
-    if (score <= 4) return { level: 3, text: '强', color: 'bg-green-500' };
-    return { level: 4, text: '非常强', color: 'bg-green-600' };
+    const found = strengthLevels.find((s) => score <= s.max) ?? strengthLevels[strengthLevels.length - 1];
+    return { level: score, text: found.text, tone: found.tone };
   };
 
   const strength = getPasswordStrength(newPassword);
@@ -90,163 +96,114 @@ const ChangePasswordDialog: React.FC<ChangePasswordDialogProps> = ({ isOpen, onC
     onClose();
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="w-full max-w-md p-6 glass rounded-2xl mx-4">
-        {/* 头部 */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
-              <Icon name="key" className="w-5 h-5 text-primary" />
-            </div>
-            <h2 className="text-lg font-bold text-white">修改主密码</h2>
+    <Modal
+      open={isOpen}
+      onClose={handleClose}
+      title="修改主密码"
+      width={400}
+      footer={
+        success ? undefined : (
+          <>
+            <Button variant="ghost" onClick={handleClose}>
+              取消
+            </Button>
+            <Button
+              variant="primary"
+              type="submit"
+              form="change-password-form"
+              loading={loading}
+              disabled={!currentPassword || !newPassword || !confirmPassword}
+            >
+              确认修改
+            </Button>
+          </>
+        )
+      }
+    >
+      {success ? (
+        <div className="py-4 text-center">
+          <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-full" style={{ background: 'rgba(48,209,88,0.14)' }}>
+            <Icon name="check-circle" size={22} color="var(--color-success-text)" />
           </div>
-          <button
-            onClick={handleClose}
-            className="p-2 rounded-lg hover:bg-white/10 transition-colors"
-          >
-            <Icon name="x" className="w-5 h-5 text-gray-400" />
-          </button>
+          <h3 className="text-[14px] font-medium text-text-1">修改成功</h3>
+          <p className="mt-1 text-[12px] text-text-3">主密码已成功更新</p>
         </div>
-
-        {success ? (
-          <div className="text-center py-6">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-500/20 mb-4">
-              <Icon name="check-circle" className="w-8 h-8 text-green-500" />
-            </div>
-            <h3 className="text-lg font-medium text-white mb-2">修改成功</h3>
-            <p className="text-sm text-gray-400">主密码已成功更新</p>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {/* 当前密码 */}
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                当前主密码
-              </label>
-              <div className="relative">
-                <input
-                  type={showCurrentPassword ? 'text' : 'password'}
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg
-                           text-white placeholder-gray-400 focus:outline-none focus:border-primary
-                           pr-12"
-                  placeholder="输入当前主密码"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
-                >
-                  <Icon name={showCurrentPassword ? 'eye-off' : 'eye'} className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-
-            {/* 新密码 */}
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                新主密码
-              </label>
-              <div className="relative">
-                <input
-                  type={showNewPassword ? 'text' : 'password'}
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg
-                           text-white placeholder-gray-400 focus:outline-none focus:border-primary
-                           pr-12"
-                  placeholder="输入新主密码"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowNewPassword(!showNewPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
-                >
-                  <Icon name={showNewPassword ? 'eye-off' : 'eye'} className="w-5 h-5" />
-                </button>
-              </div>
-
-              {/* 密码强度 */}
-              {newPassword && (
-                <div className="mt-2">
-                  <div className="flex gap-1 mb-1">
-                    {[1, 2, 3, 4].map((level) => (
-                      <div
-                        key={level}
-                        className={`h-1 flex-1 rounded-full transition-colors ${
-                          level <= strength.level ? strength.color : 'bg-gray-700'
-                        }`}
-                      />
-                    ))}
-                  </div>
-                  <p className="text-xs text-gray-400">
-                    密码强度: <span className="text-white">{strength.text}</span>
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* 确认新密码 */}
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                确认新密码
-              </label>
-              <input
-                type={showNewPassword ? 'text' : 'password'}
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg
-                         text-white placeholder-gray-400 focus:outline-none focus:border-primary"
-                placeholder="再次输入新主密码"
+      ) : (
+        <form id="change-password-form" onSubmit={handleSubmit} className="space-y-4">
+          {/* 当前密码 */}
+          <div>
+            <label className="field-label">当前主密码</label>
+            <div className="relative">
+              <Input
+                type={showCurrentPassword ? 'text' : 'password'}
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                placeholder="输入当前主密码"
               />
-            </div>
-
-            {/* 错误信息 */}
-            {error && (
-              <div className="p-3 bg-red-500/20 border border-red-500/30 rounded-lg text-red-400 text-sm flex items-center gap-2">
-                <Icon name="x-circle" className="w-5 h-5 flex-shrink-0" />
-                <span>{error}</span>
-              </div>
-            )}
-
-            {/* 按钮组 */}
-            <div className="flex items-center gap-3 pt-2">
               <button
                 type="button"
-                onClick={handleClose}
-                className="flex-1 py-3 bg-white/10 hover:bg-white/20 rounded-lg
-                         text-gray-300 transition-colors"
+                onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                className="icon-btn icon-btn-sm absolute right-1 top-1"
+                aria-label={showCurrentPassword ? '隐藏密码' : '显示密码'}
               >
-                取消
-              </button>
-              <button
-                type="submit"
-                disabled={loading || !currentPassword || !newPassword || !confirmPassword}
-                className="flex-1 py-3 bg-primary hover:bg-primary/80 disabled:bg-gray-600
-                         disabled:cursor-not-allowed rounded-lg text-white font-medium
-                         transition-colors flex items-center justify-center gap-2"
-              >
-                {loading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                    <span>修改中...</span>
-                  </>
-                ) : (
-                  <>
-                    <Icon name="key" className="w-5 h-5" />
-                    <span>确认修改</span>
-                  </>
-                )}
+                <Icon name={showCurrentPassword ? 'eye-off' : 'eye'} size={14} />
               </button>
             </div>
-          </form>
-        )}
-      </div>
-    </div>
+          </div>
+
+          {/* 新密码 */}
+          <div>
+            <label className="field-label">新主密码</label>
+            <div className="relative">
+              <Input
+                type={showNewPassword ? 'text' : 'password'}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="输入新主密码"
+              />
+              <button
+                type="button"
+                onClick={() => setShowNewPassword(!showNewPassword)}
+                className="icon-btn icon-btn-sm absolute right-1 top-1"
+                aria-label={showNewPassword ? '隐藏密码' : '显示密码'}
+              >
+                <Icon name={showNewPassword ? 'eye-off' : 'eye'} size={14} />
+              </button>
+            </div>
+
+            {/* 密码强度 */}
+            {newPassword && (
+              <div className="mt-2">
+                <ProgressBar value={(strength.level / 5) * 100} tone={strength.tone} />
+                <p className="mt-1 text-[11px] text-text-3">
+                  密码强度:<span className="text-text-1">{strength.text}</span>
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* 确认新密码 */}
+          <div>
+            <label className="field-label">确认新密码</label>
+            <Input
+              type={showNewPassword ? 'text' : 'password'}
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="再次输入新主密码"
+            />
+          </div>
+
+          {/* 错误信息 */}
+          {error && (
+            <div className="flex items-center gap-2 rounded-[6px] px-3 py-2 text-[12px]" style={{ background: 'rgba(255,69,58,0.12)', color: 'var(--color-error-text)' }}>
+              <Icon name="x-circle" size={14} className="shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
+        </form>
+      )}
+    </Modal>
   );
 };
 

@@ -1,7 +1,31 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, type ReactNode } from 'react';
 import { Events } from '@wailsio/runtime';
 import { ProcessManagerService, ProcessInfo, ProcessListOptions } from '../../bindings/ltools/plugins/processmanager';
 import { Icon } from './Icon';
+import { Button, EmptyState, IconButton, Input, Modal, ProgressBar, Skeleton, Toggle } from './ui';
+
+/**
+ * 进程管理器 — 等宽数据行 + 可排序表头 + 二次确认
+ */
+
+type ProgressTone = 'accent' | 'warning' | 'error';
+
+/** 按阈值映射进度条色调 */
+function toneFor(v: number, errorAt: number, warningAt: number): ProgressTone {
+  if (v > errorAt) return 'error';
+  if (v > warningAt) return 'warning';
+  return 'accent';
+}
+
+const TONE_TEXT: Record<ProgressTone, string> = {
+  accent: 'text-text-1',
+  warning: 'text-warning-text',
+  error: 'text-error-text',
+};
+
+/** 行网格:PID / 名称 / CPU / 内存 / 状态 / 线程 / 操作 */
+const ROW_GRID =
+  'grid grid-cols-[60px_minmax(0,1fr)_92px_104px_48px_44px_92px] items-center gap-x-3';
 
 /**
  * 格式化字节大小
@@ -31,136 +55,138 @@ function formatRelativeTime(timestamp: number): string {
 }
 
 /**
- * 进程状态标签组件
+ * 进程状态标签
  */
-interface ProcessStatusProps {
-  status: string;
+const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
+  'R': { label: '运行', className: 'text-success-text' },
+  'S': { label: '睡眠', className: 'text-text-2' },
+  'D': { label: '等待', className: 'text-error-text' },
+  'Z': { label: '僵尸', className: 'text-text-3' },
+  'T': { label: '停止', className: 'text-warning-text' },
+  'W': { label: '等待', className: 'text-text-2' },
+};
+
+function ProcessStatus({ status }: { status: string }): JSX.Element {
+  const config = STATUS_CONFIG[status] ?? { label: status || '未知', className: 'text-text-2' };
+  return <span className={`text-[12px] font-medium ${config.className}`}>{config.label}</span>;
 }
 
-function ProcessStatus({ status }: ProcessStatusProps): JSX.Element {
-  const statusConfig: Record<string, { color: string; label: string }> = {
-    'R': { color: 'text-[#22C55E]', label: '运行' },
-    'S': { color: 'text-[#F59E0B]', label: '睡眠' },
-    'D': { color: 'text-[#EF4444]', label: '等待' },
-    'Z': { color: 'text-[#6B7280]', label: '僵尸' },
-    'T': { color: 'text-[#7C3AED]', label: '停止' },
-    'W': { color: 'text-[#3B82F6]', label: '等待' },
-  };
-
-  const config = statusConfig[status] || { color: 'text-white/60', label: status };
-
+/**
+ * 可排序表头(克制样式:仅激活列显示箭头)
+ */
+function SortHeader({
+  label,
+  column,
+  sortBy,
+  sortDesc,
+  onSort,
+  alignRight,
+}: {
+  label: string;
+  column: 'pid' | 'name' | 'cpu' | 'memory';
+  sortBy: string;
+  sortDesc: boolean;
+  onSort: (column: 'pid' | 'name' | 'cpu' | 'memory') => void;
+  alignRight?: boolean;
+}): JSX.Element {
+  const active = sortBy === column;
   return (
-    <span className={`text-xs font-medium ${config.color}`}>
-      {config.label}
-    </span>
+    <button
+      type="button"
+      onClick={() => onSort(column)}
+      className={`flex select-none items-center gap-1 text-[11px] font-medium transition-colors duration-150 hover:text-text-1 ${
+        active ? 'text-text-2' : 'text-text-3'
+      } ${alignRight ? 'justify-end' : ''}`}
+    >
+      {label}
+      {active && (
+        <Icon name={sortDesc ? 'chevron-down' : 'chevron-up'} size={11} className="text-text-3" />
+      )}
+    </button>
   );
 }
 
 /**
  * 进程行组件
  */
-interface ProcessRowProps {
+function ProcessRow({
+  process,
+  onKill,
+  onViewDetails,
+}: {
   process: ProcessInfo;
   onKill: (force?: boolean) => void;
   onViewDetails: () => void;
-}
-
-function ProcessRow({ process, onKill, onViewDetails }: ProcessRowProps): JSX.Element {
-  const getCpuColor = (usage: number) => {
-    if (usage > 50) return 'text-[#EF4444]';
-    if (usage > 20) return 'text-[#F59E0B]';
-    return 'text-[#22C55E]';
-  };
-
-  const getMemoryColor = (percent: number) => {
-    if (percent > 50) return 'bg-[#EF4444]';
-    if (percent > 20) return 'bg-[#F59E0B]';
-    return 'bg-[#22C55E]';
-  };
+}): JSX.Element {
+  const cpuTone = toneFor(process.cpuPercent, 50, 20);
+  const memTone = toneFor(process.memoryPercent, 50, 20);
 
   return (
-    <tr
-      className="border-b border-white/5 hover:bg-white/5 transition-colors cursor-pointer"
-      onClick={onViewDetails}
-    >
-      <td className="px-3 py-2 text-xs text-white/60 tabular-nums">{process.pid}</td>
-      <td className="px-3 py-2">
-        <div className="flex flex-col">
-          <span className="text-sm font-medium text-white truncate max-w-[200px]" title={process.name}>
-            {process.name}
-          </span>
-          {process.isSystem && (
-            <span className="text-xs text-white/30">系统进程</span>
-          )}
-        </div>
-      </td>
-      <td className="px-3 py-2">
-        <div className="flex items-center gap-2">
-          <span className={`text-sm font-semibold tabular-nums ${getCpuColor(process.cpuPercent)}`}>
-            {process.cpuPercent.toFixed(1)}%
-          </span>
-          <div className="w-12 h-1 bg-white/5 rounded-full overflow-hidden">
-            <div
-              className="h-full rounded-full bg-[#7C3AED]"
-              style={{ width: `${Math.min(process.cpuPercent, 100)}%` }}
-            />
-          </div>
-        </div>
-      </td>
-      <td className="px-3 py-2">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-white/60 tabular-nums">
-            {formatBytes(process.memoryBytes)}
-          </span>
-          <div className="w-12 h-1 bg-white/5 rounded-full overflow-hidden">
-            <div
-              className={`h-full rounded-full ${getMemoryColor(process.memoryPercent)}`}
-              style={{ width: `${Math.min(process.memoryPercent, 100)}%` }}
-            />
-          </div>
-        </div>
-      </td>
-      <td className="px-3 py-2">
-        <ProcessStatus status={process.status} />
-      </td>
-      <td className="px-3 py-2 text-xs text-white/40 tabular-nums">
-        {process.numThreads > 0 && `${process.numThreads} 线程`}
-      </td>
-      <td className="px-3 py-2">
-        <div className="flex items-center gap-1">
-          <button
-            className="p-1.5 rounded hover:bg-white/10 text-white/40 hover:text-white transition-colors"
-            onClick={(e) => {
-              e.stopPropagation();
-              onViewDetails();
-            }}
-            title="查看详情"
-          >
-            <Icon name="document" size={14} />
-          </button>
-          <button
-            className="p-1.5 rounded hover:bg-[#F59E0B]/20 text-white/40 hover:text-[#F59E0B] transition-colors"
-            onClick={(e) => {
-              e.stopPropagation();
-              onKill(false);
-            }}
-            title="正常终止进程"
-          >
-            <Icon name="close" size={14} />
-          </button>
-          <button
-            className="p-1.5 rounded hover:bg-[#EF4444]/20 text-white/40 hover:text-[#EF4444] transition-colors"
-            onClick={(e) => {
-              e.stopPropagation();
-              onKill(true);
-            }}
-            title="强制终止进程"
-          >
-            <Icon name="alert-circle" size={14} />
-          </button>
-        </div>
-      </td>
-    </tr>
+    <div className={`row row-clickable ${ROW_GRID} px-3 py-1.5`} onClick={onViewDetails}>
+      <span className="tnum font-mono text-[12px] text-text-3">{process.pid}</span>
+      <div className="min-w-0">
+        <span className="block truncate text-[12.5px] font-medium text-text-1" title={process.name}>
+          {process.name}
+        </span>
+        {process.isSystem && <span className="block text-[10.5px] leading-tight text-text-4">系统进程</span>}
+      </div>
+      <div className="flex items-center justify-end gap-2">
+        <ProgressBar value={Math.min(process.cpuPercent, 100)} tone={cpuTone} className="w-12" />
+        <span className={`tnum w-11 shrink-0 text-right font-mono text-[12px] ${TONE_TEXT[cpuTone]}`}>
+          {process.cpuPercent.toFixed(1)}%
+        </span>
+      </div>
+      <div className="flex items-center justify-end gap-2">
+        <ProgressBar value={Math.min(process.memoryPercent, 100)} tone={memTone} className="w-12" />
+        <span
+          className="tnum w-[62px] shrink-0 text-right font-mono text-[12px] text-text-2"
+          title={`内存占用 ${process.memoryPercent.toFixed(1)}%`}
+        >
+          {formatBytes(process.memoryBytes)}
+        </span>
+      </div>
+      <ProcessStatus status={process.status} />
+      <span className="tnum text-right font-mono text-[12px] text-text-3" title="线程数">
+        {process.numThreads > 0 ? process.numThreads : '—'}
+      </span>
+      <div className="flex items-center justify-end gap-0.5" onClick={(e) => e.stopPropagation()}>
+        <IconButton name="document" label="查看详情" size="sm" onClick={onViewDetails} />
+        <IconButton name="close" label="正常终止进程" size="sm" onClick={() => onKill(false)} />
+        <IconButton name="alert-circle" label="强制终止进程" size="sm" tone="danger" onClick={() => onKill(true)} />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * 信息块(详情对话框内)
+ */
+function InfoBlock({
+  label,
+  value,
+  mono,
+  small,
+  danger,
+}: {
+  label: string;
+  value: ReactNode;
+  mono?: boolean;
+  small?: boolean;
+  danger?: boolean;
+}): JSX.Element {
+  return (
+    <div className="card-inset min-w-0 px-3.5 py-2.5">
+      <p className="text-[11px] text-text-4">{label}</p>
+      <div
+        className={`mt-0.5 break-all font-medium text-text-1 ${
+          mono ? 'tnum font-mono' : ''
+        } ${small ? 'text-[11.5px] font-normal text-text-2' : 'text-[12.5px]'} ${
+          danger ? 'text-error-text' : ''
+        }`}
+      >
+        {value}
+      </div>
+    </div>
   );
 }
 
@@ -186,48 +212,33 @@ function ConfirmDialog({
   onConfirm,
   onCancel,
 }: ConfirmDialogProps): JSX.Element {
-  const typeStyles = {
-    warning: {
-      confirmBtn: 'bg-[#F59E0B] hover:bg-[#D97706]',
-      icon: 'alert-circle',
-      iconColor: '#F59E0B',
-    },
-    danger: {
-      confirmBtn: 'bg-[#EF4444] hover:bg-[#DC2626]',
-      icon: 'alert-circle',
-      iconColor: '#EF4444',
-    },
-  };
-
-  const styles = typeStyles[type];
-
+  const danger = type === 'danger';
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onCancel}>
-      <div
-        className="glass-light rounded-2xl p-6 max-w-md w-full"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center gap-3 mb-4">
-          <Icon name={styles.icon as any} size={24} color={styles.iconColor} />
-          <h3 className="text-lg font-bold text-white">{title}</h3>
-        </div>
-        <p className="text-white/80 mb-6 whitespace-pre-line">{message}</p>
-        <div className="flex gap-3">
-          <button
-            className={`flex-1 px-4 py-2.5 rounded-lg text-white transition-all duration-200 text-sm font-medium clickable ${styles.confirmBtn}`}
-            onClick={onConfirm}
-          >
-            {confirmText}
-          </button>
-          <button
-            className="px-4 py-2.5 rounded-lg bg-white/10 text-white hover:bg-white/20 transition-all duration-200 text-sm font-medium clickable"
-            onClick={onCancel}
-          >
+    <Modal
+      open
+      onClose={onCancel}
+      title={title}
+      width={400}
+      footer={
+        <>
+          <Button variant="secondary" onClick={onCancel}>
             {cancelText}
-          </button>
-        </div>
+          </Button>
+          <Button variant={danger ? 'danger-solid' : 'danger'} onClick={onConfirm}>
+            {confirmText}
+          </Button>
+        </>
+      }
+    >
+      <div className="flex gap-3">
+        <Icon
+          name="alert-circle"
+          size={18}
+          className={`shrink-0 ${danger ? 'text-error-text' : 'text-warning-text'}`}
+        />
+        <p className="whitespace-pre-line text-[12.5px] leading-relaxed text-text-2">{message}</p>
       </div>
-    </div>
+    </Modal>
   );
 }
 
@@ -244,112 +255,50 @@ function ProcessDetailDialog({ process, onClose, onKill }: ProcessDetailDialogPr
   if (!process) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div
-        className="glass-light rounded-2xl p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            <Icon name="process" size={20} color="#A78BFA" />
-            进程详情
-          </h2>
-          <button
-            className="p-2 rounded-lg hover:bg-white/10 text-white/40 hover:text-white transition-colors"
-            onClick={onClose}
-          >
-            <Icon name="close" size={18} />
-          </button>
+    <Modal
+      open
+      onClose={onClose}
+      title="进程详情"
+      width={680}
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose}>
+            关闭
+          </Button>
+          <Button variant="danger" icon="close" onClick={() => onKill()}>
+            正常终止
+          </Button>
+          <Button variant="danger-solid" icon="alert-circle" onClick={() => onKill(true)}>
+            强制终止
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-2.5">
+        <div className="grid grid-cols-2 gap-2.5">
+          <InfoBlock label="进程名称" value={process.name} />
+          <InfoBlock label="进程 ID" value={process.pid} mono />
+          <InfoBlock
+            label="CPU 使用率"
+            value={`${process.cpuPercent.toFixed(2)}%`}
+            mono
+            danger={process.cpuPercent > 50}
+          />
+          <InfoBlock
+            label="内存使用"
+            value={`${formatBytes(process.memoryBytes)} (${process.memoryPercent.toFixed(1)}%)`}
+            mono
+          />
+          <InfoBlock label="状态" value={<ProcessStatus status={process.status} />} />
+          <InfoBlock label="线程数" value={process.numThreads} mono />
         </div>
-
-        <div className="space-y-4">
-          {/* 基本信息 */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="p-3 rounded-lg bg-white/5">
-              <p className="text-xs text-white/40 mb-1">进程名称</p>
-              <p className="text-sm font-medium text-white">{process.name}</p>
-            </div>
-            <div className="p-3 rounded-lg bg-white/5">
-              <p className="text-xs text-white/40 mb-1">进程 ID</p>
-              <p className="text-sm font-medium text-white tabular-nums">{process.pid}</p>
-            </div>
-          </div>
-
-          {/* 资源使用 */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="p-3 rounded-lg bg-white/5">
-              <p className="text-xs text-white/40 mb-1">CPU 使用率</p>
-              <p className={`text-lg font-bold ${process.cpuPercent > 50 ? 'text-[#EF4444]' : 'text-white'}`}>
-                {process.cpuPercent.toFixed(2)}%
-              </p>
-            </div>
-            <div className="p-3 rounded-lg bg-white/5">
-              <p className="text-xs text-white/40 mb-1">内存使用</p>
-              <p className="text-lg font-bold text-white">
-                {formatBytes(process.memoryBytes)}
-                <span className="text-sm text-white/60 ml-2">({process.memoryPercent.toFixed(1)}%)</span>
-              </p>
-            </div>
-          </div>
-
-          {/* 状态和线程 */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="p-3 rounded-lg bg-white/5">
-              <p className="text-xs text-white/40 mb-1">状态</p>
-              <ProcessStatus status={process.status} />
-            </div>
-            <div className="p-3 rounded-lg bg-white/5">
-              <p className="text-xs text-white/40 mb-1">线程数</p>
-              <p className="text-sm font-medium text-white tabular-nums">{process.numThreads}</p>
-            </div>
-          </div>
-
-          {/* 用户和路径 */}
-          <div className="space-y-3">
-            <div className="p-3 rounded-lg bg-white/5">
-              <p className="text-xs text-white/40 mb-1">运行用户</p>
-              <p className="text-sm font-medium text-white">{process.username}</p>
-            </div>
-            {process.executablePath && (
-              <div className="p-3 rounded-lg bg-white/5">
-                <p className="text-xs text-white/40 mb-1">可执行文件路径</p>
-                <p className="text-xs text-white/60 break-all">{process.executablePath}</p>
-              </div>
-            )}
-            {process.cmdLine && (
-              <div className="p-3 rounded-lg bg-white/5">
-                <p className="text-xs text-white/40 mb-1">命令行</p>
-                <p className="text-xs text-white/60 break-all font-mono">{process.cmdLine}</p>
-              </div>
-            )}
-          </div>
-
-          {/* 操作按钮 */}
-          <div className="flex gap-3 pt-4 border-t border-white/10">
-            <button
-              className="flex-1 px-4 py-2.5 rounded-lg bg-[#F59E0B] text-white hover:bg-[#D97706] transition-all duration-200 text-sm font-medium clickable flex items-center justify-center gap-2"
-              onClick={() => onKill()}
-            >
-              <Icon name="close" size={16} />
-              正常终止
-            </button>
-            <button
-              className="flex-1 px-4 py-2.5 rounded-lg bg-[#EF4444] text-white hover:bg-[#DC2626] transition-all duration-200 text-sm font-medium clickable flex items-center justify-center gap-2"
-              onClick={() => onKill(true)}
-            >
-              <Icon name="alert-circle" size={16} />
-              强制终止
-            </button>
-            <button
-              className="px-4 py-2.5 rounded-lg bg-white/10 text-white hover:bg-white/20 transition-all duration-200 text-sm font-medium clickable"
-              onClick={onClose}
-            >
-              关闭
-            </button>
-          </div>
-        </div>
+        <InfoBlock label="运行用户" value={process.username} />
+        {process.executablePath && (
+          <InfoBlock label="可执行文件路径" value={process.executablePath} mono small />
+        )}
+        {process.cmdLine && <InfoBlock label="命令行" value={process.cmdLine} mono small />}
       </div>
-    </div>
+    </Modal>
   );
 }
 
@@ -360,6 +309,7 @@ export function ProcessManagerWidget(): JSX.Element {
   const [processes, setProcesses] = useState<ProcessInfo[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [detailProcess, setDetailProcess] = useState<ProcessInfo | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState<'pid' | 'name' | 'cpu' | 'memory'>('memory');
@@ -395,6 +345,9 @@ export function ProcessManagerWidget(): JSX.Element {
     pageSize
   });
 
+  // 搜索防抖计时器(卸载时清理)
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // 加载进程列表 - 移除依赖避免无限循环
   const loadProcesses = useCallback(async () => {
     try {
@@ -412,8 +365,10 @@ export function ProcessManagerWidget(): JSX.Element {
       setProcesses(procs.filter((p): p is ProcessInfo => p !== null));
       setTotalCount(total);
       setLastUpdate(new Date());
+      setLoadError(null);
     } catch (err) {
       console.error('Failed to load processes:', err);
+      setLoadError(err instanceof Error ? err.message : '加载进程列表失败');
     } finally {
       setLoading(false);
     }
@@ -421,18 +376,18 @@ export function ProcessManagerWidget(): JSX.Element {
 
   // 初始化加载
   useEffect(() => {
-    console.log('[ProcessManager] Component mounted, loading initial data...');
     loadProcesses();
-  }, []); // 只在挂载时执行一次
+    // 卸载时清理搜索防抖计时器
+    return () => {
+      if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    };
+  }, [loadProcesses]); // 只在挂载时执行一次
 
   // 监听更新事件 - 移除 loadProcesses 依赖避免重新注册
   useEffect(() => {
-    console.log('[ProcessManager] Setting up event listeners...');
-
     let updateTimer: ReturnType<typeof setTimeout> | null = null;
 
-    const unsubUpdated = Events.On('processmanager:updated', (data) => {
-      console.log('[ProcessManager] Received update event:', data);
+    const unsubUpdated = Events.On('processmanager:updated', () => {
       // 节流：避免频繁刷新
       if (updateTimer) clearTimeout(updateTimer);
       updateTimer = setTimeout(() => {
@@ -440,8 +395,7 @@ export function ProcessManagerWidget(): JSX.Element {
       }, 1000); // 延迟1秒执行，合并多次更新
     });
 
-    const unsubKilled = Events.On('processmanager:killed', (data) => {
-      console.log('[ProcessManager] Process killed:', data);
+    const unsubKilled = Events.On('processmanager:killed', () => {
       // 立即刷新，不延迟
       if (updateTimer) clearTimeout(updateTimer);
       updateTimer = null;
@@ -449,12 +403,11 @@ export function ProcessManagerWidget(): JSX.Element {
     });
 
     return () => {
-      console.log('[ProcessManager] Cleaning up event listeners...');
       if (updateTimer) clearTimeout(updateTimer);
       unsubUpdated?.();
       unsubKilled?.();
     };
-  }, []); // 空依赖数组，只在挂载时注册一次
+  }, [loadProcesses]); // 空依赖数组，只在挂载时注册一次
 
   // 处理搜索输入 - 使用防抖
   const handleSearchChange = (value: string) => {
@@ -463,7 +416,8 @@ export function ProcessManagerWidget(): JSX.Element {
     optionsRef.current.searchTerm = value;
     optionsRef.current.currentPage = 0;
     // 防抖：延迟执行搜索
-    setTimeout(() => loadProcesses(), 300);
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => loadProcesses(), 300);
   };
 
   // 处理排序
@@ -509,10 +463,8 @@ export function ProcessManagerWidget(): JSX.Element {
         try {
           if (force) {
             await ProcessManagerService.ForceKillProcess(pid);
-            console.log('[ProcessManager] Process force killed:', pid);
           } else {
             await ProcessManagerService.KillProcess(pid);
-            console.log('[ProcessManager] Process killed:', pid);
           }
           setConfirmDialog({ ...confirmDialog, show: false });
           setDetailProcess(null);
@@ -541,160 +493,139 @@ export function ProcessManagerWidget(): JSX.Element {
 
   if (loading) {
     return (
-      <div className="glass-light rounded-xl p-8 text-center">
-        <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-white/5 animate-pulse">
-          <Icon name="refresh" size={20} color="rgba(255,255,255,0.3)" />
+      <div className="space-y-3" aria-busy="true">
+        <div className="flex items-center gap-2.5">
+          <Skeleton className="h-8 min-w-0 flex-1 rounded-[6px]" />
+          <Skeleton className="h-8 w-28 shrink-0 rounded-[6px]" />
+          <Skeleton className="h-8 w-16 shrink-0 rounded-[6px]" />
         </div>
-        <p className="text-white/40 mt-4">加载进程列表中...</p>
+        <div className="card p-2">
+          {Array.from({ length: 12 }).map((_, i) => (
+            <Skeleton key={i} className="my-1.5 h-6 rounded-[5px]" />
+          ))}
+        </div>
       </div>
     );
   }
 
-  return (
-    <div className="space-y-4">
-      {/* 标题和控制栏 */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-          <Icon name="process" size={18} color="#A78BFA" />
-          进程管理器
-          <span className="text-sm text-white/40 font-normal">
-            ({totalCount} 个进程)
-          </span>
-        </h2>
-        <button
-          className="px-3 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20 transition-all duration-200 text-sm font-medium clickable flex items-center gap-2"
-          onClick={handleRefresh}
-        >
-          <Icon name="refresh" size={14} />
-          刷新
-        </button>
-      </div>
+  const totalPages = Math.ceil(totalCount / pageSize);
 
+  return (
+    <div className="space-y-3">
       {/* 搜索和过滤器 */}
-      <div className="flex items-center gap-3">
-        <div className="flex-1 relative">
+      <div className="flex flex-wrap items-center gap-2.5">
+        <div className="relative min-w-0 flex-1">
           <Icon
             name="search"
-            size={16}
-            color="rgba(255,255,255,0.3)"
-            className="absolute left-3 top-1/2 -translate-y-1/2"
+            size={15}
+            className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-text-4"
           />
-          <input
+          <Input
             type="text"
+            className="pl-8"
             placeholder="搜索进程名称、PID 或命令行..."
-            className="w-full pl-10 pr-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-white/20 text-sm"
             value={searchTerm}
             onChange={(e) => handleSearchChange(e.target.value)}
           />
         </div>
-        <label className="flex items-center gap-2 px-3 py-2 bg-white/5 rounded-lg cursor-pointer hover:bg-white/10 transition-colors">
-          <input
-            type="checkbox"
-            checked={showSystem}
-            onChange={(e) => handleShowSystemChange(e.target.checked)}
-            className="w-4 h-4 rounded"
-          />
-          <span className="text-sm text-white/60">显示系统进程</span>
-        </label>
+        <div className="flex shrink-0 items-center gap-2">
+          <Toggle checked={showSystem} onChange={handleShowSystemChange} label="显示系统进程" />
+          <span className="select-none text-[12px] text-text-2">显示系统进程</span>
+        </div>
+        <Button variant="secondary" icon="refresh" onClick={handleRefresh} className="shrink-0">
+          刷新
+        </Button>
       </div>
 
-      {/* 进程列表表格 */}
-      <div className="glass-light rounded-xl overflow-hidden">
+      {/* 进程列表 */}
+      <div className="card overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-white/10">
-                <th
-                  className="px-3 py-3 text-left text-xs font-medium text-white/40 uppercase tracking-wide cursor-pointer hover:text-white/60 select-none"
-                  onClick={() => handleSort('pid')}
-                >
-                  PID {sortBy === 'pid' && (sortDesc ? '↓' : '↑')}
-                </th>
-                <th
-                  className="px-3 py-3 text-left text-xs font-medium text-white/40 uppercase tracking-wide cursor-pointer hover:text-white/60 select-none"
-                  onClick={() => handleSort('name')}
-                >
-                  名称 {sortBy === 'name' && (sortDesc ? '↓' : '↑')}
-                </th>
-                <th
-                  className="px-3 py-3 text-left text-xs font-medium text-white/40 uppercase tracking-wide cursor-pointer hover:text-white/60 select-none"
-                  onClick={() => handleSort('cpu')}
-                >
-                  CPU {sortBy === 'cpu' && (sortDesc ? '↓' : '↑')}
-                </th>
-                <th
-                  className="px-3 py-3 text-left text-xs font-medium text-white/40 uppercase tracking-wide cursor-pointer hover:text-white/60 select-none"
-                  onClick={() => handleSort('memory')}
-                >
-                  内存 {sortBy === 'memory' && (sortDesc ? '↓' : '↑')}
-                </th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-white/40 uppercase tracking-wide">
-                  状态
-                </th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-white/40 uppercase tracking-wide">
-                  线程
-                </th>
-                <th className="px-3 py-3 text-right text-xs font-medium text-white/40 uppercase tracking-wide">
-                  操作
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {processes.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="px-3 py-8 text-center text-white/40">
-                    没有找到匹配的进程
-                  </td>
-                </tr>
-              ) : (
-                processes.map((proc) => (
-                  <ProcessRow
-                    key={proc.pid}
-                    process={proc}
-                    onKill={(force) => handleKillProcess(proc.pid, force)}
-                    onViewDetails={() => setDetailProcess(proc)}
-                  />
-                ))
-              )}
-            </tbody>
-          </table>
+          <div className="min-w-[680px]">
+            {/* 表头 */}
+            <div className={`${ROW_GRID} hairline-b px-3 py-2.5`}>
+              <SortHeader label="PID" column="pid" sortBy={sortBy} sortDesc={sortDesc} onSort={handleSort} />
+              <SortHeader label="名称" column="name" sortBy={sortBy} sortDesc={sortDesc} onSort={handleSort} />
+              <SortHeader label="CPU" column="cpu" sortBy={sortBy} sortDesc={sortDesc} onSort={handleSort} alignRight />
+              <SortHeader label="内存" column="memory" sortBy={sortBy} sortDesc={sortDesc} onSort={handleSort} alignRight />
+              <span className="text-[11px] font-medium text-text-3">状态</span>
+              <span className="text-right text-[11px] font-medium text-text-3">线程</span>
+              <span className="text-right text-[11px] font-medium text-text-3">操作</span>
+            </div>
+
+            {/* 表体 */}
+            {loadError ? (
+              <EmptyState
+                icon="exclamation-circle"
+                title="进程列表加载失败"
+                description={loadError}
+                action={
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    icon="refresh"
+                    onClick={() => {
+                      setLoadError(null);
+                      loadProcesses();
+                    }}
+                  >
+                    重试
+                  </Button>
+                }
+              />
+            ) : processes.length === 0 ? (
+              <EmptyState
+                icon="search"
+                title="没有找到匹配的进程"
+                description="尝试修改搜索关键词或调整筛选条件"
+              />
+            ) : (
+              processes.map((proc) => (
+                <ProcessRow
+                  key={proc.pid}
+                  process={proc}
+                  onKill={(force) => handleKillProcess(proc.pid, force)}
+                  onViewDetails={() => setDetailProcess(proc)}
+                />
+              ))
+            )}
+          </div>
         </div>
       </div>
 
       {/* 分页控件 */}
       {totalCount > pageSize && (
-        <div className="flex items-center justify-between">
-          <p className="text-xs text-white/30">
+        <div className="flex items-center justify-between gap-3">
+          <p className="tnum truncate text-[12px] text-text-3">
             显示 {currentPage * pageSize + 1} - {Math.min((currentPage + 1) * pageSize, totalCount)} / 共 {totalCount} 个进程
           </p>
-          <div className="flex items-center gap-2">
-            <button
-              className="px-3 py-1.5 rounded-lg bg-white/5 text-white/60 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed text-sm clickable"
+          <div className="flex shrink-0 items-center gap-2">
+            <Button
+              size="sm"
+              variant="secondary"
               disabled={currentPage === 0}
               onClick={() => handlePageChange(Math.max(0, currentPage - 1))}
             >
               上一页
-            </button>
-            <span className="text-sm text-white/60">
-              第 {currentPage + 1} / {Math.ceil(totalCount / pageSize)} 页
+            </Button>
+            <span className="tnum text-[12px] text-text-2">
+              第 {currentPage + 1} / {totalPages} 页
             </span>
-            <button
-              className="px-3 py-1.5 rounded-lg bg-white/5 text-white/60 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed text-sm clickable"
+            <Button
+              size="sm"
+              variant="secondary"
               disabled={(currentPage + 1) * pageSize >= totalCount}
               onClick={() => handlePageChange(currentPage + 1)}
             >
               下一页
-            </button>
+            </Button>
           </div>
         </div>
       )}
 
       {/* 最后更新时间 */}
-      <div className="text-center">
-        <p className="text-xs text-white/20">
-          最后更新: {lastUpdate.toLocaleString('zh-CN')} ({formatRelativeTime(lastUpdate.getTime())})
-        </p>
-      </div>
+      <p className="tnum text-center text-[11px] text-text-4">
+        共 {totalCount} 个进程 · 最后更新: {lastUpdate.toLocaleString('zh-CN')} ({formatRelativeTime(lastUpdate.getTime())})
+      </p>
 
       {/* 进程详情对话框 */}
       {detailProcess && (

@@ -45,8 +45,8 @@ function MusicPlayerWindowWrapper() {
  */
 function WindowLoadingFallback() {
   return (
-    <div className="flex items-center justify-center h-screen w-screen bg-[#0D0F1A]">
-      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#7C3AED]"></div>
+    <div className="flex h-screen w-screen items-center justify-center bg-surface-0">
+      <span className="spinner" />
     </div>
   )
 }

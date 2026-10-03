@@ -4,6 +4,7 @@ import { ClipboardService } from '../../bindings/ltools/plugins/clipboard';
 import { ClipboardItem } from '../../bindings/ltools/plugins/clipboard/models';
 import { Icon } from './Icon';
 import { useToast } from '../hooks/useToast';
+import { Button, Card, EmptyState, IconButton, Input, Skeleton } from './ui';
 
 // Image preview modal component
 interface ImagePreviewModalProps {
@@ -22,22 +23,23 @@ function ImagePreviewModal({ imageSrc, onClose }: ImagePreviewModalProps): JSX.E
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+      className="scrim fixed inset-0 z-[999] flex items-center justify-center p-6"
       onClick={onClose}
     >
-      <div className="relative max-w-[90vw] max-h-[90vh]">
+      <div className="relative flex max-h-full max-w-[90vw] flex-col items-center">
+        <IconButton
+          name="x-mark"
+          label="关闭预览"
+          className="absolute -top-9 right-0 text-text-2"
+          onClick={onClose}
+        />
         <img
           src={imageSrc}
-          alt="Preview"
-          className="max-w-full max-h-[90vh] rounded-lg shadow-2xl"
+          alt="预览图片"
+          className="max-h-[80vh] max-w-full rounded-[9px] border border-hairline-strong"
+          style={{ boxShadow: 'var(--shadow-modal)' }}
           onClick={(e) => e.stopPropagation()}
         />
-        <button
-          className="absolute -top-10 right-0 p-2 text-white/60 hover:text-white transition-colors"
-          onClick={onClose}
-        >
-          <Icon name="x-mark" size={24} />
-        </button>
       </div>
     </div>
   );
@@ -59,7 +61,6 @@ interface ClipboardItemProps {
 function ClipboardHistoryItem({ item, index, onCopy, onCopyImage, onSaveImage, onDelete, onPreviewImage }: ClipboardItemProps): JSX.Element {
   const [copied, setCopied] = useState(false);
   const [imageCopied, setImageCopied] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
   const { success, error: showError } = useToast();
 
   const handleCopy = async () => {
@@ -108,7 +109,7 @@ function ClipboardHistoryItem({ item, index, onCopy, onCopyImage, onSaveImage, o
     onDelete(index);
   };
 
-  const formatTime = (timestamp: any) => {
+  const formatTime = (timestamp: string | number) => {
     if (!timestamp) return '';
     const date = new Date(timestamp);
     const now = new Date();
@@ -130,122 +131,103 @@ function ClipboardHistoryItem({ item, index, onCopy, onCopyImage, onSaveImage, o
     });
   };
 
-  const getIconForType = (type: string) => {
-    switch (type) {
-      case 'image':
-        return 'photo';
-      case 'text':
-      default:
-        return 'document-text';
-    }
-  };
-
-  const truncateContent = (content: string, maxLength: number = 100) => {
-    if (content.length <= maxLength) return content;
-    return content.substring(0, maxLength) + '...';
-  };
-
-  const renderContent = () => {
-    if (item.type === 'image') {
-      return (
-        <div className="flex items-start gap-3">
-          <div
-            className="flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
-            onClick={() => onPreviewImage(item.content)}
-          >
-            <img
-              src={item.content}
-              alt="剪贴板图片"
-              className="max-h-24 max-w-32 rounded-lg object-contain bg-white/5"
-            />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-xs text-white/40 mb-1">图片</p>
-            <p className="text-sm text-white/60 font-mono">
-              {truncateContent(item.content.substring(0, 50))}...
-            </p>
-          </div>
-        </div>
-      );
-    }
-    return (
-      <p className="text-sm text-white/90 break-words font-mono">
-        {truncateContent(item.content)}
-      </p>
-    );
-  };
+  const isImage = item.type === 'image';
 
   return (
     <div
-      className={`glass-light rounded-lg p-4 transition-all duration-200 group ${
-        isHovered ? 'bg-white/5' : ''
-      }`}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      className="row row-clickable group w-full cursor-pointer"
+      role="button"
+      tabIndex={0}
+      title={isImage ? undefined : item.content}
+      onClick={handleCopy}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          handleCopy();
+        }
+      }}
     >
-      <div className="flex items-start gap-3">
-        {/* 图标 */}
-        <div className="w-10 h-10 rounded-lg bg-[#7C3AED]/10 flex items-center justify-center flex-shrink-0">
-          <Icon name={getIconForType(item.type) as any} size={18} color="#A78BFA" />
-        </div>
-
-        {/* 内容 */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-2 mb-2">
-            <div className="flex-1 min-w-0">
-              {renderContent()}
-            </div>
-            <span className="text-xs text-white/30 whitespace-nowrap">
-              {formatTime(item.timestamp)}
-            </span>
-          </div>
-
-          {/* 操作按钮 */}
-          <div className="flex items-center gap-2">
-            <button
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 clickable ${
-                copied || imageCopied
-                  ? 'bg-[#22C55E]/20 text-[#22C55E] border border-[#22C55E]/20'
-                  : 'bg-[#7C3AED]/10 text-[#A78BFA] hover:bg-[#7C3AED]/20 border border-[#7C3AED]/20'
-              }`}
-              onClick={handleCopy}
-            >
-              {copied || imageCopied ? '已复制' : (item.type === 'image' ? '复制图片' : '复制')}
-            </button>
-            {item.type === 'image' && (
-              <button
-                className="px-3 py-1.5 rounded-lg text-xs font-medium bg-[#3B82F6]/10 text-[#60A5FA] hover:bg-[#3B82F6]/20 border border-[#3B82F6]/20 transition-all duration-200 clickable"
-                onClick={handleSaveImage}
-              >
-                保存图片
-              </button>
-            )}
-            <button
-              className="px-3 py-1.5 rounded-lg text-xs font-medium bg-white/5 text-white/60 hover:bg-[#EF4444]/10 hover:text-[#EF4444] border border-white/10 transition-all duration-200 clickable"
-              onClick={handleDelete}
-            >
-              删除
-            </button>
-          </div>
-        </div>
+      {/* 类型图标 */}
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[6px] border border-hairline bg-surface-2">
+        <Icon name={isImage ? 'photo' : 'document'} size={15} className="text-text-3" />
       </div>
-    </div>
-  );
-}
 
-/**
- * 空状态组件
- */
-function EmptyState(): JSX.Element {
-  return (
-    <div className="glass-light rounded-xl p-12 text-center">
-      <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-white/5 mb-4">
-        <Icon name="clipboard" size={28} color="rgba(255,255,255,0.3)" />
+      {/* 内容 */}
+      <div className="min-w-0 flex-1">
+        {isImage ? (
+          <div className="flex items-center gap-2.5">
+            <button
+              type="button"
+              className="shrink-0 overflow-hidden rounded-[5px] border border-hairline"
+              title="预览图片"
+              onClick={(e) => {
+                e.stopPropagation();
+                onPreviewImage(item.content);
+              }}
+            >
+              <img
+                src={item.content}
+                alt="剪贴板图片"
+                className="h-10 w-10 object-cover"
+              />
+            </button>
+            <span className="text-[12px] text-text-3">图片</span>
+          </div>
+        ) : (
+          <p className="truncate font-mono text-[12.5px] text-text-1">{item.content}</p>
+        )}
       </div>
-      <h3 className="text-lg font-medium text-white mb-2">剪贴板历史为空</h3>
-      <p className="text-white/40 text-sm">
-        复制的内容将自动出现在这里
-      </p>
+
+      {/* 时间戳 */}
+      <span className="tnum shrink-0 text-[11px] text-text-4">
+        {formatTime(item.timestamp)}
+      </span>
+
+      {/* 操作按钮(hover 时出现) */}
+      <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity duration-150 group-focus-within:opacity-100 group-hover:opacity-100">
+        <IconButton
+          name={copied || imageCopied ? 'check' : 'copy'}
+          label={copied || imageCopied ? '已复制' : isImage ? '复制图片' : '复制'}
+          size="sm"
+          className={copied || imageCopied ? 'text-success-text' : ''}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleCopy();
+          }}
+        />
+        {isImage && (
+          <IconButton
+            name="eye"
+            label="预览图片"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              onPreviewImage(item.content);
+            }}
+          />
+        )}
+        {isImage && (
+          <IconButton
+            name="download"
+            label="保存图片"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleSaveImage();
+            }}
+          />
+        )}
+        <IconButton
+          name="trash"
+          label="删除"
+          size="sm"
+          tone="danger"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleDelete();
+          }}
+        />
+      </div>
     </div>
   );
 }
@@ -351,9 +333,21 @@ export function ClipboardWidget(): JSX.Element {
   };
 
   // 删除处理
+  // 修复:传入的 index 是过滤后列表的下标,搜索/过滤状态下会误删其他条目,
+  // 这里映射回完整历史中的真实下标。
   const handleDelete = async (index: number) => {
     try {
-      await ClipboardService.DeleteItem(index);
+      const target = filteredHistory[index];
+      const realIndex = target
+        ? history.findIndex(
+            (h) =>
+              h.content === target.content &&
+              h.timestamp === target.timestamp &&
+              h.type === target.type
+          )
+        : -1;
+      const deleteIndex = realIndex >= 0 ? realIndex : index;
+      await ClipboardService.DeleteItem(deleteIndex);
       await loadHistory();
     } catch (err) {
       console.error('Failed to delete item:', err);
@@ -408,17 +402,19 @@ export function ClipboardWidget(): JSX.Element {
 
   if (loading) {
     return (
-      <div className="glass-light rounded-xl p-8 text-center">
-        <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-white/5 animate-pulse">
-          <Icon name="refresh" size={20} color="rgba(255,255,255,0.3)" />
-        </div>
-        <p className="text-white/40 mt-4">加载中...</p>
+      <div className="space-y-4" aria-busy="true">
+        <Skeleton className="h-8 rounded-[6px]" />
+        <Card inset className="p-1.5">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="m-1 h-10 rounded-[6px]" />
+          ))}
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Image Preview Modal */}
       {previewImage && (
         <ImagePreviewModal
@@ -428,94 +424,112 @@ export function ClipboardWidget(): JSX.Element {
       )}
 
       {/* 页头 */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-semibold text-white">剪贴板历史</h2>
-          <p className="text-sm text-white/40">
-            {totalCount} 条记录 · 最大 {maxHistory} 条
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <button
-            className="px-4 py-2 rounded-lg bg-[#7C3AED] text-white hover:bg-[#6D28D9] transition-all duration-200 text-sm font-medium clickable disabled:opacity-50 disabled:cursor-not-allowed"
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-[12px] text-text-3">
+          <span className="tnum font-medium text-text-2">{totalCount}</span> 条记录
+          <span className="text-text-4"> · </span>上限{' '}
+          <span className="tnum font-medium text-text-2">{maxHistory}</span> 条
+        </p>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="primary"
+            icon="plus"
+            loading={addingClipboard}
             onClick={handleAddCurrentClipboard}
-            disabled={addingClipboard}
           >
-            {addingClipboard ? '添加中...' : '添加当前剪贴板'}
-          </button>
-          <button
-            className={`px-4 py-2 rounded-lg bg-[#EF4444]/10 text-[#EF4444] border border-[#EF4444]/20 hover:bg-[#EF4444]/20 transition-all duration-200 text-sm font-medium clickable disabled:opacity-50 disabled:cursor-not-allowed ${totalCount === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+            添加当前剪贴板
+          </Button>
+          <Button
+            variant="danger"
+            icon="trash"
             onClick={handleClear}
             disabled={totalCount === 0}
           >
-            清空历史 {totalCount === 0 ? '(无记录)' : ''}
-          </button>
+            清空历史
+          </Button>
         </div>
       </div>
 
       {/* 搜索栏 */}
-      <div className="glass-light rounded-xl p-4">
-        <div className="flex gap-3">
-          <div className="flex items-center justify-center w-10 text-white/40">
-            <Icon name="search" size={20} />
-          </div>
-          <input
+      <div className="flex items-center gap-2">
+        <div className="relative min-w-0 flex-1">
+          <Icon
+            name="search"
+            size={15}
+            className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-text-4"
+          />
+          <Input
             type="text"
-            className="flex-1 bg-transparent text-white placeholder-white/30 focus:outline-none"
+            className="pr-9 pl-8"
             placeholder="搜索剪贴板内容..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyPress={(e) => {
+            onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 handleSearch();
               }
             }}
           />
           {searchQuery && (
-            <button
-              className="p-2 rounded-lg text-white/40 hover:text-white/80 hover:bg-white/5 transition-all duration-200 clickable"
+            <IconButton
+              name="close"
+              label="清空搜索"
+              size="sm"
+              className="absolute right-1.5 top-1/2 -translate-y-1/2"
               onClick={() => {
                 setSearchQuery('');
                 setFilteredHistory(history);
               }}
-            >
-              <Icon name="x-mark" size={18} />
-            </button>
+            />
           )}
-          <button
-            className="px-5 py-2 rounded-lg bg-[#7C3AED] text-white hover:bg-[#6D28D9] transition-all duration-200 text-sm font-medium clickable"
-            onClick={handleSearch}
-          >
-            搜索
-          </button>
         </div>
+        <Button variant="primary" icon="search" onClick={handleSearch}>
+          搜索
+        </Button>
       </div>
 
       {/* 历史列表 */}
       {filteredHistory.length === 0 ? (
-        <EmptyState />
-      ) : (
-        <div className="space-y-3">
-          {filteredHistory.map((item, index) => (
-            <ClipboardHistoryItem
-              key={`${item.timestamp}-${index}`}
-              item={item}
-              index={index}
-              onCopy={handleCopy}
-              onCopyImage={() => {}}
-              onSaveImage={() => {}}
-              onDelete={handleDelete}
-              onPreviewImage={setPreviewImage}
+        searchQuery ? (
+          <EmptyState
+            icon="search"
+            title="没有找到匹配的记录"
+            description="尝试使用其他关键词搜索"
+          />
+        ) : (
+          <Card inset>
+            <EmptyState
+              icon="clipboard"
+              title="剪贴板历史为空"
+              description="复制的内容将自动出现在这里"
             />
-          ))}
-        </div>
+          </Card>
+        )
+      ) : (
+        <Card inset className="p-1.5">
+          <div className="flex flex-col gap-0.5">
+            {filteredHistory.map((item, index) => (
+              <ClipboardHistoryItem
+                key={`${item.type}-${item.timestamp}-${item.content.length}`}
+                item={item}
+                index={index}
+                onCopy={handleCopy}
+                onCopyImage={() => {}}
+                onSaveImage={() => {}}
+                onDelete={handleDelete}
+                onPreviewImage={setPreviewImage}
+              />
+            ))}
+          </div>
+        </Card>
       )}
 
       {/* 统计信息 */}
       {searchQuery && filteredHistory.length > 0 && (
         <div className="text-center">
-          <p className="text-sm text-white/40">
-            找到 {filteredHistory.length} 条匹配结果
+          <p className="text-[12px] text-text-3">
+            找到 <span className="tnum font-medium text-text-2">{filteredHistory.length}</span>{' '}
+            条匹配结果
           </p>
         </div>
       )}

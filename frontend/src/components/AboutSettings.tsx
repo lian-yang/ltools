@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
-import { Icon } from './Icon';
+import { useState, useEffect, useRef } from 'react';
 import { Browser } from '@wailsio/runtime';
 import * as UpdateService from '../../bindings/ltools/internal/update/service';
+import { Icon } from './Icon';
+import { Badge, Button, PageHeader, SectionTitle } from './ui';
 
 /**
  * 关于页面组件
@@ -16,15 +17,37 @@ export function AboutSettings() {
   const wailsVersion = 'v3 (alpha)';
   const reactVersion = '18.2';
 
+  // 记录提示消息的定时器,卸载时清理
+  const messageTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  useEffect(() => {
+    return () => {
+      messageTimersRef.current.forEach(clearTimeout);
+      messageTimersRef.current = [];
+    };
+  }, []);
+
   // 从后端获取应用版本
   useEffect(() => {
+    let alive = true;
     UpdateService.GetCurrentVersion()
-      .then(version => setAppVersion(version))
+      .then(version => {
+        if (alive) setAppVersion(version);
+      })
       .catch(err => {
         console.error('Failed to get app version:', err);
-        setAppVersion('未知');
+        if (alive) setAppVersion('未知');
       });
+    return () => {
+      alive = false;
+    };
   }, []);
+
+  const showUpdateMessage = (message: string) => {
+    setUpdateMessage(message);
+    const timer = setTimeout(() => setUpdateMessage(null), 3000);
+    messageTimersRef.current.push(timer);
+  };
 
   const handleCheckUpdate = async () => {
     setChecking(true);
@@ -36,144 +59,107 @@ export function AboutSettings() {
       if (info) {
         // 更新信息会通过 "update:available" 事件发送到 UpdateNotification 组件显示
         // 这里只显示一个简短的提示
-        setUpdateMessage('发现新版本，请查看更新通知');
-        setTimeout(() => setUpdateMessage(null), 3000);
+        showUpdateMessage('发现新版本，请查看更新通知');
       } else {
-        setUpdateMessage('您已经在使用最新版本！');
-        setTimeout(() => setUpdateMessage(null), 3000);
+        showUpdateMessage('您已经在使用最新版本！');
       }
     } catch (error) {
       console.error('Check update failed:', error);
-      setUpdateMessage('检查更新失败，请稍后重试');
-      setTimeout(() => setUpdateMessage(null), 3000);
+      showUpdateMessage('检查更新失败，请稍后重试');
     } finally {
       setChecking(false);
     }
   };
 
+  const updateMessageTone = !updateMessage
+    ? 'neutral'
+    : updateMessage.includes('失败')
+      ? 'error'
+      : updateMessage.includes('最新版本')
+        ? 'success'
+        : 'accent';
+
   return (
-    <div className="space-y-8">
-      {/* 页面标题 */}
-      <div>
-        <h2 className="text-xl font-semibold text-white flex items-center gap-2">
-          <Icon name="information-circle" size={20} color="#A78BFA" />
-          关于
-        </h2>
-        <p className="text-white/50 text-sm mt-1">
-          了解 LTools 的版本信息和技术栈
-        </p>
-      </div>
+    <div className="animate-fade-in">
+      <PageHeader title="关于" description="了解 LTools 的版本信息和技术栈" />
 
-      {/* 应用信息卡片 */}
-      <div className="glass-light rounded-xl p-6">
-        <div className="flex items-center gap-4 mb-6">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#7C3AED] to-[#A78BFA] flex items-center justify-center">
-            <Icon name="cube" size={32} color="white" />
-          </div>
-          <div>
-            <h3 className="text-2xl font-bold text-white">LTools</h3>
-            <p className="text-white/50 text-sm">多功能开发工具集</p>
-          </div>
+      {/* 应用信息 */}
+      <div className="card-inset flex items-start gap-4 p-4">
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[10px] border border-hairline bg-surface-2">
+          <Icon name="cube" size={24} className="text-text-2" />
         </div>
-
-        <p className="text-white/60 text-sm leading-relaxed">
-          LTools 是一个基于 Wails v3 的插件化跨平台桌面工具箱应用。
-          通过插件架构提供统一的工具集中心，面向开发者和高级用户，
-          支持全局搜索和快捷键快速访问工具。
-        </p>
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <h3 className="text-[15px] font-semibold text-text-1">LTools</h3>
+            <span className="text-[11.5px] text-text-3">多功能开发工具集</span>
+          </div>
+          <p className="mt-1.5 text-[12px] leading-relaxed text-text-2">
+            LTools 是一个基于 Wails v3 的插件化跨平台桌面工具箱应用。
+            通过插件架构提供统一的工具集中心，面向开发者和高级用户，
+            支持全局搜索和快捷键快速访问工具。
+          </p>
+        </div>
       </div>
 
       {/* 版本信息 */}
-      <div className="glass-light rounded-xl p-5 space-y-4">
-        <h3 className="text-white font-medium flex items-center gap-2">
-          <Icon name="code" size={16} color="#A78BFA" />
-          版本信息
-        </h3>
+      <SectionTitle title="版本信息" className="mb-2 mt-5" />
+      <div className="card-inset px-4">
+        <VersionRow label="应用版本" value={`v${appVersion}`} separated />
+        <VersionRow label="Go" value={goVersion} separated />
+        <VersionRow label="Wails" value={wailsVersion} separated />
+        <VersionRow label="React" value={reactVersion} separated={false} />
 
-        <div className="space-y-3">
-          <VersionRow label="应用版本" value={`v${appVersion}`} />
-          <VersionRow label="Go" value={goVersion} />
-          <VersionRow label="Wails" value={wailsVersion} />
-          <VersionRow label="React" value={reactVersion} />
-        </div>
-
-        {/* 检查更新按钮 */}
-        <div className="pt-3 border-t border-white/5">
-          <button
+        {/* 检查更新 */}
+        <div className="hairline-t flex items-center justify-between gap-3 pt-3 pb-1">
+          <div className="min-w-0">
+            {updateMessage && (
+              <Badge tone={updateMessageTone}>{updateMessage}</Badge>
+            )}
+          </div>
+          <Button
+            variant="primary"
+            icon="refresh"
+            loading={checking}
             onClick={handleCheckUpdate}
             disabled={checking}
-            className="w-full py-2.5 px-4 rounded-lg bg-gradient-to-r from-[#7C3AED] to-[#A78BFA] text-white font-medium hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
-            <Icon
-              name="refresh"
-              size={16}
-              color="white"
-              className={checking ? 'animate-spin' : ''}
-            />
             {checking ? '检查中...' : '检查更新'}
-          </button>
-
-          {updateMessage && (
-            <div className={`mt-3 px-4 py-2.5 rounded-lg text-sm text-center ${
-              updateMessage.includes('失败')
-                ? 'bg-red-500/20 text-red-300'
-                : updateMessage.includes('最新版本')
-                  ? 'bg-green-500/20 text-green-300'
-                  : 'bg-purple-500/20 text-purple-300'
-            }`}>
-              {updateMessage}
-            </div>
-          )}
+          </Button>
         </div>
       </div>
 
       {/* 技术栈 */}
-      <div className="glass-light rounded-xl p-5">
-        <h3 className="text-white font-medium mb-4 flex items-center gap-2">
-          <Icon name="terminal" size={16} color="#A78BFA" />
-          技术栈
-        </h3>
-
-        <div className="grid grid-cols-2 gap-3">
-          <TechBadge name="Go" description="后端框架" />
-          <TechBadge name="Wails v3" description="桌面框架" />
-          <TechBadge name="React" description="前端框架" />
-          <TechBadge name="TypeScript" description="类型安全" />
-          <TechBadge name="Vite" description="构建工具" />
-          <TechBadge name="TailwindCSS" description="样式框架" />
-        </div>
+      <SectionTitle title="技术栈" className="mb-2 mt-5" />
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <TechBadge name="Go" description="后端框架" />
+        <TechBadge name="Wails v3" description="桌面框架" />
+        <TechBadge name="React" description="前端框架" />
+        <TechBadge name="TypeScript" description="类型安全" />
+        <TechBadge name="Vite" description="构建工具" />
+        <TechBadge name="TailwindCSS" description="样式框架" />
       </div>
 
       {/* 相关链接 */}
-      <div className="glass-light rounded-xl p-5">
-        <h3 className="text-white font-medium mb-4 flex items-center gap-2">
-          <Icon name="link" size={16} color="#A78BFA" />
-          相关链接
-        </h3>
-
-        <div className="space-y-2">
-          <LinkRow
-            label="Wails 官方文档"
-            href="https://v3.wails.io/"
-            icon="external-link"
-          />
-          <LinkRow
-            label="GitHub 仓库"
-            href="https://github.com/lian-yang/ltools"
-            icon="external-link"
-          />
-          <LinkRow
-            label="问题反馈"
-            href="https://github.com/lian-yang/ltools/issues"
-            icon="external-link"
-          />
-        </div>
+      <SectionTitle title="相关链接" className="mb-2 mt-5" />
+      <div className="card-inset p-1.5">
+        <LinkRow
+          label="Wails 官方文档"
+          href="https://v3.wails.io/"
+        />
+        <LinkRow
+          label="GitHub 仓库"
+          href="https://github.com/lian-yang/ltools"
+        />
+        <LinkRow
+          label="问题反馈"
+          href="https://github.com/lian-yang/ltools/issues"
+        />
       </div>
 
       {/* 版权信息 */}
-      <div className="text-center text-white/30 text-xs py-4">
-        <p>© 2025 LTools. All rights reserved.</p>
-      </div>
+      <p className="py-4 text-center text-[11.5px] text-text-4">
+        © 2025 LTools. All rights reserved.
+      </p>
     </div>
   );
 }
@@ -181,11 +167,11 @@ export function AboutSettings() {
 /**
  * 版本信息行
  */
-function VersionRow({ label, value }: { label: string; value: string }) {
+function VersionRow({ label, value, separated }: { label: string; value: string; separated: boolean }) {
   return (
-    <div className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
-      <span className="text-white/50 text-sm">{label}</span>
-      <span className="text-white text-sm font-mono">{value}</span>
+    <div className={`flex items-center justify-between gap-4 py-2.5 ${separated ? 'hairline-b' : ''}`}>
+      <span className="text-[12px] text-text-3">{label}</span>
+      <span className="tnum truncate font-mono text-[12px] text-text-1">{value}</span>
     </div>
   );
 }
@@ -195,9 +181,9 @@ function VersionRow({ label, value }: { label: string; value: string }) {
  */
 function TechBadge({ name, description }: { name: string; description: string }) {
   return (
-    <div className="bg-[#0D0F1A]/50 rounded-lg p-3 border border-white/5">
-      <p className="text-white text-sm font-medium">{name}</p>
-      <p className="text-white/40 text-xs mt-0.5">{description}</p>
+    <div className="card-inset p-3">
+      <p className="text-[12.5px] font-medium text-text-1">{name}</p>
+      <p className="mt-0.5 text-[11.5px] text-text-3">{description}</p>
     </div>
   );
 }
@@ -205,7 +191,7 @@ function TechBadge({ name, description }: { name: string; description: string })
 /**
  * 链接行
  */
-function LinkRow({ label, href, icon }: { label: string; href: string; icon: string }) {
+function LinkRow({ label, href }: { label: string; href: string }) {
   const handleClick = async () => {
     await Browser.OpenURL(href);
   };
@@ -213,10 +199,10 @@ function LinkRow({ label, href, icon }: { label: string; href: string; icon: str
   return (
     <button
       onClick={handleClick}
-      className="flex items-center justify-between py-2.5 px-3 rounded-lg hover:bg-white/5 transition-colors group w-full text-left"
+      className="row row-clickable w-full text-left"
     >
-      <span className="text-white/70 text-sm group-hover:text-white">{label}</span>
-      <Icon name={icon as any} size={14} color="currentColor" className="text-white/30 group-hover:text-[#A78BFA]" />
+      <span className="min-w-0 flex-1 truncate text-[12.5px] text-text-2">{label}</span>
+      <Icon name="external-link" size={13} className="shrink-0 text-text-4" />
     </button>
   );
 }

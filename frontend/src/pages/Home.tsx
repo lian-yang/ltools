@@ -1,11 +1,20 @@
-import { useMemo, useEffect, useState, useCallback } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Icon } from '../components/Icon'
+import { Icon, type IconName } from '../components/Icon'
 import { usePlugins } from '../plugins/usePlugins'
-import { getPluginIcon, getPluginIconName } from '../utils/pluginHelpers'
+import { getPluginIconName } from '../utils/pluginHelpers'
 import { PluginMetadata, PluginState } from '../../bindings/ltools/internal/plugins'
 import { SysInfoService } from '../../bindings/ltools/plugins/sysinfo'
 import { Events } from '@wailsio/runtime'
+import {
+  Button,
+  Card,
+  EmptyState,
+  PageHeader,
+  ProgressBar,
+  SectionTitle,
+  Skeleton,
+} from '../components/ui'
 
 // ==================== 类型定义 ====================
 
@@ -18,153 +27,73 @@ interface SystemStatus {
 // ==================== 子组件 ====================
 
 /**
- * 加载骨架屏组件
+ * 加载骨架屏 — 结构与真实布局一致
  */
 function LoadingSkeleton() {
   return (
-    <div className="p-6 min-h-full animate-fade-in">
-      <div className="max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* 左侧主区域骨架 */}
-          <div className="lg:col-span-2 space-y-4">
-            <div className="h-7 bg-white/10 rounded w-24 mb-2 animate-pulse" />
-            <div className="h-4 bg-white/10 rounded w-40 mb-4 animate-pulse" />
-            <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-3">
-              {Array.from({ length: 12 }).map((_, i) => (
-                <div key={i} className="glass-light rounded-xl p-3 animate-pulse">
-                  <div className="w-12 h-12 rounded-xl bg-white/10 mx-auto mb-2" />
-                  <div className="h-3 bg-white/10 rounded w-16 mx-auto" />
-                </div>
-              ))}
-            </div>
-          </div>
+    <div className="page animate-fade-in" aria-busy="true">
+      <div className="mb-5">
+        <Skeleton className="h-5 w-24" />
+        <Skeleton className="mt-2 h-3 w-44" />
+      </div>
 
-          {/* 右侧边栏骨架 */}
-          <div className="space-y-4">
-            <div className="glass-light rounded-xl p-4 h-48 animate-pulse" />
-            <div className="glass-light rounded-xl p-4 h-64 animate-pulse" />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        {/* 左侧:插件网格骨架 */}
+        <div className="lg:col-span-2 min-w-0">
+          <Skeleton className="mb-2.5 h-3 w-16" />
+          <div className="grid grid-cols-4 md:grid-cols-5 xl:grid-cols-6 gap-3">
+            {Array.from({ length: 12 }).map((_, i) => (
+              <Skeleton key={i} className="h-[88px] rounded-[9px]" />
+            ))}
           </div>
         </div>
+
+        {/* 右侧:最近使用 / 系统状态骨架 */}
+        <aside className="min-w-0 space-y-5">
+          <div>
+            <Skeleton className="mb-2.5 h-3 w-16" />
+            <Skeleton className="h-44 rounded-[9px]" />
+          </div>
+          <div>
+            <Skeleton className="mb-2.5 h-3 w-16" />
+            <Skeleton className="h-52 rounded-[9px]" />
+          </div>
+        </aside>
       </div>
     </div>
   )
 }
 
 /**
- * 空状态组件 - 当没有启用的插件时显示
- */
-function EmptyState({ onBrowse }: { onBrowse: () => void }) {
-  return (
-    <div className="p-8 min-h-full animate-fade-in flex items-center justify-center">
-      <div className="text-center max-w-md">
-        <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-[#7C3AED]/20 to-[#A78BFA]/20 mb-6">
-          <Icon name="puzzle-piece" size={36} className="text-[#A78BFA]" />
-        </div>
-        <h2 className="text-xl font-semibold text-white/80 mb-2">
-          暂无启用的插件
-        </h2>
-        <p className="text-sm text-white/40 mb-6">
-          启用插件后，它们将显示在这里以便快速访问
-        </p>
-        <button
-          onClick={onBrowse}
-          className="px-6 py-2.5 bg-[#7C3AED] hover:bg-[#6D28D9] text-white rounded-lg font-medium transition-colors"
-        >
-          浏览插件
-        </button>
-      </div>
-    </div>
-  )
-}
-
-/**
- * 插件图标组件 - 优先使用专业 SVG 图标，fallback 到 emoji
- */
-function PluginIcon({
-  plugin,
-  size = 'normal'
-}: {
-  plugin: PluginMetadata
-  size?: 'small' | 'normal'
-}) {
-  const iconName = getPluginIconName(plugin)
-  const emoji = getPluginIcon(plugin)
-
-  const iconSize = size === 'small' ? 20 : 28
-  const emojiSize = size === 'small' ? 'text-lg' : 'text-2xl'
-
-  if (iconName) {
-    return (
-      <Icon
-        name={iconName}
-        size={iconSize}
-        className="text-[#A78BFA]"
-      />
-    )
-  }
-
-  return (
-    <span className={emojiSize} role="img" aria-label={plugin.name}>
-      {emoji}
-    </span>
-  )
-}
-
-/**
- * 插件卡片组件
+ * 插件卡片 — 点击打开插件页
  */
 function PluginCard({
   plugin,
   onClick,
-  size = 'normal'
 }: {
   plugin: PluginMetadata
   onClick: (pluginId: string) => void
-  size?: 'small' | 'normal'
 }) {
-  if (size === 'small') {
-    return (
-      <button
-        onClick={() => onClick(plugin.id)}
-        className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition-all duration-200 group text-left w-full"
-      >
-        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#7C3AED]/20 to-[#A78BFA]/20 flex items-center justify-center flex-shrink-0 group-hover:from-[#7C3AED]/30 group-hover:to-[#A78BFA]/30 transition-all">
-          <PluginIcon plugin={plugin} size="small" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-white/80 truncate group-hover:text-white transition-colors">
-            {plugin.name}
-          </p>
-          <p className="text-xs text-white/40 truncate">
-            {plugin.description || '点击打开'}
-          </p>
-        </div>
-        <Icon name="chevron-right" size={14} className="text-white/20 group-hover:text-white/40 transition-colors" />
-      </button>
-    )
-  }
-
   return (
     <button
       onClick={() => onClick(plugin.id)}
-      className="glass-light rounded-xl p-4 hover-lift clickable group text-center"
+      className="card card-hover flex flex-col items-center gap-2.5 px-3 py-4 text-center"
+      title={plugin.description || plugin.name}
     >
-      <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-[#7C3AED]/20 to-[#A78BFA]/20 flex items-center justify-center mx-auto mb-3 group-hover:from-[#7C3AED]/30 group-hover:to-[#A78BFA]/30 transition-all">
-        <PluginIcon plugin={plugin} />
-      </div>
-      <p className="text-sm font-medium text-white/80 truncate group-hover:text-white transition-colors">
+      <Icon name={getPluginIconName(plugin)} size={26} className="text-text-2" />
+      <span className="w-full truncate text-[12.5px] font-medium text-text-1">
         {plugin.name}
-      </p>
+      </span>
     </button>
   )
 }
 
 /**
- * 最近使用组件
+ * 最近使用 / 常用工具列表
  */
 function RecentPlugins({
   plugins,
-  onPluginClick
+  onPluginClick,
 }: {
   plugins: PluginMetadata[]
   onPluginClick: (id: string) => void
@@ -205,143 +134,127 @@ function RecentPlugins({
     return date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })
   }
 
-  return (
-    <div className="glass-light rounded-xl p-4">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-medium text-white/60 flex items-center gap-2">
-          <Icon name="clock" size={14} color="#A78BFA" />
-          最近使用
-        </h3>
-      </div>
-
-      {recentPlugins.length > 0 ? (
-        <div className="space-y-1">
-          {recentPlugins.map(plugin => (
-            <div key={plugin.id} className="group">
-              <PluginCard
-                plugin={plugin}
-                onClick={onPluginClick}
-                size="small"
-              />
-              <p className="text-xs text-white/30 px-3 -mt-1 mb-1">
-                {formatRelativeTime(plugin.lastUsedAt!)}
-              </p>
-            </div>
-          ))}
-        </div>
-      ) : frequentPlugins.length > 0 ? (
-        <div className="space-y-1">
-          <p className="text-xs text-white/30 mb-2 px-1">常用工具</p>
-          {frequentPlugins.map(plugin => (
-            <PluginCard
-              key={plugin.id}
-              plugin={plugin}
-              onClick={onPluginClick}
-              size="small"
-            />
-          ))}
-        </div>
-      ) : (
-        <div className="text-center py-6">
-          <Icon name="clock" size={24} className="text-white/20 mx-auto mb-2" />
-          <p className="text-xs text-white/30">暂无使用记录</p>
-        </div>
+  const renderRow = (plugin: PluginMetadata, time?: string) => (
+    <button
+      key={plugin.id}
+      onClick={() => onPluginClick(plugin.id)}
+      className="row row-clickable w-full text-left px-2.5"
+    >
+      <Icon name={getPluginIconName(plugin)} size={16} className="shrink-0 text-text-3" />
+      <span className="min-w-0 flex-1 truncate text-[12.5px] text-text-1">{plugin.name}</span>
+      {time && (
+        <span className="tnum shrink-0 text-[11.5px] text-text-3">{time}</span>
       )}
+    </button>
+  )
+
+  return (
+    <section>
+      <SectionTitle title="最近使用" className="mb-2.5" />
+      <Card inset className="p-1.5">
+        {recentPlugins.length > 0 ? (
+          <div className="flex flex-col gap-0.5">
+            {recentPlugins.map(plugin =>
+              renderRow(plugin, formatRelativeTime(plugin.lastUsedAt!))
+            )}
+          </div>
+        ) : frequentPlugins.length > 0 ? (
+          <div className="flex flex-col gap-0.5">
+            <div className="px-2.5 pb-1 pt-1.5 text-[11px] font-medium text-text-3">
+              常用工具
+            </div>
+            {frequentPlugins.map(plugin => renderRow(plugin))}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center gap-1.5 px-4 py-8 text-center">
+            <Icon name="clock" size={18} className="text-text-4" />
+            <p className="text-[12px] text-text-3">暂无使用记录</p>
+          </div>
+        )}
+      </Card>
+    </section>
+  )
+}
+
+/**
+ * 单项系统指标:标签 + 数值 + 进度条
+ */
+function StatusMetric({
+  icon,
+  label,
+  value,
+}: {
+  icon: IconName
+  label: string
+  value: number
+}) {
+  const tone = value > 80 ? 'error' : value > 60 ? 'warning' : 'accent'
+  const valueClass =
+    value > 80 ? 'text-error-text' : value > 60 ? 'text-warning-text' : 'text-text-1'
+
+  return (
+    <div>
+      <div className="mb-1.5 flex items-center justify-between">
+        <span className="flex items-center gap-1.5 text-[12px] text-text-2">
+          <Icon name={icon} size={13} className="text-text-3" />
+          {label}
+        </span>
+        <span className={`tnum text-[12.5px] font-semibold ${valueClass}`}>
+          {value.toFixed(0)}%
+        </span>
+      </div>
+      <ProgressBar value={value} tone={tone} />
     </div>
   )
 }
 
 /**
- * 系统状态卡片
+ * 系统状态卡片 — CPU / 内存 / 运行时间
  */
-function SystemStatusCard({ status }: { status: SystemStatus | null }) {
-  if (!status) {
-    return (
-      <div className="glass-light rounded-xl p-4">
-        <div className="flex items-center gap-2 mb-3">
-          <Icon name="server" size={14} color="#22C55E" />
-          <h3 className="text-sm font-medium text-white/60">系统状态</h3>
-        </div>
-        <div className="space-y-3 animate-pulse">
-          <div className="h-8 bg-white/5 rounded" />
-          <div className="h-8 bg-white/5 rounded" />
-        </div>
-      </div>
-    )
-  }
-
-  const getCpuColor = (usage: number) => {
-    if (usage > 80) return 'text-[#EF4444]'
-    if (usage > 60) return 'text-[#F59E0B]'
-    return 'text-[#7C3AED]'
-  }
-
-  const getCpuBg = (usage: number) => {
-    if (usage > 80) return 'bg-[#EF4444]'
-    if (usage > 60) return 'bg-[#F59E0B]'
-    return 'bg-[#7C3AED]'
-  }
-
-  const getMemoryColor = (usage: number) => {
-    if (usage > 80) return 'text-[#EF4444]'
-    if (usage > 60) return 'text-[#F59E0B]'
-    return 'text-[#22C55E]'
-  }
-
-  const getMemoryBg = (usage: number) => {
-    if (usage > 80) return 'bg-[#EF4444]'
-    if (usage > 60) return 'bg-[#F59E0B]'
-    return 'bg-[#22C55E]'
-  }
-
+function SystemStatusCard({
+  status,
+  error,
+}: {
+  status: SystemStatus | null
+  error: boolean
+}) {
   return (
-    <div className="glass-light rounded-xl p-4">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-medium text-white/60 flex items-center gap-2">
-          <Icon name="server" size={14} color="#22C55E" />
-          系统状态
-        </h3>
-        <span className="text-xs text-white/30">{status.uptime}</span>
-      </div>
-
-      {/* CPU */}
-      <div className="mb-4">
-        <div className="flex items-center justify-between mb-1.5">
-          <div className="flex items-center gap-2">
-            <Icon name="cpu" size={14} className="text-white/40" />
-            <span className="text-xs text-white/50">CPU</span>
+    <section>
+      <SectionTitle title="系统状态" className="mb-2.5" />
+      <Card inset className="p-4">
+        {status ? (
+          <>
+            <div className="space-y-3.5">
+              <StatusMetric icon="cpu" label="CPU" value={status.cpu} />
+              <StatusMetric icon="memory" label="内存" value={status.memory} />
+            </div>
+            <div className="hairline-t mt-4 flex min-w-0 items-center justify-between gap-3 pt-3">
+              <span className="shrink-0 text-[12px] text-text-3">运行时间</span>
+              <span className="tnum min-w-0 truncate text-[12px] text-text-2">
+                {status.uptime}
+              </span>
+            </div>
+          </>
+        ) : error ? (
+          <div className="flex items-center gap-2 py-1.5 text-[12px] text-text-3">
+            <Icon name="exclamation-circle" size={14} className="text-text-4" />
+            系统信息不可用
           </div>
-          <span className={`text-sm font-semibold tabular-nums ${getCpuColor(status.cpu)}`}>
-            {status.cpu.toFixed(0)}%
-          </span>
-        </div>
-        <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
-          <div
-            className={`h-full rounded-full transition-all duration-500 ${getCpuBg(status.cpu)}`}
-            style={{ width: `${Math.min(status.cpu, 100)}%` }}
-          />
-        </div>
-      </div>
-
-      {/* Memory */}
-      <div>
-        <div className="flex items-center justify-between mb-1.5">
-          <div className="flex items-center gap-2">
-            <Icon name="memory" size={14} className="text-white/40" />
-            <span className="text-xs text-white/50">内存</span>
+        ) : (
+          <div className="space-y-3.5" aria-hidden="true">
+            {[0, 1].map(i => (
+              <div key={i} className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Skeleton className="h-3 w-10" />
+                  <Skeleton className="h-3 w-8" />
+                </div>
+                <Skeleton className="h-1 w-full" />
+              </div>
+            ))}
           </div>
-          <span className={`text-sm font-semibold tabular-nums ${getMemoryColor(status.memory)}`}>
-            {status.memory.toFixed(0)}%
-          </span>
-        </div>
-        <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
-          <div
-            className={`h-full rounded-full transition-all duration-500 ${getMemoryBg(status.memory)}`}
-            style={{ width: `${Math.min(status.memory, 100)}%` }}
-          />
-        </div>
-      </div>
-    </div>
+        )}
+      </Card>
+    </section>
   )
 }
 
@@ -353,7 +266,7 @@ function SystemStatusCard({ status }: { status: SystemStatus | null }) {
  * 布局结构:
  * ┌─────────────────────────────────┬─────────────────┐
  * │                                 │   最近使用       │
- * │      快速启动面板                ├─────────────────┤
+ * │      快速启动                    ├─────────────────┤
  * │      (插件网格)                  │   系统状态       │
  * │                                 │   (CPU/内存)     │
  * └─────────────────────────────────┴─────────────────┘
@@ -362,6 +275,7 @@ function Home() {
   const navigate = useNavigate()
   const { plugins, loading: pluginsLoading } = usePlugins()
   const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null)
+  const [statusError, setStatusError] = useState(false)
 
   // 过滤和排序已启用的插件（与侧边栏菜单保持一致）
   const enabledPlugins = useMemo(() => {
@@ -415,9 +329,13 @@ function Home() {
           memory: info.memoryUsedPercent || 0,
           uptime: info.hostUptime || '-'
         })
+        setStatusError(false)
+      } else {
+        setStatusError(true)
       }
     } catch (_err) {
       console.error('Failed to load system status:', _err)
+      setStatusError(true)
     }
   }, [])
 
@@ -452,70 +370,71 @@ function Home() {
 
   // 空状态 - 没有启用的插件
   if (enabledPlugins.length === 0) {
-    return <EmptyState onBrowse={handleBrowsePlugins} />
+    return (
+      <div className="page">
+        <PageHeader title="仪表盘" description="快速访问您的工具" />
+        <EmptyState
+          icon="puzzle-piece"
+          title="暂无启用的插件"
+          description="启用插件后，它们将显示在这里以便快速访问"
+          className="min-h-[calc(100vh-200px)]"
+          action={
+            <Button variant="primary" icon="grid" onClick={handleBrowsePlugins}>
+              浏览插件
+            </Button>
+          }
+        />
+      </div>
+    )
   }
 
   // 主界面：综合仪表盘
   return (
-    <div className="p-6 min-h-full animate-fade-in">
-      <div className="max-w-7xl mx-auto">
-        {/* 页面标题 */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-white/90 mb-1">仪表盘</h1>
-          <p className="text-sm text-white/40">快速访问您的工具</p>
-        </div>
+    <div className="page animate-fade-in">
+      <PageHeader
+        title="仪表盘"
+        description="快速访问您的工具"
+        actions={
+          <span className="tnum text-[12px] text-text-3">
+            {enabledPlugins.length} 个插件
+          </span>
+        }
+      />
 
-        {/* 主布局网格 */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* 左侧：快速启动面板 */}
-          <div className="lg:col-span-2">
-            <div className="glass rounded-xl p-5">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-base font-medium text-white/80 flex items-center gap-2">
-                  <Icon name="sparkles" size={16} color="#A78BFA" />
-                  快速启动
-                </h2>
-                <span className="text-xs text-white/30">
-                  {enabledPlugins.length} 个插件
-                </span>
-              </div>
-
-              {/* 插件网格 */}
-              <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-3">
-                {enabledPlugins.map(plugin => (
-                  <PluginCard
-                    key={plugin.id}
-                    plugin={plugin}
-                    onClick={handlePluginClick}
-                  />
-                ))}
-              </div>
-
-              {/* 底部分隔线和链接 */}
-              <div className="mt-5 pt-4 border-t border-white/5 flex items-center justify-between">
-                <button
-                  onClick={handleBrowsePlugins}
-                  className="text-xs text-white/30 hover:text-white/50 transition-colors flex items-center gap-1"
-                >
-                  管理插件
-                  <Icon name="arrow-right" size={12} />
-                </button>
-              </div>
-            </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        {/* 左侧：快速启动插件网格 */}
+        <section className="lg:col-span-2 min-w-0">
+          <SectionTitle
+            title="快速启动"
+            className="mb-2.5"
+            action={
+              <Button variant="ghost" size="sm" icon="arrow-right" onClick={handleBrowsePlugins}>
+                管理插件
+              </Button>
+            }
+          />
+          <div className="grid grid-cols-4 md:grid-cols-5 xl:grid-cols-6 gap-3">
+            {enabledPlugins.map(plugin => (
+              <PluginCard
+                key={plugin.id}
+                plugin={plugin}
+                onClick={handlePluginClick}
+              />
+            ))}
           </div>
+        </section>
 
-          {/* 右侧边栏 */}
-          <div className="space-y-4">
-            {/* 最近使用 */}
-            <RecentPlugins
-              plugins={enabledPlugins}
-              onPluginClick={handlePluginClick}
-            />
+        {/* 右侧边栏 */}
+        <aside className="min-w-0 space-y-5">
+          {/* 最近使用 */}
+          <RecentPlugins
+            plugins={enabledPlugins}
+            onPluginClick={handlePluginClick}
+          />
 
-            {/* 系统状态 */}
-            <SystemStatusCard status={systemStatus} />
-          </div>
-        </div>
+          {/* 系统状态 */}
+          <SystemStatusCard status={systemStatus} error={statusError} />
+        </aside>
       </div>
     </div>
   )

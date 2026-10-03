@@ -3,11 +3,22 @@ import { Events } from '@wailsio/runtime';
 import { Icon } from './Icon';
 import * as StickyService from '../../bindings/ltools/plugins/sticky/stickyservice';
 import { StickyNote } from '../../bindings/ltools/plugins/sticky/models';
+import { Button, EmptyState, KeyCap, Modal, Spinner } from './ui';
 
 /**
  * StickyWidget - 便利贴插件页面组件
  * 显示便利贴列表和创建按钮
  */
+
+// 便利贴纸色(数据语义色:深色界面下降低饱和度)
+const paperColors: Record<string, { bg: string; border: string; text: string; dot: string }> = {
+  yellow: { bg: 'rgba(255,214,10,0.08)', border: 'rgba(255,214,10,0.25)', text: '#FFE066', dot: '#FFD60A' },
+  pink: { bg: 'rgba(255,55,95,0.08)', border: 'rgba(255,55,95,0.25)', text: '#FF8FA8', dot: '#FF375F' },
+  green: { bg: 'rgba(48,209,88,0.08)', border: 'rgba(48,209,88,0.25)', text: '#7BE495', dot: '#30D158' },
+  blue: { bg: 'rgba(100,210,255,0.08)', border: 'rgba(100,210,255,0.25)', text: '#9BDCFF', dot: '#64D2FF' },
+  purple: { bg: 'rgba(191,90,242,0.09)', border: 'rgba(191,90,242,0.28)', text: '#DDB3F9', dot: '#BF5AF2' },
+};
+
 const StickyWidget: React.FC = () => {
   const [notes, setNotes] = useState<StickyNote[]>([]);
   const [loading, setLoading] = useState(true);
@@ -98,18 +109,6 @@ const StickyWidget: React.FC = () => {
     setDeleteConfirm({ id: '', show: false });
   }, []);
 
-  // 获取颜色样式
-  const getColorClasses = (color: string) => {
-    const colorMap: Record<string, { bg: string; border: string; text: string }> = {
-      yellow: { bg: 'bg-amber-100', border: 'border-amber-300', text: 'text-amber-900' },
-      pink: { bg: 'bg-pink-100', border: 'border-pink-300', text: 'text-pink-900' },
-      green: { bg: 'bg-emerald-100', border: 'border-emerald-300', text: 'text-emerald-900' },
-      blue: { bg: 'bg-sky-100', border: 'border-sky-300', text: 'text-sky-900' },
-      purple: { bg: 'bg-violet-100', border: 'border-violet-300', text: 'text-violet-900' },
-    };
-    return colorMap[color] || colorMap.yellow;
-  };
-
   // 格式化日期
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '';
@@ -136,100 +135,91 @@ const StickyWidget: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#7C3AED]"></div>
+      <div className="flex h-64 items-center justify-center">
+        <Spinner size={22} />
       </div>
     );
   }
 
   return (
-    <div className="max-w-6xl mx-auto">
+    <div className="mx-auto max-w-6xl">
       {/* 操作栏 */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 text-white/60 text-sm">
-            <Icon name="document" size={16} />
-            <span>共 {notes.length} 个便利贴</span>
-          </div>
-        </div>
-        <button
-          onClick={handleCreateNote}
-          disabled={creating}
-          className="flex items-center gap-2 px-4 py-2 bg-[#7C3AED] hover:bg-[#6D28D9] disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
-        >
-          {creating ? (
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-          ) : (
-            <Icon name="plus" size={18} />
-          )}
-          <span>新建便利贴</span>
-        </button>
+      <div className="mb-5 flex items-center justify-between">
+        <span className="tnum text-[12px] text-text-3">共 {notes.length} 个便利贴</span>
+        <Button variant="primary" icon="plus" onClick={handleCreateNote} loading={creating}>
+          新建便利贴
+        </Button>
       </div>
 
       {/* 快捷提示 */}
-      <div className="mb-6 p-3 rounded-lg bg-[#7C3AED]/10 border border-[#7C3AED]/20">
-        <p className="text-sm text-white/70 flex items-center gap-2">
-          <Icon name="sparkles" size={16} color="#A78BFA" />
-          <span>快捷键提示：按</span>
-          <kbd className="px-2 py-0.5 bg-white/10 rounded text-xs font-mono">Alt+T</kbd>
-          <span>快速创建新便利贴</span>
-        </p>
+      <div
+        className="mb-5 flex items-center gap-2 rounded-[7px] px-3.5 py-2.5 text-[12px] text-text-3"
+        style={{ background: 'var(--color-surface-1)', border: '1px solid var(--color-hairline-faint)' }}
+      >
+        <Icon name="information-circle" size={13} color="var(--color-text-4)" />
+        <span>按</span>
+        <KeyCap>Alt+T</KeyCap>
+        <span>快速创建新便利贴</span>
       </div>
 
       {/* 便利贴网格 */}
       {notes.length === 0 ? (
-        <div className="text-center py-16">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-white/5 mb-4">
-            <Icon name="document" size={40} color="rgba(255,255,255,0.2)" />
-          </div>
-          <h3 className="text-lg font-medium text-white/80 mb-2">还没有便利贴</h3>
-          <p className="text-white/50 mb-6">点击上方按钮或使用快捷键创建第一个便利贴</p>
-          <button
-            onClick={handleCreateNote}
-            disabled={creating}
-            className="inline-flex items-center gap-2 px-6 py-3 bg-[#7C3AED] hover:bg-[#6D28D9] disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
-          >
-            <Icon name="plus" size={20} />
-            <span>创建便利贴</span>
-          </button>
-        </div>
+        <EmptyState
+          icon="document"
+          title="还没有便利贴"
+          description="点击上方按钮或使用快捷键创建第一个便利贴"
+          action={
+            <Button variant="primary" icon="plus" onClick={handleCreateNote} loading={creating}>
+              创建便利贴
+            </Button>
+          }
+        />
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {notes.map((note) => {
-            const colors = getColorClasses(note.color);
+            const colors = paperColors[note.color] ?? paperColors.yellow;
             const preview = getPreview(note.content);
 
             return (
               <div
                 key={note.id}
                 onClick={() => handleOpenNote(note.id)}
-                className={`group relative p-4 rounded-lg border-2 cursor-pointer transition-all hover:scale-[1.02] hover:shadow-lg ${colors.bg} ${colors.border}`}
+                className="group relative cursor-pointer rounded-[9px] border p-3.5 transition-colors duration-150"
+                style={{ background: colors.bg, borderColor: colors.border }}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleOpenNote(note.id);
+                }}
               >
                 {/* 删除按钮 */}
                 <button
                   type="button"
                   onClick={(e) => showDeleteConfirm(note.id, e)}
-                  className="absolute top-2 right-2 p-1.5 rounded-md bg-black/10 hover:bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer z-10"
+                  className="icon-btn icon-btn-sm absolute right-1.5 top-1.5 z-10 opacity-0 transition-opacity duration-150 group-hover:opacity-100"
                   title="删除"
                 >
-                  <Icon name="trash" size={14} className={colors.text} />
+                  <Icon name="trash" size={12} color={colors.text} />
                 </button>
 
                 {/* 内容预览 */}
-                <div className={`${colors.text} min-h-[100px]`}>
+                <div style={{ color: colors.text }} className="min-h-[96px]">
                   {preview ? (
-                    <p className="text-sm whitespace-pre-wrap line-clamp-4">{preview}</p>
+                    <p className="select-text whitespace-pre-wrap text-[12.5px] leading-relaxed line-clamp-4">{preview}</p>
                   ) : (
-                    <p className="text-sm opacity-50 italic">空便利贴</p>
+                    <p className="text-[12.5px] italic opacity-50">空便利贴</p>
                   )}
                 </div>
 
                 {/* 底部信息 */}
-                <div className={`mt-3 pt-3 border-t ${colors.border} flex items-center justify-between`}>
-                  <span className={`text-xs opacity-60 ${colors.text}`}>
+                <div
+                  className="tnum mt-2.5 flex items-center justify-between pt-2.5"
+                  style={{ borderTop: `1px solid ${colors.border}` }}
+                >
+                  <span className="text-[10.5px] opacity-70">
                     {formatDate(note.updatedAt?.toString() || note.createdAt?.toString() || '')}
                   </span>
-                  <div className={`w-3 h-3 rounded-full ${colors.bg.replace('100', '300')}`} />
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ background: colors.dot, opacity: 0.8 }} />
                 </div>
               </div>
             );
@@ -239,55 +229,39 @@ const StickyWidget: React.FC = () => {
           <button
             onClick={handleCreateNote}
             disabled={creating}
-            className="flex flex-col items-center justify-center p-4 rounded-lg border-2 border-dashed border-white/20 hover:border-[#7C3AED]/50 hover:bg-[#7C3AED]/5 transition-all min-h-[180px]"
+            className="flex min-h-[160px] flex-col items-center justify-center rounded-[9px] border border-dashed border-hairline-strong transition-colors duration-150 hover:border-text-4"
           >
-            <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mb-3">
+            <span className="mb-2 flex h-9 w-9 items-center justify-center rounded-full bg-surface-2">
               {creating ? (
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#7C3AED]"></div>
+                <Spinner size={16} />
               ) : (
-                <Icon name="plus" size={24} color="rgba(255,255,255,0.5)" />
+                <Icon name="plus" size={16} color="var(--color-text-3)" />
               )}
-            </div>
-            <span className="text-white/50 text-sm">创建新便利贴</span>
+            </span>
+            <span className="text-[12px] text-text-3">创建新便利贴</span>
           </button>
         </div>
       )}
 
       {/* 删除确认对话框 */}
-      {deleteConfirm.show && (
-        <div
-          className="fixed inset-0 flex items-center justify-center z-50"
-          style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
-          onClick={handleDeleteCancel}
-        >
-          <div
-            className="glass-heavy p-6 rounded-xl shadow-xl max-w-sm mx-4"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="text-center mb-4">
-              <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-red-500/20 mb-3">
-                <Icon name="trash" size={24} color="#EF4444" />
-              </div>
-              <h3 className="text-lg font-semibold text-white mb-2">确认删除</h3>
-              <p className="text-white/60">确定要删除这个便利贴吗？此操作无法撤销。</p>
-            </div>
-            <div className="flex gap-3">
-              <button
-                onClick={handleDeleteCancel}
-                className="flex-1 px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"
-              >
-                取消
-              </button>
-              <button
-                onClick={handleDeleteConfirm}
-                className="flex-1 px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white transition-colors"
-              >
-                删除
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Modal
+        open={deleteConfirm.show}
+        onClose={handleDeleteCancel}
+        title="确认删除"
+        width={340}
+        footer={
+          <>
+            <Button variant="ghost" onClick={handleDeleteCancel}>
+              取消
+            </Button>
+            <Button variant="danger-solid" onClick={handleDeleteConfirm}>
+              删除
+            </Button>
+          </>
+        }
+      >
+        <p className="text-[12.5px] leading-relaxed text-text-2">确定要删除这个便利贴吗？此操作无法撤销。</p>
+      </Modal>
     </div>
   );
 };

@@ -5,6 +5,7 @@ import { BoardView } from './BoardView';
 import { InputDialog } from './InputDialog';
 import { ConfirmDialog } from './ConfirmDialog';
 import { Icon } from '../Icon';
+import { Button, IconButton } from '../ui';
 import { useToast } from '../../hooks/useToast';
 
 type View = 'list' | 'board';
@@ -72,62 +73,43 @@ export function KanbanWidget(): JSX.Element {
 
   if (kanban.loading && kanban.boards.length === 0) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#7C3AED]"></div>
+      <div className="flex h-full items-center justify-center">
+        <span className="spinner" />
       </div>
     );
   }
 
   return (
-    <div className="h-full flex flex-col relative">
+    <div className="relative flex h-full flex-col">
       {/* Fixed Header */}
-      <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 border-b border-white/10 bg-[#0D0F1A]">
-        <div className="flex items-center gap-3">
+      <div className="flex shrink-0 items-center justify-between border-b border-hairline bg-surface-0 px-4 py-2.5">
+        <div className="flex min-w-0 items-center gap-2.5">
           {view === 'board' && (
-            <button
-              onClick={handleBackToList}
-              className="p-1.5 rounded-lg hover:bg-white/5 text-white/60 hover:text-white transition-colors"
-            >
-              <Icon name="arrow-left" size={20} />
-            </button>
+            <IconButton name="arrow-left" label="返回看板列表" size="sm" onClick={handleBackToList} />
           )}
-          <h2 className="text-lg font-semibold text-white">
+          <h2 className="truncate text-[15px] font-semibold text-text-1">
             {view === 'list' ? '看板管理' : kanban.currentBoard?.name || '看板'}
           </h2>
         </div>
 
         {view === 'list' && (
-          <button
-            onClick={() => setDialogType('createBoard')}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#7C3AED] hover:bg-[#6D28D9] text-white text-sm font-medium transition-colors clickable"
-          >
-            <Icon name="plus" size={16} />
-            <span>新建看板</span>
-          </button>
+          <Button variant="primary" size="sm" icon="plus" onClick={() => setDialogType('createBoard')}>
+            新建看板
+          </Button>
         )}
 
         {view === 'board' && kanban.currentBoard && (
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => setDialogType('addColumn')}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-sm transition-colors clickable"
-            >
-              <Icon name="plus" size={16} />
-              <span>添加列</span>
-            </button>
-            <button
-              onClick={() => handleDeleteBoard(kanban.currentBoard!.id)}
-              className="p-1.5 rounded-lg hover:bg-[#EF4444]/10 text-white/40 hover:text-[#EF4444] transition-colors"
-              title="删除看板"
-            >
-              <Icon name="trash" size={18} />
-            </button>
+            <Button variant="secondary" size="sm" icon="plus" onClick={() => setDialogType('addColumn')}>
+              添加列
+            </Button>
+            <IconButton name="trash" label="删除看板" size="sm" onClick={() => handleDeleteBoard(kanban.currentBoard!.id)} />
           </div>
         )}
       </div>
 
       {/* Content - 可滚动区域 */}
-      <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         {view === 'list' ? (
           <BoardList
             boards={kanban.boards}
@@ -140,9 +122,9 @@ export function KanbanWidget(): JSX.Element {
             kanban={kanban}
           />
         ) : (
-          <div className="flex flex-col items-center justify-center h-full text-white/40">
-            <Icon name="kanban" size={48} className="mb-4 opacity-50" />
-            <p>请选择一个看板</p>
+          <div className="flex h-full flex-col items-center justify-center text-text-4">
+            <Icon name="view-columns" size={40} className="mb-3 opacity-50" />
+            <p className="text-[12.5px]">请选择一个看板</p>
           </div>
         )}
       </div>
@@ -174,7 +156,10 @@ export function KanbanWidget(): JSX.Element {
 
       {/* Error Toast */}
       {kanban.error && (
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 rounded-lg bg-[#EF4444] text-white text-sm z-50">
+        <div
+          className="absolute bottom-4 left-1/2 z-50 -translate-x-1/2 rounded-[8px] px-3.5 py-2 text-[12.5px]"
+          style={{ background: 'var(--color-surface-4)', border: '1px solid rgba(255,69,58,0.3)', color: 'var(--color-error-text)', boxShadow: 'var(--shadow-pop)' }}
+        >
           {kanban.error}
         </div>
       )}

@@ -38,6 +38,10 @@ function Settings() {
     console.log('[Settings] SetShortcut called:', { pluginId, keyCombo })
     try {
       await ShortcutService.SetShortcut(keyCombo, pluginId)
+      // Register the replacement before removing old bindings so failures keep the old key usable.
+      for (const [oldKey, owner] of Object.entries(shortcuts)) {
+        if (owner === pluginId && oldKey !== keyCombo) await ShortcutService.RemoveShortcut(oldKey)
+      }
       await reloadShortcuts()
     } catch (error) {
       console.error('[Settings] Failed to set shortcut:', error)

@@ -2,11 +2,13 @@ package applauncher
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"ltools/internal/plugins"
+	"ltools/internal/searchmatch"
 	"ltools/plugins/applauncher/apps"
 )
 
@@ -40,7 +42,7 @@ func NewAppLauncherPlugin() *AppLauncherPlugin {
 			plugins.PermissionFileSystem, // 读取应用路径
 			plugins.PermissionProcess,    // 启动进程
 		},
-		Keywords: []string{"app", "应用", "启动", "launch", "open"},
+		Keywords:   []string{"app", "应用", "启动", "launch", "open"},
 		ShowInMenu: plugins.BoolPtr(false), // 不在菜单中显示，通过快捷键/搜索调用
 		HasPage:    plugins.BoolPtr(false), // 无需独立页面
 	}
@@ -127,6 +129,13 @@ func (p *AppLauncherPlugin) Search(query string) ([]*apps.AppInfo, error) {
 			results = append(results, app)
 		}
 	}
+	sort.SliceStable(results, func(i, j int) bool {
+		left, right := searchmatch.Score(results[i].Name, query), searchmatch.Score(results[j].Name, query)
+		if left == right {
+			return results[i].Name < results[j].Name
+		}
+		return left > right
+	})
 
 	return results, nil
 }
@@ -217,11 +226,6 @@ func (p *AppLauncherPlugin) matchApp(app *apps.AppInfo, query string) bool {
 		return false
 	}
 
-	name := strings.ToLower(app.Name)
-	description := strings.ToLower(app.Description)
-
-	// 精确匹配或包含匹配
-	return strings.Contains(name, query) ||
-		strings.Contains(description, query) ||
-		name == query
+	return searchmatch.Score(app.Name, query) > 0 ||
+		strings.Contains(strings.ToLower(app.Description), strings.ToLower(query))
 }

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Icon } from '../Icon';
+import { Input } from '../ui';
 
 interface CategorySidebarProps {
   categories: string[];
@@ -19,18 +20,6 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
   const [showAddInput, setShowAddInput] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
 
-  // 获取分类图标颜色
-  const getCategoryColor = (category: string) => {
-    const colors: Record<string, string> = {
-      '社交': 'bg-blue-500',
-      '工作': 'bg-green-500',
-      '金融': 'bg-yellow-500',
-      '购物': 'bg-pink-500',
-      '其他': 'bg-gray-500',
-    };
-    return colors[category] || 'bg-purple-500';
-  };
-
   const handleAddCategory = () => {
     if (newCategoryName.trim()) {
       onAddCategory(newCategoryName.trim());
@@ -39,59 +28,49 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
     }
   };
 
+  const itemClass = (active: boolean) =>
+    `flex h-[30px] w-full items-center gap-2.5 rounded-[6px] px-2.5 text-left text-[12.5px] transition-colors duration-150 ${
+      active ? 'bg-accent-subtle font-medium text-accent-text' : 'text-text-2 hover:bg-white/[0.045] hover:text-text-1'
+    }`;
+
   return (
-    <div className="w-64 border-r border-white/10 bg-black/20 flex flex-col">
+    <div className="flex w-[200px] shrink-0 flex-col border-r border-hairline bg-surface-1">
       {/* 头部 */}
-      <div className="p-4 border-b border-white/10">
-        <h3 className="text-sm font-medium text-gray-400">分类</h3>
+      <div className="px-4 pb-2 pt-4">
+        <h3 className="text-[11px] font-medium text-text-4">分类</h3>
       </div>
 
       {/* 分类列表 */}
-      <div className="flex-1 overflow-auto p-2">
+      <div className="flex-1 space-y-0.5 overflow-auto p-2 scrollbar-hide">
         {/* 全部 */}
-        <button
-          onClick={() => onSelectCategory('')}
-          className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors mb-1 ${
-            selectedCategory === ''
-              ? 'bg-primary/20 text-primary'
-              : 'text-gray-300 hover:bg-white/5'
-          }`}
-        >
-          <div className="w-2 h-2 rounded-full bg-gray-500" />
-          <span className="flex-1 text-left">全部</span>
+        <button onClick={() => onSelectCategory('')} className={itemClass(selectedCategory === '')}>
+          <Icon name="funnel" size={14} className="shrink-0" />
+          <span className="flex-1 truncate">全部</span>
         </button>
 
         {/* 分类项 */}
-        {categories.map((category) => (
-          <div
-            key={category}
-            className="group flex items-center gap-1 mb-1"
-          >
-            <button
-              onClick={() => onSelectCategory(category)}
-              className={`flex-1 flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
-                selectedCategory === category
-                  ? 'bg-primary/20 text-primary'
-                  : 'text-gray-300 hover:bg-white/5'
-              }`}
-            >
-              <div className={`w-2 h-2 rounded-full ${getCategoryColor(category)}`} />
-              <span className="flex-1 text-left truncate">{category}</span>
-            </button>
-            <button
-              onClick={() => onDeleteCategory(category)}
-              className="p-1.5 rounded opacity-0 group-hover:opacity-100 hover:bg-white/10 transition-all"
-              title="删除分类"
-            >
-              <Icon name="x" className="w-3.5 h-3.5 text-gray-400 hover:text-red-400" />
-            </button>
-          </div>
-        ))}
+        {categories.map((category) => {
+          const active = selectedCategory === category;
+          return (
+            <div key={category} className="group relative flex items-center">
+              <button onClick={() => onSelectCategory(category)} className={itemClass(active)}>
+                <span className="flex-1 truncate">{category}</span>
+              </button>
+              <button
+                onClick={() => onDeleteCategory(category)}
+                className="icon-btn icon-btn-sm absolute right-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100"
+                title="删除分类"
+              >
+                <Icon name="close" size={11} />
+              </button>
+            </div>
+          );
+        })}
 
         {/* 添加分类输入框 */}
         {showAddInput && (
-          <div className="mt-2 px-1">
-            <input
+          <div className="mt-2 px-0.5">
+            <Input
               type="text"
               value={newCategoryName}
               onChange={(e) => setNewCategoryName(e.target.value)}
@@ -105,22 +84,18 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
               }}
               autoFocus
               placeholder="输入分类名称"
-              className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg
-                       text-white placeholder-gray-400 focus:outline-none focus:border-primary
-                       text-sm"
             />
           </div>
         )}
       </div>
 
       {/* 添加分类按钮 */}
-      <div className="p-3 border-t border-white/10">
+      <div className="border-t border-hairline p-2">
         <button
           onClick={() => setShowAddInput(true)}
-          className="w-full flex items-center gap-2 px-3 py-2 text-gray-400 hover:text-white
-                   hover:bg-white/5 rounded-lg transition-colors text-sm"
+          className="flex h-[30px] w-full items-center gap-2 rounded-[6px] px-2.5 text-[12.5px] text-text-3 transition-colors duration-150 hover:bg-white/[0.045] hover:text-text-1"
         >
-          <Icon name="plus" className="w-4 h-4" />
+          <Icon name="plus" size={14} />
           <span>添加分类</span>
         </button>
       </div>

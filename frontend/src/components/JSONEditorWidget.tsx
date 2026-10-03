@@ -1,9 +1,16 @@
 import { useState, useCallback, useEffect } from 'react';
 import Editor from '@monaco-editor/react';
+import { useTheme } from '../hooks/useTheme';
 import { Icon } from './Icon';
 import { JSONEditorService } from '../../bindings/ltools/plugins/jsoneditor';
+import { Badge, Button, Card, Segmented } from './ui';
 
 type ViewMode = 'code' | 'tree';
+
+const VIEW_OPTIONS: { value: ViewMode; label: string }[] = [
+  { value: 'code', label: '代码视图' },
+  { value: 'tree', label: '树形视图' },
+];
 
 interface JSONStats {
   size: number;
@@ -17,6 +24,7 @@ interface JSONStats {
  * JSON 编辑器主组件
  */
 export function JSONEditorWidget(): JSX.Element {
+  const { resolvedTheme } = useTheme();
   const [jsonText, setJsonText] = useState('{\n  \n}');
   const [viewMode, setViewMode] = useState<ViewMode>('code');
   const [error, setError] = useState('');
@@ -127,139 +135,91 @@ export function JSONEditorWidget(): JSX.Element {
   };
 
   return (
-    <div className="max-w-5xl mx-auto">
-      <div className="glass-heavy rounded-2xl p-6">
-        {/* 标题和工具栏 */}
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h3 className="text-xl font-semibold text-white">JSON 编辑器</h3>
-            <p className="text-white/60 text-sm">格式化、验证和编辑 JSON 数据</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              className={`px-3 py-1.5 rounded-lg text-sm transition-all clickable ${
-                viewMode === 'code' ? 'bg-[#7C3AED] text-white' : 'bg-white/5 text-white/60 hover:text-white'
-              }`}
-              onClick={() => setViewMode('code')}
-            >
-              代码视图
-            </button>
-            <button
-              className={`px-3 py-1.5 rounded-lg text-sm transition-all clickable ${
-                viewMode === 'tree' ? 'bg-[#7C3AED] text-white' : 'bg-white/5 text-white/60 hover:text-white'
-              }`}
-              onClick={() => setViewMode('tree')}
-            >
-              树形视图
-            </button>
-          </div>
-        </div>
-
-        {/* 编辑器区域 */}
-        {viewMode === 'code' ? (
-          <div className="mb-4">
-            <div className="rounded-xl overflow-hidden border border-white/10">
-              <Editor
-                height="500px"
-                defaultLanguage="json"
-                value={jsonText}
-                onChange={(value) => setJsonText(value || '')}
-                theme="vs-dark"
-                options={{
-                  minimap: { enabled: false },
-                  fontSize: 14,
-                  lineNumbers: 'on',
-                  scrollBeyondLastLine: false,
-                  automaticLayout: true,
-                  wordWrap: 'on',
-                  formatOnPaste: true,
-                  tabSize: 2,
-                }}
-              />
-            </div>
-          </div>
-        ) : (
-          <div className="glass-light rounded-xl p-4 h-[500px] overflow-auto">
-            {/* 简单的树形视图 */}
-            <JSONTreeView data={jsonText} error={error} />
-          </div>
-        )}
-
-        {/* 错误提示 */}
-        {error && (
-          <div className="mb-4 p-3 rounded-lg bg-[#EF4444]/10 text-[#EF4444] text-sm flex items-start gap-2">
-            <Icon name="alert-circle" size={16} color="#EF4444" />
-            <span className="flex-1 break-all">{error}</span>
-          </div>
-        )}
-
-        {/* 统计信息 */}
-        <div className="flex items-center justify-between text-xs text-white/40">
-          <span>
-            类型: {stats.type} | 大小: {stats.size} 字符 | 行数: {stats.lines}
-          </span>
-          <span className={isValid ? 'text-[#22C55E]' : 'text-[#EF4444]'}>
-            {isValid ? '✓ 有效 JSON' : '✗ 无效 JSON'}
-          </span>
-        </div>
-
-        {/* 操作按钮 */}
-        <div className="mt-4 flex items-center gap-3">
-          <button
-            className="px-4 py-2 rounded-lg bg-[#7C3AED] text-white hover:bg-[#6D28D9] transition-all clickable"
-            onClick={handleFormat}
-          >
-            格式化
-          </button>
-          <button
-            className="px-4 py-2 rounded-lg bg-white/5 text-white hover:bg-white/10 transition-all clickable"
-            onClick={handleMinify}
-          >
-            压缩
-          </button>
-          <button
-            className="px-4 py-2 rounded-lg bg-white/5 text-white hover:bg-white/10 transition-all clickable"
-            onClick={handleValidate}
-          >
-            验证
-          </button>
-          <button
-            className="px-4 py-2 rounded-lg bg-white/5 text-white hover:bg-white/10 transition-all clickable"
-            onClick={handleCopy}
-          >
-            复制
-          </button>
-          <button
-            className="px-4 py-2 rounded-lg bg-white/5 text-white hover:bg-white/10 transition-all clickable"
-            onClick={handleClear}
-          >
-            清空
-          </button>
-        </div>
-
-        {/* 文件导入导出 */}
-        <div className="mt-4 pt-4 border-t border-white/10 flex items-center gap-3">
-          <button
-            className="px-4 py-2 rounded-lg bg-white/5 text-white/60 hover:text-white hover:bg-white/10 transition-all clickable"
-            onClick={handleImport}
-          >
-            <div className="flex items-center gap-2">
-              <Icon name="upload" size={16} />
-              导入文件
-            </div>
-          </button>
-          <button
-            className="px-4 py-2 rounded-lg bg-white/5 text-white/60 hover:text-white hover:bg-white/10 transition-all clickable"
-            onClick={handleExport}
-          >
-            <div className="flex items-center gap-2">
-              <Icon name="download" size={16} />
-              导出文件
-            </div>
-          </button>
+    <Card className="p-4">
+      {/* 工具栏:视图切换 + 文件导入导出 */}
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+        <Segmented<ViewMode>
+          options={VIEW_OPTIONS}
+          value={viewMode}
+          onChange={(nextMode) => setViewMode(nextMode)}
+        />
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" icon="upload" onClick={handleImport}>
+            导入文件
+          </Button>
+          <Button variant="ghost" size="sm" icon="download" onClick={handleExport}>
+            导出文件
+          </Button>
         </div>
       </div>
-    </div>
+
+      {/* 编辑器区域 */}
+      {viewMode === 'code' ? (
+        <div className="overflow-hidden rounded-[9px] border border-hairline">
+          <Editor
+            height="500px"
+            defaultLanguage="json"
+            value={jsonText}
+            onChange={(value) => setJsonText(value || '')}
+            theme={resolvedTheme === 'light' ? 'light' : 'vs-dark'}
+            options={{
+              minimap: { enabled: false },
+              fontSize: 14,
+              lineNumbers: 'on',
+              scrollBeyondLastLine: false,
+              automaticLayout: true,
+              wordWrap: 'on',
+              formatOnPaste: true,
+              tabSize: 2,
+            }}
+          />
+        </div>
+      ) : (
+        <div className="card-inset h-[500px] overflow-auto rounded-[9px] p-3">
+          {/* 简单的树形视图 */}
+          <JSONTreeView data={jsonText} error={error} />
+        </div>
+      )}
+
+      {/* 错误提示 */}
+      {error && (
+        <div className="mt-3 flex items-start gap-2 rounded-[6px] bg-error/10 px-3 py-2 text-[12.5px] text-error-text">
+          <Icon name="alert-circle" size={15} className="mt-px shrink-0" />
+          <span className="selectable min-w-0 flex-1 break-all">{error}</span>
+        </div>
+      )}
+
+      {/* 统计信息 */}
+      <div className="mt-3 flex items-center justify-between gap-3 text-[11.5px] text-text-3">
+        <span className="min-w-0 truncate">
+          类型 {stats.type || '-'} · 大小{' '}
+          <span className="tnum font-medium text-text-2">{stats.size}</span> 字符 · 行数{' '}
+          <span className="tnum font-medium text-text-2">{stats.lines}</span>
+        </span>
+        <Badge tone={isValid ? 'success' : 'error'} className="shrink-0">
+          {isValid ? '有效 JSON' : '无效 JSON'}
+        </Badge>
+      </div>
+
+      {/* 操作按钮 */}
+      <div className="hairline-t mt-3 flex flex-wrap items-center gap-2 pt-3">
+        <Button variant="primary" onClick={handleFormat}>
+          格式化
+        </Button>
+        <Button variant="secondary" onClick={handleMinify}>
+          压缩
+        </Button>
+        <Button variant="secondary" onClick={handleValidate}>
+          验证
+        </Button>
+        <Button variant="secondary" icon="copy" onClick={handleCopy}>
+          复制
+        </Button>
+        <Button variant="ghost" icon="trash" onClick={handleClear}>
+          清空
+        </Button>
+      </div>
+    </Card>
   );
 }
 
@@ -285,23 +245,23 @@ function JSONTreeView({ data, error }: JSONTreeViewProps): JSX.Element {
 
   if (error) {
     return (
-      <div className="text-center py-8">
-        <Icon name="alert-circle" size={32} color="#EF4444" />
-        <p className="text-[#EF4444] mt-2">无效的 JSON</p>
+      <div className="flex flex-col items-center py-8 text-center">
+        <Icon name="alert-circle" size={28} className="text-error-text" />
+        <p className="mt-2 text-[12.5px] text-error-text">无效的 JSON</p>
       </div>
     );
   }
 
   if (!parsed) {
     return (
-      <div className="text-center py-8 text-white/40">
+      <div className="py-8 text-center text-[12.5px] text-text-3">
         请输入有效的 JSON 数据
       </div>
     );
   }
 
   return (
-    <div className="font-mono text-sm">
+    <div className="selectable font-mono text-[12.5px]">
       <TreeNode data={parsed} key="root" />
     </div>
   );
@@ -329,24 +289,24 @@ function TreeNode({ data, name }: TreeNodeProps): JSX.Element {
   // 基本类型值
   if (type !== 'object' && type !== 'array') {
     let valueDisplay = String(data);
-    let valueColor = 'text-[#A78BFA]';
+    let valueColor = 'text-accent-text';
 
     if (type === 'string') {
       valueDisplay = `"${data}"`;
-      valueColor = 'text-[#22C55E]';
+      valueColor = 'text-success-text';
     } else if (type === 'number') {
-      valueColor = 'text-[#F59E0B]';
+      valueColor = 'text-warning-text';
     } else if (type === 'boolean') {
-      valueColor = 'text-[#7C3AED]';
+      valueColor = 'text-info';
     } else if (type === 'null') {
-      valueColor = 'text-white/40';
+      valueColor = 'text-text-4';
     }
 
     return (
-      <div className="py-1 px-2 hover:bg-white/5 rounded">
-        {name && <span className="text-[#60A5FA]">{name}</span>}
-        {name && <span className="text-white/40 mx-1">:</span>}
-        <span className={valueColor}>{valueDisplay}</span>
+      <div className="rounded-[5px] px-1.5 py-0.5 hover:bg-surface-3">
+        {name && <span className="text-accent-text">{name}</span>}
+        {name && <span className="mx-1 text-text-4">:</span>}
+        <span className={`tnum break-all ${valueColor}`}>{valueDisplay}</span>
       </div>
     );
   }
@@ -357,35 +317,35 @@ function TreeNode({ data, name }: TreeNodeProps): JSX.Element {
     : Object.entries(data);
 
   const isEmpty = entries.length === 0;
-  const bracketColor = type === 'array' ? 'text-[#F59E0B]' : 'text-[#60A5FA]';
+  const bracketColor = type === 'array' ? 'text-warning-text' : 'text-accent-text';
 
   return (
-    <div className="ml-2">
+    <div>
       <div
-        className="flex items-center gap-1 py-1 px-2 hover:bg-white/5 rounded cursor-pointer clickable"
+        className="flex cursor-pointer items-center gap-1 rounded-[5px] px-1.5 py-0.5 hover:bg-surface-3"
         onClick={() => setExpanded(!expanded)}
       >
-        <span className="text-white/30 select-none">
-          {expanded ? '▼' : '▶'}
+        <span className="shrink-0 select-none text-text-4">
+          <Icon name={expanded ? 'chevron-down' : 'chevron-right'} size={11} />
         </span>
-        {name && <span className="text-[#60A5FA]">{name}</span>}
-        {name && <span className="text-white/40 mx-1">:</span>}
+        {name && <span className="text-accent-text">{name}</span>}
+        {name && <span className="mx-1 text-text-4">:</span>}
         <span className={bracketColor}>{type === 'array' ? '[' : '{'}</span>
-        {!expanded && <span className="text-white/40">...</span>}
+        {!expanded && <span className="text-text-4">...</span>}
         {isEmpty && <span className={bracketColor}>{type === 'array' ? ']' : '}'}</span>}
-        {!isEmpty && (
-          <span className="text-white/40 text-xs">
+        {!isEmpty && expanded && (
+          <span className="tnum text-[11px] text-text-4">
             {entries.length} {type === 'array' ? '项' : '个属性'}
           </span>
         )}
       </div>
 
       {expanded && !isEmpty && (
-        <div className="ml-4 border-l border-white/10 pl-2">
+        <div className="ml-3 border-l border-hairline pl-2">
           {entries.map(([key, value], index) => (
             <TreeNode key={`${name}-${key}-${index}`} data={value} name={String(key)} />
           ))}
-          <div className={bracketColor}>{type === 'array' ? ']' : '}'}</div>
+          <div className={`py-0.5 px-1.5 ${bracketColor}`}>{type === 'array' ? ']' : '}'}</div>
         </div>
       )}
     </div>

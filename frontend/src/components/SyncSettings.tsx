@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Icon } from './Icon';
-import { useToast } from '../hooks/useToast';
 import * as SyncService from '../../bindings/ltools/internal/sync/syncservice';
 import { SyncConfig, SyncStatus } from '../../bindings/ltools/internal/sync/models';
+import { useToast } from '../hooks/useToast';
+import { Icon } from './Icon';
+import { Badge, Button, Field, Input, PageHeader, SectionTitle, Spinner, Toggle } from './ui';
 import {
   Select,
   SelectContent,
@@ -44,7 +45,11 @@ export function SyncSettings() {
     loadData();
     // 定时刷新状态
     const interval = setInterval(() => {
-      SyncService.GetStatus().then(setStatus);
+      SyncService.GetStatus()
+        .then(setStatus)
+        .catch(() => {
+          /* 状态刷新失败时静默,等待下次轮询 */
+        });
     }, 5000);
     return () => clearInterval(interval);
   }, [loadData]);
@@ -54,8 +59,12 @@ export function SyncSettings() {
   const [sshAvailable, setSshAvailable] = useState(false);
 
   useEffect(() => {
-    SyncService.IsGitInstalled().then(setGitInstalled);
-    SyncService.CheckSSHCredential().then(setSshAvailable);
+    SyncService.IsGitInstalled()
+      .then(setGitInstalled)
+      .catch((err) => console.error('Failed to check git:', err));
+    SyncService.CheckSSHCredential()
+      .then(setSshAvailable)
+      .catch((err) => console.error('Failed to check SSH credential:', err));
   }, []);
 
   // 保存配置
@@ -139,19 +148,20 @@ export function SyncSettings() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#7C3AED]"></div>
+        <Spinner size={20} />
       </div>
     );
   }
 
   if (!gitInstalled) {
     return (
-      <div className="glass-light rounded-xl p-6">
-        <div className="flex items-center gap-3 text-[#F59E0B]">
-          <Icon name="exclamation-circle" size={24} />
+      <div className="animate-fade-in">
+        <PageHeader title="同步" description="配置数据同步和备份选项" />
+        <div className="flex items-center gap-3 rounded-[9px] border border-warning/20 bg-warning/10 p-4">
+          <Icon name="exclamation-circle" size={20} className="shrink-0 text-warning-text" />
           <div>
-            <h3 className="font-semibold">Git 未安装</h3>
-            <p className="text-sm text-white/50">请先安装 Git 以使用同步功能</p>
+            <h3 className="text-[13px] font-semibold text-warning-text">Git 未安装</h3>
+            <p className="mt-0.5 text-[12px] text-text-3">请先安装 Git 以使用同步功能</p>
           </div>
         </div>
       </div>
@@ -159,67 +169,65 @@ export function SyncSettings() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* 状态卡片 */}
-      <div className="glass-light rounded-xl p-6">
-        <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-          <Icon name="server" size={20} color="#A78BFA" />
-          同步状态
-        </h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-[#0D0F1A]/50 rounded-lg p-4">
-            <p className="text-white/50 text-sm">状态</p>
-            <p className="text-white font-medium mt-1">
+    <div className="animate-fade-in">
+      <PageHeader title="同步" description="配置数据同步和备份选项" />
+
+      {/* 同步状态 */}
+      <SectionTitle title="同步状态" className="mb-2" />
+      <div className="card-inset p-4">
+        <div className="grid grid-cols-2 gap-x-6 gap-y-4 md:grid-cols-4">
+          <div>
+            <p className="text-[11.5px] text-text-3">状态</p>
+            <p className="mt-1 text-[12.5px] font-medium">
               {status?.enabled ? (
-                <span className="text-[#22C55E]">已启用</span>
+                <Badge tone="success">已启用</Badge>
               ) : (
-                <span className="text-white/50">未启用</span>
+                <Badge tone="neutral">未启用</Badge>
               )}
             </p>
           </div>
-          <div className="bg-[#0D0F1A]/50 rounded-lg p-4">
-            <p className="text-white/50 text-sm">自动同步</p>
-            <p className="text-white font-medium mt-1">
+          <div>
+            <p className="text-[11.5px] text-text-3">自动同步</p>
+            <p className="mt-1 text-[12.5px] font-medium text-text-1">
               {status?.autoSync ? '已开启' : '已关闭'}
             </p>
           </div>
-          <div className="bg-[#0D0F1A]/50 rounded-lg p-4">
-            <p className="text-white/50 text-sm">上次同步</p>
-            <p className="text-white font-medium mt-1 text-sm">
+          <div>
+            <p className="text-[11.5px] text-text-3">上次同步</p>
+            <p className="tnum mt-1 truncate text-[12.5px] font-medium text-text-1" title={formatTime(status?.lastSyncTime)}>
               {formatTime(status?.lastSyncTime)}
             </p>
           </div>
-          <div className="bg-[#0D0F1A]/50 rounded-lg p-4">
-            <p className="text-white/50 text-sm">待同步更改</p>
-            <p className="text-white font-medium mt-1">
+          <div>
+            <p className="text-[11.5px] text-text-3">待同步更改</p>
+            <p className="mt-1 text-[12.5px] font-medium">
               {status?.hasChanges ? (
-                <span className="text-[#F59E0B]">有</span>
+                <span className="text-warning-text">有</span>
               ) : (
-                <span className="text-[#22C55E]">无</span>
+                <span className="text-success-text">无</span>
               )}
             </p>
           </div>
         </div>
         {status?.error && (
-          <div className="mt-4 p-3 bg-[#EF4444]/10 rounded-lg border border-[#EF4444]/20">
-            <p className="text-[#EF4444] text-sm">{status.error}</p>
+          <div className="mt-4 rounded-[7px] border border-error/20 bg-error/10 px-3 py-2">
+            <p className="text-[12px] text-error-text">{status.error}</p>
           </div>
         )}
       </div>
 
       {/* 仓库配置 */}
-      <div className="glass-light rounded-xl p-6">
-        <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-          <Icon name="code" size={20} color="#A78BFA" />
-          仓库配置
-        </h3>
-        <div className="space-y-4">
-          <div>
-            <label className="block text-white/70 text-sm mb-2">Git 仓库地址</label>
+      <SectionTitle title="仓库配置" className="mb-2 mt-5" />
+      <div className="card-inset px-4">
+        <div className="hairline-b py-3">
+          <Field
+            label="Git 仓库地址"
+            hint="支持 SSH (git@...) 或 HTTPS (https://...) 格式"
+          >
             <div className="flex gap-2">
-              <input
+              <Input
                 type="text"
-                className="flex-1 bg-[#0D0F1A]/50 border border-white/10 rounded-lg px-4 py-2 text-white placeholder-white/30 focus:border-[#7C3AED] focus:outline-none"
+                className="flex-1"
                 placeholder="git@github.com:username/ltools-sync.git"
                 value={config?.repoUrl || ''}
                 onChange={(e) => {
@@ -229,183 +237,114 @@ export function SyncSettings() {
                 }}
                 onBlur={() => config && saveConfig(config)}
               />
-              <button
-                className="px-4 py-2 bg-[#7C3AED]/20 hover:bg-[#7C3AED]/30 text-[#A78BFA] rounded-lg transition-all duration-200 clickable"
+              <Button
+                variant="secondary"
                 onClick={testConnection}
                 disabled={testing || !config?.repoUrl}
+                loading={testing}
               >
                 {testing ? '测试中...' : '测试连接'}
-              </button>
+              </Button>
             </div>
-            <p className="text-white/40 text-xs mt-2">
-              支持 SSH (git@...) 或 HTTPS (https://...) 格式
-            </p>
-          </div>
+          </Field>
+        </div>
 
-          {/* 认证信息 */}
-          <div className="bg-[#0D0F1A]/50 rounded-lg p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-white/70 text-sm">认证方式</p>
-                <p className="text-white mt-1">
-                  {sshAvailable ? (
-                    <span className="flex items-center gap-2">
-                      <Icon name="check-circle" size={16} color="#22C55E" />
-                      SSH 密钥已配置
-                    </span>
-                  ) : (
-                    <span className="text-white/50">SSH 未配置，可使用 HTTPS + Token</span>
-                  )}
-                </p>
-              </div>
-              {!sshAvailable && (
-                <button
-                  className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white/70 rounded-lg transition-all duration-200 clickable text-sm"
-                  onClick={() => setShowTokenInput(!showTokenInput)}
-                >
-                  {showTokenInput ? '取消' : '设置 Token'}
-                </button>
-              )}
-            </div>
-            {showTokenInput && (
-              <div className="mt-4 space-y-3">
-                <input
-                  type="password"
-                  className="w-full bg-[#0D0F1A] border border-white/10 rounded-lg px-4 py-2 text-white placeholder-white/30 focus:border-[#7C3AED] focus:outline-none"
-                  placeholder="输入 Personal Access Token"
-                  value={token}
-                  onChange={(e) => setToken(e.target.value)}
-                />
-                <button
-                  className="px-4 py-2 bg-[#7C3AED] hover:bg-[#7C3AED]/80 text-white rounded-lg transition-all duration-200 clickable"
-                  onClick={saveToken}
-                >
-                  保存令牌
-                </button>
-              </div>
+        {/* 认证信息 */}
+        <div className="py-3">
+          <Field horizontal label="认证方式" hint={sshAvailable ? 'SSH 密钥已配置' : 'SSH 未配置，可使用 HTTPS + Token'}>
+            {sshAvailable ? (
+              <Badge tone="success">SSH 密钥已配置</Badge>
+            ) : (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setShowTokenInput(!showTokenInput)}
+              >
+                {showTokenInput ? '取消' : '设置 Token'}
+              </Button>
             )}
-          </div>
+          </Field>
+          {showTokenInput && !sshAvailable && (
+            <div className="mt-3 flex flex-col items-start gap-2">
+              <Input
+                type="password"
+                className="max-w-sm"
+                placeholder="输入 Personal Access Token"
+                value={token}
+                onChange={(e) => setToken(e.target.value)}
+              />
+              <Button variant="primary" size="sm" onClick={saveToken}>
+                保存令牌
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* 同步设置 */}
-      <div className="glass-light rounded-xl p-6">
-        <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-          <Icon name="cog" size={20} color="#A78BFA" />
-          同步设置
-        </h3>
-        <div className="space-y-4">
-          {/* 启用同步 */}
-          <div className="flex items-center justify-between p-4 bg-[#0D0F1A]/50 rounded-lg">
-            <div>
-              <p className="text-white font-medium">启用同步</p>
-              <p className="text-white/50 text-sm">开启后可将数据同步到 Git 仓库</p>
-            </div>
-            <button
-              className={`relative w-12 h-6 rounded-full transition-colors duration-200 ${
-                config?.enabled ? 'bg-[#7C3AED]' : 'bg-white/20'
-              }`}
-              onClick={() => {
-                if (config) {
-                  const newEnabled = !config.enabled;
-                  saveConfig({ ...config, enabled: newEnabled });
-                }
-              }}
-            >
-              <div
-                className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform duration-200 ${
-                  config?.enabled ? 'left-7' : 'left-1'
-                }`}
-              />
-            </button>
-          </div>
-
-          {/* 自动同步 */}
-          <div className="flex items-center justify-between p-4 bg-[#0D0F1A]/50 rounded-lg">
-            <div>
-              <p className="text-white font-medium">自动同步</p>
-              <p className="text-white/50 text-sm">定时自动同步数据</p>
-            </div>
-            <button
-              className={`relative w-12 h-6 rounded-full transition-colors duration-200 ${
-                config?.autoSync ? 'bg-[#7C3AED]' : 'bg-white/20'
-              }`}
-              onClick={() => {
-                if (config) {
-                  saveConfig({ ...config, autoSync: !config.autoSync });
-                }
-              }}
-            >
-              <div
-                className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform duration-200 ${
-                  config?.autoSync ? 'left-7' : 'left-1'
-                }`}
-              />
-            </button>
-          </div>
-
-          {/* 同步间隔 */}
-          <div className="p-4 bg-[#0D0F1A]/50 rounded-lg">
-            <div className="flex items-center justify-between mb-3">
-              <div>
-                <p className="text-white font-medium">同步间隔</p>
-                <p className="text-white/50 text-sm">自动同步的时间间隔</p>
-              </div>
-              <Select
-                value={String(config?.syncInterval || 5)}
-                onValueChange={(value) => {
-                  if (config) {
-                    saveConfig({ ...config, syncInterval: parseInt(value) });
-                  }
-                }}
-              >
-                <SelectTrigger className="w-24">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1">1 分钟</SelectItem>
-                  <SelectItem value="5">5 分钟</SelectItem>
-                  <SelectItem value="10">10 分钟</SelectItem>
-                  <SelectItem value="30">30 分钟</SelectItem>
-                  <SelectItem value="60">1 小时</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </div>
+      {/* 同步选项 */}
+      <SectionTitle title="同步选项" className="mb-2 mt-5" />
+      <div className="card-inset px-4">
+        <Field horizontal className="hairline-b" label="启用同步" hint="开启后可将数据同步到 Git 仓库">
+          <Toggle
+            checked={config?.enabled ?? false}
+            onChange={(checked) => {
+              if (config) {
+                saveConfig({ ...config, enabled: checked });
+              }
+            }}
+            label="启用同步"
+          />
+        </Field>
+        <Field horizontal className="hairline-b" label="自动同步" hint="定时自动同步数据">
+          <Toggle
+            checked={config?.autoSync ?? false}
+            onChange={(checked) => {
+              if (config) {
+                saveConfig({ ...config, autoSync: checked });
+              }
+            }}
+            label="自动同步"
+          />
+        </Field>
+        <Field horizontal label="同步间隔" hint="自动同步的时间间隔">
+          <Select
+            value={String(config?.syncInterval || 5)}
+            onValueChange={(value) => {
+              if (config) {
+                saveConfig({ ...config, syncInterval: parseInt(value) });
+              }
+            }}
+          >
+            <SelectTrigger className="w-28">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="1">1 分钟</SelectItem>
+              <SelectItem value="5">5 分钟</SelectItem>
+              <SelectItem value="10">10 分钟</SelectItem>
+              <SelectItem value="30">30 分钟</SelectItem>
+              <SelectItem value="60">1 小时</SelectItem>
+            </SelectContent>
+          </Select>
+        </Field>
       </div>
 
       {/* 手动同步 */}
-      <div className="glass-light rounded-xl p-6">
-        <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-          <Icon name="refresh" size={20} color="#A78BFA" />
-          手动同步
-        </h3>
-        <div className="flex items-center gap-4">
-          <button
-            className={`px-6 py-3 rounded-lg transition-all duration-200 clickable font-medium ${
-              syncing || !config?.enabled || !config?.repoUrl
-                ? 'bg-white/10 text-white/30 cursor-not-allowed'
-                : 'bg-[#7C3AED] hover:bg-[#7C3AED]/80 text-white'
-            }`}
-            onClick={performSync}
-            disabled={syncing || !config?.enabled || !config?.repoUrl}
-          >
-            {syncing ? (
-              <span className="flex items-center gap-2">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                同步中...
-              </span>
-            ) : (
-              '立即同步'
-            )}
-          </button>
-          {status?.lastSyncHash && (
-            <p className="text-white/50 text-sm">
-              最后提交: {status.lastSyncHash.substring(0, 7)}
-            </p>
-          )}
-        </div>
+      <SectionTitle title="手动同步" className="mb-2 mt-5" />
+      <div className="card-inset flex items-center gap-3 p-4">
+        <Button
+          variant="primary"
+          onClick={performSync}
+          disabled={syncing || !config?.enabled || !config?.repoUrl}
+          loading={syncing}
+        >
+          {syncing ? '同步中...' : '立即同步'}
+        </Button>
+        {status?.lastSyncHash && (
+          <p className="tnum min-w-0 truncate font-mono text-[12px] text-text-3">
+            最后提交: {status.lastSyncHash.substring(0, 7)}
+          </p>
+        )}
       </div>
     </div>
   );

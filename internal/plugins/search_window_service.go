@@ -4,9 +4,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"sync"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
+	"github.com/wailsapp/wails/v3/pkg/events"
+	"ltools/internal/filesearch"
+	"ltools/internal/searchmatch"
 	"ltools/plugins/applauncher/apps"
 )
 
@@ -18,16 +22,16 @@ type AppLauncherService interface {
 
 // SearchWindowService manages the global search window (Spotlight/Alfred-like)
 type SearchWindowService struct {
-	app                   *application.App
-	pluginService         *PluginService
-	shortcutService       *ShortcutService
-	appLauncherService    AppLauncherService         `json:"-"` // Exclude from JSON serialization
-	searchWindow          *application.WebviewWindow
-	mainWindow            *application.WebviewWindow // 主窗口引用
-	isVisible             bool
-	lastPosition          *windowPosition
-	searchHotkeyPluginID  string // Plugin ID for the search hotkey
-	mu                    sync.RWMutex
+	app                  *application.App
+	pluginService        *PluginService
+	shortcutService      *ShortcutService
+	appLauncherService   AppLauncherService `json:"-"` // Exclude from JSON serialization
+	searchWindow         *application.WebviewWindow
+	mainWindow           *application.WebviewWindow // 主窗口引用
+	isVisible            bool
+	lastPosition         *windowPosition
+	searchHotkeyPluginID string // Plugin ID for the search hotkey
+	mu                   sync.RWMutex
 }
 
 // windowPosition stores the window position
@@ -42,10 +46,10 @@ type SearchResult struct {
 	Name          string   `json:"name"`
 	Description   string   `json:"description"`
 	Icon          string   `json:"icon"`
-	MatchedFields []string `json:"matchedFields"` // Fields that matched the search query
-	Type          string   `json:"type"`          // "plugin", "app", or "file"
-	AppID         string   `json:"appId,omitempty"`   // For apps
-	Path          string   `json:"path,omitempty"`    // For file/directory paths
+	MatchedFields []string `json:"matchedFields"`         // Fields that matched the search query
+	Type          string   `json:"type"`                  // "plugin", "app", or "file"
+	AppID         string   `json:"appId,omitempty"`       // For apps
+	Path          string   `json:"path,omitempty"`        // For file/directory paths
 	IsDirectory   bool     `json:"isDirectory,omitempty"` // Whether the path is a directory
 }
 
@@ -75,6 +79,7 @@ func (s *SearchWindowService) SetMainWindow(window *application.WebviewWindow) {
 
 // ServiceStartup is called when the application starts
 func (s *SearchWindowService) ServiceStartup(app *application.App) error {
+	filesearch.Default.Start()
 	app.Logger.Info("[SearchWindowService] Starting up...")
 
 	// Register the search hotkey (Cmd+Space / Ctrl+Space)
@@ -122,6 +127,7 @@ func (s *SearchWindowService) Show() error {
 	// Show and focus the window
 	s.searchWindow.Show()
 	s.searchWindow.SetAlwaysOnTop(true)
+	s.searchWindow.Focus()
 
 	// Emit event to frontend to focus the search input
 	s.app.Event.Emit("search:opened", "")
@@ -155,6 +161,7 @@ func (s *SearchWindowService) ShowWithQuery(query string) error {
 	// Show and focus the window
 	s.searchWindow.Show()
 	s.searchWindow.SetAlwaysOnTop(true)
+	s.searchWindow.Focus()
 
 	// Emit event to frontend with the query (只发送一次，带查询参数)
 	s.app.Event.Emit("search:opened", query)
@@ -269,6 +276,9 @@ func (s *SearchWindowService) Search(query string) ([]*SearchResult, error) {
 	}
 
 	// 注意：应用搜索由前端直接调用 AppLauncherService.Search() 处理
+	sort.SliceStable(results, func(i, j int) bool {
+		return searchmatch.Score(results[i].Name, query) > searchmatch.Score(results[j].Name, query)
+	})
 	// 这样可以避免 Wails 绑定警告，并保持更清晰的职责分离
 
 	s.app.Logger.Info(fmt.Sprintf("[SearchWindowService] Found %d plugin results", len(results)))
@@ -342,7 +352,7 @@ func (s *SearchWindowService) matchPlugin(plugin *PluginMetadata, query string) 
 	queryLower := toLower(query)
 
 	// Check name
-	if contains(toLower(plugin.Name), queryLower) {
+	if searchmatch.Score(plugin.Name, query) > 0 {
 		matchedFields = append(matchedFields, "name")
 	}
 
@@ -353,7 +363,7 @@ func (s *SearchWindowService) matchPlugin(plugin *PluginMetadata, query string) 
 
 	// Check keywords
 	for _, keyword := range plugin.Keywords {
-		if contains(toLower(keyword), queryLower) {
+		if searchmatch.Score(keyword, query) > 0 {
 			matchedFields = append(matchedFields, "keyword")
 			break
 		}
@@ -372,11 +382,11 @@ func (s *SearchWindowService) getPluginIcon(pluginID string) string {
 	// This could be enhanced to return actual icon data
 	// For now, return emoji based on plugin ID
 	iconMap := map[string]string{
-		"datetime.builtin":      "🕐",
-		"calculator.builtin":    "🔢",
-		"clipboard.builtin":     "📋",
-		"sysinfo.builtin":       "💻",
-		"jsoneditor.builtin":    "📝",
+		"datetime.builtin":       "🕐",
+		"calculator.builtin":     "🔢",
+		"clipboard.builtin":      "📋",
+		"sysinfo.builtin":        "💻",
+		"jsoneditor.builtin":     "📝",
 		"processmanager.builtin": "⚙️",
 	}
 
@@ -392,9 +402,9 @@ func (s *SearchWindowService) createWindow() error {
 
 	s.searchWindow = s.app.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title:           "LTools Search",
-		Width:           600,
-		Height:          500,
-		MinWidth:        500,
+		Width:           760,
+		Height:          460,
+		MinWidth:        600,
 		MinHeight:       400,
 		Frameless:       true,
 		AlwaysOnTop:     true,
@@ -403,13 +413,50 @@ func (s *SearchWindowService) createWindow() error {
 		InitialPosition: application.WindowCentered,
 		Mac: application.MacWindow{
 			InvisibleTitleBarHeight: 0,
-			Backdrop:               application.MacBackdropTranslucent,
+			Backdrop:                application.MacBackdropTranslucent,
 		},
 		DisableResize: false,
+	})
+	s.searchWindow.OnWindowEvent(events.Common.WindowLostFocus, func(event *application.WindowEvent) {
+		if s.IsVisible() && !s.searchWindow.IsFocused() {
+			_ = s.Hide()
+		}
 	})
 
 	s.app.Logger.Info("[SearchWindowService] Search window created")
 	return nil
+}
+
+// OpenMainWindow brings the main application back from the launcher.
+func (s *SearchWindowService) OpenMainWindow() error {
+	s.mu.RLock()
+	window := s.mainWindow
+	s.mu.RUnlock()
+	if window == nil {
+		return fmt.Errorf("main window is unavailable")
+	}
+	_ = s.Hide()
+	window.Show()
+	window.Focus()
+	s.app.Event.Emit("navigate:to", map[string]string{"path": "/"})
+	return nil
+}
+
+type FileSearchResponse struct {
+	Results  []*SearchResult `json:"results"`
+	Indexing bool            `json:"indexing"`
+	Limited  bool            `json:"limited"`
+}
+
+// SearchFiles searches the background name index without traversing directories.
+func (s *SearchWindowService) SearchFiles(query string) FileSearchResponse {
+	entries, indexing, limited := filesearch.Default.Search(query, 100)
+	response := FileSearchResponse{Results: []*SearchResult{}, Indexing: indexing, Limited: limited}
+	for _, entry := range entries {
+		response.Results = append(response.Results, &SearchResult{Name: entry.Name, Description: entry.Path,
+			Path: entry.Path, Type: "file", IsDirectory: entry.IsDirectory})
+	}
+	return response
 }
 
 // SearchPath 检测并返回文件/目录路径搜索结果
@@ -435,12 +482,12 @@ func (s *SearchWindowService) SearchPath(query string) (*SearchResult, error) {
 	}
 
 	return &SearchResult{
-		Name:          pathInfo.OriginalInput,
-		Description:   description,
-		Icon:          s.getFileIcon(pathInfo.ResolvedPath, pathInfo.IsDirectory),
-		Type:          "file",
-		Path:          pathInfo.ResolvedPath,
-		IsDirectory:   pathInfo.IsDirectory,
+		Name:        pathInfo.OriginalInput,
+		Description: description,
+		Icon:        s.getFileIcon(pathInfo.ResolvedPath, pathInfo.IsDirectory),
+		Type:        "file",
+		Path:        pathInfo.ResolvedPath,
+		IsDirectory: pathInfo.IsDirectory,
 	}, nil
 }
 
@@ -454,18 +501,18 @@ func (s *SearchWindowService) getFileIcon(path string, isDir bool) string {
 	ext := GetFileExtension(path)
 	iconMap := map[string]string{
 		// 代码文件
-		"go":   "🐹",
-		"js":   "📜",
-		"ts":   "📘",
-		"tsx":  "⚛️",
-		"jsx":  "⚛️",
-		"py":   "🐍",
-		"rs":   "🦀",
-		"c":    "©️",
-		"cpp":  "©️",
-		"h":    "📄",
-		"java": "☕",
-		"kt":   "🎯",
+		"go":    "🐹",
+		"js":    "📜",
+		"ts":    "📘",
+		"tsx":   "⚛️",
+		"jsx":   "⚛️",
+		"py":    "🐍",
+		"rs":    "🦀",
+		"c":     "©️",
+		"cpp":   "©️",
+		"h":     "📄",
+		"java":  "☕",
+		"kt":    "🎯",
 		"swift": "🍎",
 
 		// 配置文件
@@ -512,16 +559,16 @@ func (s *SearchWindowService) getFileIcon(path string, isDir bool) string {
 		"webm": "🎬",
 
 		// 压缩文件
-		"zip":  "📦",
-		"tar":  "📦",
-		"gz":   "📦",
-		"rar":  "📦",
-		"7z":   "📦",
+		"zip": "📦",
+		"tar": "📦",
+		"gz":  "📦",
+		"rar": "📦",
+		"7z":  "📦",
 
 		// 其他常见文件
-		"exe":  "⚙️",
-		"dll":  "🔧",
-		"so":   "🔧",
+		"exe":   "⚙️",
+		"dll":   "🔧",
+		"so":    "🔧",
 		"dylib": "🔧",
 	}
 

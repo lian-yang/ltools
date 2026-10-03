@@ -22,6 +22,7 @@ import { BatchProgress as BatchProgressDialog } from './imageprocessor/BatchProg
 import { FaviconResultDialog } from './imageprocessor/FaviconResultDialog';
 import { Icon } from './Icon';
 import { useToast } from '../hooks/useToast';
+import { Badge, Button } from './ui';
 import {
   applyWatermark,
   hasValidWatermarkContent,
@@ -1054,69 +1055,51 @@ export function ImageProcessorWidget(): JSX.Element {
   }, [currentMode, files, originalPreviews, compressOptions.maxWidth, compressOptions.maxHeight]);
 
   return (
-    <div className="h-full flex flex-col p-6">
+    <div className="flex h-full flex-col p-6">
       {/* 头部 */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#7C3AED] to-[#A78BFA] flex items-center justify-center">
-            <Icon name="photo" className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-[#FAF5FF]">图片处理</h1>
-            <p className="text-sm text-white/50">本地批量图片处理工具</p>
-          </div>
+      <div className="mb-5 flex items-center justify-between">
+        <div>
+          <h1 className="page-title">图片处理</h1>
+          <p className="page-subtitle">本地批量图片处理工具</p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           {files.length > 0 && (
             <>
               {currentMode === ProcessingMode.ModeCompress && (
-                <button
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  icon="view-columns"
                   onClick={() => setCompareMode(!compareMode)}
-                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
-                    compareMode
-                      ? 'bg-[#7C3AED] text-white'
-                      : 'bg-white/10 text-white/70 hover:bg-white/20'
-                  }`}
+                  className={compareMode ? '!border-accent/40 !bg-accent-subtle !text-accent-text' : ''}
                 >
-                  <Icon name="folder" className="w-4 h-4" />
                   对比
-                </button>
+                </Button>
               )}
               {currentMode === ProcessingMode.ModeCrop && isCropped && (
-                <button
-                  onClick={handleUndoCrop}
-                  className="px-3 py-2 rounded-lg text-sm font-medium bg-[#F59E0B]/20 text-[#FBBF24] hover:bg-[#F59E0B]/30 transition-colors flex items-center gap-2"
-                >
-                  <Icon name="undo" className="w-4 h-4" />
+                <Button variant="secondary" size="sm" icon="undo" onClick={handleUndoCrop}>
                   撤销裁剪
-                </button>
+                </Button>
               )}
-              <button
-                onClick={clearFiles}
-                className="px-3 py-2 rounded-lg text-sm font-medium text-white/70 hover:bg-white/10 transition-colors"
-              >
+              <Button variant="ghost" size="sm" onClick={clearFiles}>
                 清空
-              </button>
-              <span className="px-3 py-1.5 bg-white/10 rounded-lg text-sm text-white/70">
+              </Button>
+              <Badge tone="neutral" className="tnum">
                 {files.length} 个文件
-              </span>
+              </Badge>
             </>
           )}
-          <button
-            onClick={handleFileSelect}
-            className="px-4 py-2 bg-[#7C3AED] hover:bg-[#6D28D9] rounded-lg text-white font-medium transition-colors flex items-center gap-2"
-          >
-            <Icon name="plus" className="w-4 h-4" />
+          <Button variant="primary" icon="plus" onClick={handleFileSelect}>
             选择文件
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* 主要内容区域 */}
-      <div className="flex-1 flex gap-4 min-h-0">
+      <div className="flex min-h-0 flex-1 gap-4">
         {/* 左侧功能面板 */}
-        <div className="w-56 flex-shrink-0">
+        <div className="w-56 shrink-0">
           <FunctionPanel
             currentMode={currentMode}
             onModeChange={setCurrentMode}
@@ -1125,7 +1108,7 @@ export function ImageProcessorWidget(): JSX.Element {
         </div>
 
         {/* 中间预览区域 */}
-        <div className="flex-1 min-w-0" data-file-drop-target>
+        <div className="min-w-0 flex-1" data-file-drop-target>
           <PreviewArea
             files={files}
             selectedIndex={selectedIndex}
@@ -1143,7 +1126,7 @@ export function ImageProcessorWidget(): JSX.Element {
         </div>
 
         {/* 右侧设置面板 */}
-        <div className="w-80 flex-shrink-0">
+        <div className="w-80 shrink-0">
           <SettingsPanel
             mode={currentMode}
             compressOptions={compressOptions}
@@ -1166,31 +1149,53 @@ export function ImageProcessorWidget(): JSX.Element {
 
       {/* 文件列表 */}
       {files.length > 0 && (
-        <div className="mt-4 glass rounded-xl p-3">
-          <div className="flex items-center gap-2 overflow-x-auto">
-            {files.map((file, index) => (
-              <div
-                key={file.path}
-                className={`flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
-                  selectedIndex === index
-                    ? 'bg-[#7C3AED]/30 border border-[#A78BFA]/30'
-                    : 'bg-white/5 hover:bg-white/10'
-                }`}
-                onClick={() => setSelectedIndex(index)}
-              >
-                <Icon name="photo" className="w-4 h-4 text-white/40" />
-                <span className="text-sm text-white/70 truncate max-w-[150px]">{file.name}</span>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    removeFile(index);
+        <div className="card mt-4 p-2">
+          <div className="scrollbar-hide flex items-center gap-1.5 overflow-x-auto">
+            {files.map((file, index) => {
+              const active = selectedIndex === index;
+              return (
+                <div
+                  key={file.path}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setSelectedIndex(index)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setSelectedIndex(index);
+                    }
                   }}
-                  className="p-0.5 hover:bg-white/20 rounded transition-colors"
+                  aria-pressed={active}
+                  className={`flex shrink-0 cursor-pointer items-center gap-1.5 rounded-[6px] border px-2.5 py-1.5 transition-colors duration-150 ${
+                    active
+                      ? 'border-accent/40 bg-accent-subtle'
+                      : 'border-transparent bg-surface-1 hover:bg-surface-2'
+                  }`}
                 >
-                  <Icon name="x-mark" className="w-3 h-3 text-white/40" />
-                </button>
-              </div>
-            ))}
+                  <Icon
+                    name="photo"
+                    size={13}
+                    className={`shrink-0 ${active ? 'text-accent-text' : 'text-text-4'}`}
+                  />
+                  <span
+                    className={`max-w-[150px] truncate text-[12px] ${active ? 'text-text-1' : 'text-text-2'}`}
+                    title={file.name}
+                  >
+                    {file.name}
+                  </span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeFile(index);
+                    }}
+                    className="icon-btn icon-btn-sm shrink-0"
+                    aria-label={`移除 ${file.name}`}
+                  >
+                    <Icon name="x" size={11} />
+                  </button>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

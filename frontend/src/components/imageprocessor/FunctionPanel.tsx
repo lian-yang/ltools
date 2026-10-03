@@ -12,13 +12,13 @@ const functions: FunctionItem[] = [
   {
     id: 'compress',
     label: '压缩',
-    icon: 'folder',
+    icon: 'funnel',
     description: '调整质量和尺寸',
   },
   {
     id: 'crop',
     label: '裁剪',
-    icon: 'pencil',
+    icon: 'rectangle',
     description: '按尺寸或比例裁剪',
   },
   {
@@ -43,44 +43,40 @@ const functions: FunctionItem[] = [
 
 export function FunctionPanel({ currentMode, onModeChange, disabled }: FunctionPanelProps): JSX.Element {
   return (
-    <div className="glass-heavy rounded-2xl p-4 h-full flex flex-col">
-      <h3 className="text-lg font-semibold text-[#FAF5FF] mb-4 flex items-center gap-2">
-        <Icon name="cog-6-tooth" className="w-5 h-5 text-[#A78BFA]" />
-        处理功能
-      </h3>
+    <div className="card-inset flex h-full flex-col p-2">
+      <h3 className="section-title px-2 pb-2 pt-1.5">处理功能</h3>
 
-      <div className="flex-1 space-y-2 overflow-y-auto">
-        {functions.map((fn) => (
-          <button
-            key={fn.id}
-            onClick={() => !disabled && onModeChange(fn.id as ProcessingMode)}
-            disabled={disabled}
-            className={`
-              w-full text-left p-3 rounded-xl transition-all duration-200 group
-              ${currentMode === fn.id
-                ? 'bg-[#7C3AED]/30 border border-[#A78BFA]/50'
-                : 'hover:bg-white/5 border border-transparent'
-              }
-              ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
-            `}
-          >
-            <div className="flex items-center gap-3">
-              <div className={`
-                w-10 h-10 rounded-lg flex items-center justify-center
-                ${currentMode === fn.id
-                  ? 'bg-[#7C3AED] text-white'
-                  : 'bg-white/10 text-[#A78BFA] group-hover:bg-white/20'
-                }
-              `}>
-                <Icon name={fn.icon} className="w-5 h-5" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-[#FAF5FF] font-medium">{fn.label}</div>
-                <div className="text-xs text-white/50 truncate">{fn.description}</div>
-              </div>
-            </div>
-          </button>
-        ))}
+      <div className="min-h-0 flex-1 space-y-0.5 overflow-y-auto scrollbar-hide">
+        {functions.map((fn) => {
+          const active = currentMode === fn.id;
+          return (
+            <button
+              key={fn.id}
+              onClick={() => !disabled && onModeChange(fn.id as ProcessingMode)}
+              disabled={disabled}
+              aria-pressed={active}
+              className={`row row-clickable w-full text-left ${active ? 'row-selected hover:bg-accent-subtle' : ''} ${
+                disabled ? 'cursor-not-allowed opacity-45' : ''
+              }`}
+            >
+              <Icon
+                name={fn.icon}
+                size={15}
+                className={`shrink-0 ${active ? 'text-accent-text' : 'text-text-3'}`}
+              />
+              <span className="min-w-0 flex-1">
+                <span
+                  className={`block truncate text-[12.5px] font-medium ${
+                    active ? 'text-accent-text' : 'text-text-1'
+                  }`}
+                >
+                  {fn.label}
+                </span>
+                <span className="block truncate text-[11px] text-text-3">{fn.description}</span>
+              </span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );

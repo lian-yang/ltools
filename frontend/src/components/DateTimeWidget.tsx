@@ -1,7 +1,29 @@
 import { useEffect, useState } from 'react';
 import { Events } from '@wailsio/runtime';
 import { DateTimeService } from '../../bindings/ltools/plugins/datetime';
-import { Icon } from './Icon';
+import {
+  Badge,
+  Button,
+  Card,
+  IconButton,
+  Input,
+  SectionTitle,
+  Segmented,
+} from './ui';
+
+type TimestampMode = 'toDatetime' | 'toTimestamp';
+
+const MODE_OPTIONS: { value: TimestampMode; label: string }[] = [
+  { value: 'toDatetime', label: '时间戳 → 日期时间' },
+  { value: 'toTimestamp', label: '日期时间 → 时间戳' },
+];
+
+const QUICK_REFS: { label: string; seconds: number }[] = [
+  { label: '1分钟前', seconds: -60 },
+  { label: '1小时前', seconds: -3600 },
+  { label: '1天后', seconds: 86400 },
+  { label: '1周后', seconds: 604800 },
+];
 
 /**
  * 日期时间小部件组件
@@ -61,33 +83,25 @@ export function DateTimeWidget(): JSX.Element {
   }, []);
 
   return (
-    <div className="glass-heavy rounded-2xl p-8 text-center">
+    <Card className="px-6 py-8 text-center">
       {/* 时间 */}
-      <div className="text-6xl font-bold text-[#A78BFA] mb-4 tabular-nums">
+      <div className="tnum font-mono text-[44px] font-light leading-none tracking-tight text-text-1">
         {currentTime || '--:--:--'}
       </div>
 
       {/* 日期 */}
-      <div className="text-xl text-white/80 mb-3">
+      <div className="tnum mt-3 text-[13.5px] text-text-2">
         {currentDate || '----/--/--'}
       </div>
 
       {/* 星期 */}
-      <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${
-        isWeekend
-          ? 'bg-[#22C55E]/10 text-[#22C55E] border border-[#22C55E]/20'
-          : 'bg-white/5 text-white/60 border border-white/10'
-      }`}>
-        <span className="text-sm">
+      <div className="mt-4 flex justify-center">
+        <Badge tone={isWeekend ? 'success' : 'neutral'}>
           {weekday || '--'}
-        </span>
-        {isWeekend && (
-          <span className="text-xs font-medium">
-            周末
-          </span>
-        )}
+          {isWeekend ? ' · 周末' : ''}
+        </Badge>
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -130,10 +144,10 @@ export function ClockWidget(): JSX.Element {
 
   return (
     <div className="text-center">
-      <div className="text-xl font-semibold text-white/90 tabular-nums">
+      <div className="tnum font-mono text-[15px] font-semibold leading-tight text-text-1">
         {time || '--:--:--'}
       </div>
-      <div className="text-xs text-white/40 mt-1">
+      <div className="tnum mt-0.5 text-[11px] text-text-4">
         {date || '----/--/--'}
       </div>
     </div>
@@ -146,7 +160,7 @@ export default DateTimeWidget;
  * 时间戳转换工具组件
  */
 export function TimestampConverter(): JSX.Element {
-  const [mode, setMode] = useState<'toDatetime' | 'toTimestamp'>('toDatetime');
+  const [mode, setMode] = useState<TimestampMode>('toDatetime');
   const [timestamp, setTimestamp] = useState<string>('');
   const [datetime, setDatetime] = useState<string>('');
   const [result, setResult] = useState<string>('');
@@ -261,161 +275,95 @@ export function TimestampConverter(): JSX.Element {
   };
 
   return (
-    <div className="glass-light rounded-xl p-6">
-      <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-        <Icon name="refresh" size={18} color="#A78BFA" />
-        时间戳转换工具
-      </h3>
+    <Card className="p-4">
+      <SectionTitle title="时间戳转换" className="mb-3" />
 
       {/* 模式切换 */}
-      <div className="flex gap-2 mb-6">
-        <button
-          className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 clickable ${
-            mode === 'toDatetime'
-              ? 'bg-[#7C3AED] text-white'
-              : 'bg-white/5 text-white/60 hover:bg-white/10'
-          }`}
-          onClick={() => {
-            setMode('toDatetime');
-            setResult('');
-          }}
-        >
-          时间戳 → 日期时间
-        </button>
-        <button
-          className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 clickable ${
-            mode === 'toTimestamp'
-              ? 'bg-[#7C3AED] text-white'
-              : 'bg-white/5 text-white/60 hover:bg-white/10'
-          }`}
-          onClick={() => {
-            setMode('toTimestamp');
-            setResult('');
-          }}
-        >
-          日期时间 → 时间戳
-        </button>
-      </div>
+      <Segmented<TimestampMode>
+        options={MODE_OPTIONS}
+        value={mode}
+        onChange={(nextMode) => {
+          setMode(nextMode);
+          setResult('');
+        }}
+        className="mb-4"
+      />
 
       {/* 时间戳转日期时间模式 */}
       {mode === 'toDatetime' && (
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm text-white/60 mb-2">输入时间戳</label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                className="flex-1 px-4 py-3 bg-[#0D0F1A]/50 border border-white/10 rounded-lg text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/50 focus:border-[#7C3AED]/50 transition-all duration-200 font-mono"
-                placeholder="例如: 1704067200 或 1704067200000"
-                value={timestamp}
-                onChange={(e) => setTimestamp(e.target.value)}
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter') handleConvert();
-                }}
-              />
-              <button
-                className="px-4 py-3 rounded-lg bg-[#7C3AED] hover:bg-[#6D28D9] text-white transition-all duration-200 text-sm font-medium clickable"
-                onClick={handleConvert}
-              >
-                转换
-              </button>
-              <button
-                className="px-4 py-3 rounded-lg bg-white/5 hover:bg-white/10 text-white/80 transition-all duration-200 text-sm font-medium clickable border border-white/10"
-                onClick={useCurrentTimestamp}
-                title="使用当前时间戳"
-              >
-                <Icon name="clock" size={16} />
-              </button>
-            </div>
-            <p className="text-xs text-white/30 mt-2">
-              当前时间戳: <span className="font-mono text-[#A78BFA]">{currentTime}</span> (秒级)
-            </p>
+        <div className="space-y-1.5">
+          <label className="field-label">输入时间戳</label>
+          <div className="flex gap-2">
+            <Input
+              type="text"
+              className="min-w-0 flex-1 font-mono tnum"
+              placeholder="例如: 1704067200 或 1704067200000"
+              value={timestamp}
+              onChange={(e) => setTimestamp(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleConvert();
+              }}
+            />
+            <Button variant="primary" onClick={handleConvert}>
+              转换
+            </Button>
+            <IconButton name="clock" label="使用当前时间戳" onClick={useCurrentTimestamp} />
           </div>
-
-          {result && (
-            <div className="glass-heavy rounded-lg p-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-white/40">转换结果</span>
-                <button
-                  className="text-xs text-[#7C3AED] hover:text-[#A78BFA] transition-colors clickable flex items-center gap-1"
-                  onClick={copyResult}
-                >
-                  <Icon name="document" size={12} />
-                  复制
-                </button>
-              </div>
-              <pre className="text-sm text-white whitespace-pre-wrap font-mono">{result}</pre>
-            </div>
-          )}
+          <p className="text-[11.5px] text-text-3">
+            当前时间戳: <span className="tnum font-mono text-text-1">{currentTime}</span>（秒级）
+          </p>
         </div>
       )}
 
       {/* 日期时间转时间戳模式 */}
       {mode === 'toTimestamp' && (
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm text-white/60 mb-2">输入日期时间</label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                className="flex-1 px-4 py-3 bg-[#0D0F1A]/50 border border-white/10 rounded-lg text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/50 focus:border-[#7C3AED]/50 transition-all duration-200 font-mono"
-                placeholder="例如: 2024-01-01 12:00:00 或 2024/01/01"
-                value={datetime}
-                onChange={(e) => setDatetime(e.target.value)}
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter') handleConvert();
-                }}
-              />
-              <button
-                className="px-4 py-3 rounded-lg bg-[#7C3AED] hover:bg-[#6D28D9] text-white transition-all duration-200 text-sm font-medium clickable"
-                onClick={handleConvert}
-              >
-                转换
-              </button>
-              <button
-                className="px-4 py-3 rounded-lg bg-white/5 hover:bg-white/10 text-white/80 transition-all duration-200 text-sm font-medium clickable border border-white/10"
-                onClick={useCurrentDatetime}
-                title="使用当前日期时间"
-              >
-                <Icon name="clock" size={16} />
-              </button>
-            </div>
-            <p className="text-xs text-white/30 mt-2">
-              支持格式: YYYY-MM-DD HH:MM:SS, YYYY/MM/DD 等
-            </p>
+        <div className="space-y-1.5">
+          <label className="field-label">输入日期时间</label>
+          <div className="flex gap-2">
+            <Input
+              type="text"
+              className="min-w-0 flex-1 font-mono tnum"
+              placeholder="例如: 2024-01-01 12:00:00 或 2024/01/01"
+              value={datetime}
+              onChange={(e) => setDatetime(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleConvert();
+              }}
+            />
+            <Button variant="primary" onClick={handleConvert}>
+              转换
+            </Button>
+            <IconButton name="clock" label="使用当前日期时间" onClick={useCurrentDatetime} />
           </div>
+          <p className="text-[11.5px] text-text-3">
+            支持格式: YYYY-MM-DD HH:MM:SS, YYYY/MM/DD 等
+          </p>
+        </div>
+      )}
 
-          {result && (
-            <div className="glass-heavy rounded-lg p-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-white/40">转换结果</span>
-                <button
-                  className="text-xs text-[#7C3AED] hover:text-[#A78BFA] transition-colors clickable flex items-center gap-1"
-                  onClick={copyResult}
-                >
-                  <Icon name="document" size={12} />
-                  复制
-                </button>
-              </div>
-              <pre className="text-sm text-white whitespace-pre-wrap font-mono">{result}</pre>
-            </div>
-          )}
+      {/* 转换结果 */}
+      {result && (
+        <div className="card-inset mt-3 p-3">
+          <div className="mb-1.5 flex items-center justify-between">
+            <span className="text-[11px] text-text-4">转换结果</span>
+            <Button variant="ghost" size="sm" icon="copy" onClick={copyResult}>
+              复制
+            </Button>
+          </div>
+          <pre className="selectable whitespace-pre-wrap break-words font-mono text-[12.5px] leading-relaxed text-text-1">
+            {result}
+          </pre>
         </div>
       )}
 
       {/* 快捷时间戳参考 */}
-      <div className="mt-6 pt-4 border-t border-white/10">
-        <p className="text-xs text-white/40 mb-2">快捷参考</p>
-        <div className="flex flex-wrap gap-2">
-          {[
-            { label: '1分钟前', seconds: -60 },
-            { label: '1小时前', seconds: -3600 },
-            { label: '1天后', seconds: 86400 },
-            { label: '1周后', seconds: 604800 },
-          ].map((item) => (
+      <div className="hairline-t mt-4 pt-3">
+        <p className="mb-2 text-[11px] text-text-4">快捷参考</p>
+        <div className="flex flex-wrap gap-1.5">
+          {QUICK_REFS.map((item) => (
             <button
               key={item.label}
-              className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/60 hover:text-white/80 transition-all duration-200 text-xs clickable border border-white/10"
+              className="btn btn-sm btn-secondary"
               onClick={() => {
                 const ts = Math.floor((Date.now() / 1000) + item.seconds);
                 setTimestamp(ts.toString());
@@ -428,6 +376,6 @@ export function TimestampConverter(): JSX.Element {
           ))}
         </div>
       </div>
-    </div>
+    </Card>
   );
 }
