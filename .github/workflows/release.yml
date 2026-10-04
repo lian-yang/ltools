@@ -13,7 +13,9 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: ubuntu-latest
+          # 固定 22.04 构建：捆绑的 webkit/gtk 依赖 glibc <= 2.35，
+          # 兼容主流旧发行版（24.04 构建的产物要求 glibc 2.38+ 无法在旧系统运行）
+          - os: ubuntu-22.04
             goos: linux
             arch: amd64
             ext: ''
@@ -137,14 +139,15 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/go/bin/wails3
-          key: ${{ runner.os }}-wails3-${{ hashFiles('**/go.sum') }}
+          key: ${{ runner.os }}-wails3-v3.0.0-alpha.74-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-wails3-
 
       - name: Install Wails CLI
         if: steps.cache-wails.outputs.cache-hit != 'true'
         run: |
-          go install github.com/wailsapp/wails/v3/cmd/wails3@latest
+          # 版本与 go.mod 保持一致；@latest 已升级到 beta（需要 gtk4），不兼容本项目
+          go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-alpha.74
           echo "$HOME/go/bin" >> $GITHUB_PATH
 
       - name: Add Wails to PATH (from cache)
