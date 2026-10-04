@@ -1,23 +1,23 @@
 {
-  "version": "0.1.5",
-  "releaseDate": "2026-03-13T10:44:24Z",
-  "releaseNotes": "chore: 更新版本号到 v0.1.5",
+  "version": "0.1.6",
+  "releaseDate": "2026-10-04T08:18:19Z",
+  "releaseNotes": "fix: 发版构建修复——钉住 wails3 CLI 版本、Linux 构建机降至 22.04、补充 MIT LICENSE\n\n- wails3 CLI 固定为 v3.0.0-alpha.74（@latest 已是 beta.27，需要 gtk4，\n  与项目的 gtk3/webkit2gtk-4.1 依赖不兼容），缓存 key 同步加入版本\n- Linux 构建机固定 ubuntu-22.04：24.04 构建的 AppImage 捆绑库要求\n  glibc 2.38+，在旧发行版上直接退出（AppImage 目录测试的\n  error-glibc-too-new / error-app-exits 根因）\n- 新增 MIT LICENSE 文件（README 徽章一直指向它但文件缺失）",
   "mandatory": false,
   "platforms": {
     "darwin-arm64": {
-      "url": "https://github.com/lian-yang/ltools/releases/download/v0.1.5/ltools-v0.1.5-darwin-arm64.tar.gz",
-      "size": 10439696,
-      "checksum": "sha256:f5d96709dc2c264050713a94a4d9f562d5f787d84f45e8fd6d2a0422af792f2a"
+      "url": "https://github.com/lian-yang/ltools/releases/download/v0.1.6/ltools-v0.1.6-darwin-arm64.tar.gz",
+      "size": 10359374,
+      "checksum": "sha256:755fe315ad7bb2c284473c7f81114b3d30939cda471bb47ab1cb4f5bd4fbe093"
     },
     "windows-amd64": {
-      "url": "https://github.com/lian-yang/ltools/releases/download/v0.1.5/ltools-v0.1.5-windows-amd64-installer.exe",
-      "size": 14848423,
-      "checksum": "sha256:7c78411351859818f858ea9c322d8f8912345a615713e583813e2027b44ec32e"
+      "url": "https://github.com/lian-yang/ltools/releases/download/v0.1.6/ltools-v0.1.6-windows-amd64-installer.exe",
+      "size": 14891820,
+      "checksum": "sha256:36e23307d2cdd42d72d8df955906331c9cef085513867bdfb37fe8d63c1de62c"
     },
     "linux-amd64": {
-      "url": "https://github.com/lian-yang/ltools/releases/download/v0.1.5/ltools-v0.1.5-linux-amd64.AppImage",
-      "size": 80665080,
-      "checksum": "sha256:58dc5c430974c6315044ecad2f54f3e96145925d0188d78374f19b25fd0589ce"
+      "url": "https://github.com/lian-yang/ltools/releases/download/v0.1.6/ltools-v0.1.6-linux-amd64.AppImage",
+      "size": 87669240,
+      "checksum": "sha256:d3ce2a234cbb610244501457b28d9026c54d19e10771a52b6baa9902942bf10f"
     }
   }
 }
