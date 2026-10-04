@@ -1,4 +1,5 @@
-interface ConfirmDialogProps {
+
+import { t } from '@/i18n';interface ConfirmDialogProps {
   isOpen: boolean;
   title: string;
   message: string;
@@ -33,13 +34,13 @@ export function ConfirmDialog({
             onClick={onCancel}
             className="px-4 py-2 rounded-lg bg-white/10 text-white/60 hover:bg-white/20 hover:text-white transition-colors"
           >
-            取消
+            {t('取消')}
           </button>
           <button
             onClick={onConfirm}
             className="px-4 py-2 rounded-lg bg-[#EF4444] text-white hover:bg-[#DC2626] transition-colors"
           >
-            删除
+            {t('删除')}
           </button>
         </div>
       </div>

@@ -8,6 +8,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { Column, Card, Label } from '../../../bindings/ltools/plugins/kanban/models';
 import { Icon } from '../Icon';
+import { t } from '@/i18n';
 
 interface KanbanColumnProps {
   column: Column;
@@ -63,9 +64,9 @@ function SortableCard({ card, labels, columnId, onClick, onDelete }: SortableCar
   };
 
   const priorityLabels: Record<string, string> = {
-    'high': '高',
-    'medium': '中',
-    'low': '低',
+    'high': t('高'),
+    'medium': t('中'),
+    'low': t('低'),
   };
 
   const formatDate = (date: string | Date | null) => {
@@ -74,11 +75,11 @@ function SortableCard({ card, labels, columnId, onClick, onDelete }: SortableCar
     const now = new Date();
     const diffDays = Math.ceil((d.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
-    if (diffDays === 0) return '今天';
-    if (diffDays === 1) return '明天';
-    if (diffDays === -1) return '昨天';
-    if (diffDays < 0) return `${Math.abs(diffDays)}天前`;
-    if (diffDays <= 7) return `${diffDays}天后`;
+    if (diffDays === 0) return t('今天');
+    if (diffDays === 1) return t('明天');
+    if (diffDays === -1) return t('昨天');
+    if (diffDays < 0) return t('{n}天前', { n: Math.abs(diffDays) });
+    if (diffDays <= 7) return t('{n}天后', { n: diffDays });
 
     return d.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
   };
@@ -110,7 +111,7 @@ function SortableCard({ card, labels, columnId, onClick, onDelete }: SortableCar
         className={`absolute top-2 right-2 p-1 rounded hover:bg-[#EF4444]/10 text-white/40 hover:text-[#EF4444] transition-all z-10 ${
           isHovered ? 'opacity-100' : 'opacity-0'
         }`}
-        title="删除卡片"
+        title={t("删除卡片")}
       >
         <Icon name="close" size={14} />
       </button>
@@ -252,7 +253,7 @@ export function KanbanColumn({
             <button
               onClick={onDeleteColumn}
               className="p-1 rounded hover:bg-[#EF4444]/10 text-white/40 hover:text-[#EF4444] transition-colors"
-              title="删除列"
+              title={t("删除列")}
             >
               <Icon name="trash" size={14} />
             </button>
@@ -289,7 +290,7 @@ export function KanbanColumn({
           className="w-full py-2 rounded-lg hover:bg-white/5 text-white/40 hover:text-white/60 transition-colors flex items-center justify-center gap-1.5 text-sm"
         >
           <Icon name="plus" size={16} />
-          <span>添加卡片</span>
+          <span>{t('添加卡片')}</span>
         </button>
       </div>
     </div>

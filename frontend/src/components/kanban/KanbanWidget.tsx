@@ -6,6 +6,7 @@ import { InputDialog } from './InputDialog';
 import { ConfirmDialog } from './ConfirmDialog';
 import { Icon } from '../Icon';
 import { useToast } from '../../hooks/useToast';
+import { t } from '@/i18n';
 
 type View = 'list' | 'board';
 type DialogType = 'none' | 'createBoard' | 'addColumn';
@@ -19,12 +20,12 @@ export function KanbanWidget(): JSX.Element {
 
   const handleCreateBoard = async (name: string) => {
     if (!name.trim()) {
-      toast.error('请输入看板名称');
+      toast.error(t('请输入看板名称'));
       return;
     }
     const board = await kanban.createBoard(name.trim(), '');
     if (board) {
-      toast.success('看板创建成功');
+      toast.success(t('看板创建成功'));
       kanban.selectBoard(board.id);
       setView('board');
     } else if (kanban.error) {
@@ -35,13 +36,13 @@ export function KanbanWidget(): JSX.Element {
 
   const handleAddColumn = async (name: string) => {
     if (!name.trim()) {
-      toast.error('请输入列名称');
+      toast.error(t('请输入列名称'));
       return;
     }
     if (kanban.currentBoard) {
       const result = await kanban.createColumn(kanban.currentBoard.id, name.trim());
       if (result) {
-        toast.success('列创建成功');
+        toast.success(t('列创建成功'));
       } else if (kanban.error) {
         toast.error(kanban.error);
         kanban.clearError();
@@ -65,7 +66,7 @@ export function KanbanWidget(): JSX.Element {
   const handleConfirmDeleteBoard = async () => {
     if (deleteBoardId) {
       await kanban.deleteBoard(deleteBoardId);
-      toast.success('看板已删除');
+      toast.success(t('看板已删除'));
       setDeleteBoardId(null);
     }
   };
@@ -92,7 +93,7 @@ export function KanbanWidget(): JSX.Element {
             </button>
           )}
           <h2 className="text-lg font-semibold text-white">
-            {view === 'list' ? '看板管理' : kanban.currentBoard?.name || '看板'}
+            {view === 'list' ? t('看板管理') : kanban.currentBoard?.name || t('看板')}
           </h2>
         </div>
 
@@ -102,7 +103,7 @@ export function KanbanWidget(): JSX.Element {
             className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#7C3AED] hover:bg-[#6D28D9] text-white text-sm font-medium transition-colors clickable"
           >
             <Icon name="plus" size={16} />
-            <span>新建看板</span>
+            <span>{t('新建看板')}</span>
           </button>
         )}
 
@@ -113,12 +114,12 @@ export function KanbanWidget(): JSX.Element {
               className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-sm transition-colors clickable"
             >
               <Icon name="plus" size={16} />
-              <span>添加列</span>
+              <span>{t('添加列')}</span>
             </button>
             <button
               onClick={() => handleDeleteBoard(kanban.currentBoard!.id)}
               className="p-1.5 rounded-lg hover:bg-[#EF4444]/10 text-white/40 hover:text-[#EF4444] transition-colors"
-              title="删除看板"
+              title={t("删除看板")}
             >
               <Icon name="trash" size={18} />
             </button>
@@ -142,7 +143,7 @@ export function KanbanWidget(): JSX.Element {
         ) : (
           <div className="flex flex-col items-center justify-center h-full text-white/40">
             <Icon name="kanban" size={48} className="mb-4 opacity-50" />
-            <p>请选择一个看板</p>
+            <p>{t('请选择一个看板')}</p>
           </div>
         )}
       </div>
@@ -150,24 +151,24 @@ export function KanbanWidget(): JSX.Element {
       {/* Input Dialogs */}
       <InputDialog
         isOpen={dialogType === 'createBoard'}
-        title="新建看板"
-        placeholder="请输入看板名称"
+        title={t("新建看板")}
+        placeholder={t("请输入看板名称")}
         onConfirm={handleCreateBoard}
         onCancel={() => setDialogType('none')}
       />
 
       <InputDialog
         isOpen={dialogType === 'addColumn'}
-        title="添加列"
-        placeholder="请输入列名称"
+        title={t("添加列")}
+        placeholder={t("请输入列名称")}
         onConfirm={handleAddColumn}
         onCancel={() => setDialogType('none')}
       />
 
       <ConfirmDialog
         isOpen={deleteBoardId !== null}
-        title="删除看板"
-        message="确定要删除这个看板吗？所有数据将被删除。"
+        title={t("删除看板")}
+        message={t("确定要删除这个看板吗？所有数据将被删除。")}
         onConfirm={handleConfirmDeleteBoard}
         onCancel={() => setDeleteBoardId(null)}
       />

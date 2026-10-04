@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { Events } from '@wailsio/runtime';
 import { ProcessManagerService, ProcessInfo, ProcessListOptions } from '../../bindings/ltools/plugins/processmanager';
 import { Icon } from './Icon';
+import { t } from '@/i18n';
 
 /**
  * 格式化字节大小
@@ -24,10 +25,10 @@ function formatRelativeTime(timestamp: number): string {
   const hours = Math.floor(diff / 3600000);
   const days = Math.floor(diff / 86400000);
 
-  if (minutes < 1) return '刚刚';
-  if (minutes < 60) return `${minutes} 分钟前`;
-  if (hours < 24) return `${hours} 小时前`;
-  return `${days} 天前`;
+  if (minutes < 1) return t('刚刚');
+  if (minutes < 60) return t('{n} 分钟前', { n: minutes });
+  if (hours < 24) return t('{n} 小时前', { n: hours });
+  return t('{n} 天前', { n: days });
 }
 
 /**
@@ -39,12 +40,12 @@ interface ProcessStatusProps {
 
 function ProcessStatus({ status }: ProcessStatusProps): JSX.Element {
   const statusConfig: Record<string, { color: string; label: string }> = {
-    'R': { color: 'text-[#22C55E]', label: '运行' },
-    'S': { color: 'text-[#F59E0B]', label: '睡眠' },
-    'D': { color: 'text-[#EF4444]', label: '等待' },
-    'Z': { color: 'text-[#6B7280]', label: '僵尸' },
-    'T': { color: 'text-[#7C3AED]', label: '停止' },
-    'W': { color: 'text-[#3B82F6]', label: '等待' },
+    'R': { color: 'text-[#22C55E]', label: t('运行') },
+    'S': { color: 'text-[#F59E0B]', label: t('睡眠') },
+    'D': { color: 'text-[#EF4444]', label: t('等待') },
+    'Z': { color: 'text-[#6B7280]', label: t('僵尸') },
+    'T': { color: 'text-[#7C3AED]', label: t('停止') },
+    'W': { color: 'text-[#3B82F6]', label: t('等待') },
   };
 
   const config = statusConfig[status] || { color: 'text-white/60', label: status };
@@ -90,7 +91,7 @@ function ProcessRow({ process, onKill, onViewDetails }: ProcessRowProps): JSX.El
             {process.name}
           </span>
           {process.isSystem && (
-            <span className="text-xs text-white/30">系统进程</span>
+            <span className="text-xs text-white/30">{t('系统进程')}</span>
           )}
         </div>
       </td>
@@ -124,7 +125,7 @@ function ProcessRow({ process, onKill, onViewDetails }: ProcessRowProps): JSX.El
         <ProcessStatus status={process.status} />
       </td>
       <td className="px-3 py-2 text-xs text-white/40 tabular-nums">
-        {process.numThreads > 0 && `${process.numThreads} 线程`}
+        {process.numThreads > 0 && t('{n} 线程', { n: process.numThreads })}
       </td>
       <td className="px-3 py-2">
         <div className="flex items-center gap-1">
@@ -134,7 +135,7 @@ function ProcessRow({ process, onKill, onViewDetails }: ProcessRowProps): JSX.El
               e.stopPropagation();
               onViewDetails();
             }}
-            title="查看详情"
+            title={t("查看详情")}
           >
             <Icon name="document" size={14} />
           </button>
@@ -144,7 +145,7 @@ function ProcessRow({ process, onKill, onViewDetails }: ProcessRowProps): JSX.El
               e.stopPropagation();
               onKill(false);
             }}
-            title="正常终止进程"
+            title={t("正常终止进程")}
           >
             <Icon name="close" size={14} />
           </button>
@@ -154,7 +155,7 @@ function ProcessRow({ process, onKill, onViewDetails }: ProcessRowProps): JSX.El
               e.stopPropagation();
               onKill(true);
             }}
-            title="强制终止进程"
+            title={t("强制终止进程")}
           >
             <Icon name="alert-circle" size={14} />
           </button>
@@ -181,7 +182,7 @@ function ConfirmDialog({
   title,
   message,
   confirmText,
-  cancelText = '取消',
+  cancelText = t('取消'),
   type = 'danger',
   onConfirm,
   onCancel,
@@ -252,7 +253,7 @@ function ProcessDetailDialog({ process, onClose, onKill }: ProcessDetailDialogPr
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-bold text-white flex items-center gap-2">
             <Icon name="process" size={20} color="#A78BFA" />
-            进程详情
+            {t('进程详情')}
           </h2>
           <button
             className="p-2 rounded-lg hover:bg-white/10 text-white/40 hover:text-white transition-colors"
@@ -266,11 +267,11 @@ function ProcessDetailDialog({ process, onClose, onKill }: ProcessDetailDialogPr
           {/* 基本信息 */}
           <div className="grid grid-cols-2 gap-4">
             <div className="p-3 rounded-lg bg-white/5">
-              <p className="text-xs text-white/40 mb-1">进程名称</p>
+              <p className="text-xs text-white/40 mb-1">{t('进程名称')}</p>
               <p className="text-sm font-medium text-white">{process.name}</p>
             </div>
             <div className="p-3 rounded-lg bg-white/5">
-              <p className="text-xs text-white/40 mb-1">进程 ID</p>
+              <p className="text-xs text-white/40 mb-1">{t('进程 ID')}</p>
               <p className="text-sm font-medium text-white tabular-nums">{process.pid}</p>
             </div>
           </div>
@@ -278,13 +279,13 @@ function ProcessDetailDialog({ process, onClose, onKill }: ProcessDetailDialogPr
           {/* 资源使用 */}
           <div className="grid grid-cols-2 gap-4">
             <div className="p-3 rounded-lg bg-white/5">
-              <p className="text-xs text-white/40 mb-1">CPU 使用率</p>
+              <p className="text-xs text-white/40 mb-1">{t('CPU 使用率')}</p>
               <p className={`text-lg font-bold ${process.cpuPercent > 50 ? 'text-[#EF4444]' : 'text-white'}`}>
                 {process.cpuPercent.toFixed(2)}%
               </p>
             </div>
             <div className="p-3 rounded-lg bg-white/5">
-              <p className="text-xs text-white/40 mb-1">内存使用</p>
+              <p className="text-xs text-white/40 mb-1">{t('内存使用')}</p>
               <p className="text-lg font-bold text-white">
                 {formatBytes(process.memoryBytes)}
                 <span className="text-sm text-white/60 ml-2">({process.memoryPercent.toFixed(1)}%)</span>
@@ -295,11 +296,11 @@ function ProcessDetailDialog({ process, onClose, onKill }: ProcessDetailDialogPr
           {/* 状态和线程 */}
           <div className="grid grid-cols-2 gap-4">
             <div className="p-3 rounded-lg bg-white/5">
-              <p className="text-xs text-white/40 mb-1">状态</p>
+              <p className="text-xs text-white/40 mb-1">{t('状态')}</p>
               <ProcessStatus status={process.status} />
             </div>
             <div className="p-3 rounded-lg bg-white/5">
-              <p className="text-xs text-white/40 mb-1">线程数</p>
+              <p className="text-xs text-white/40 mb-1">{t('线程数')}</p>
               <p className="text-sm font-medium text-white tabular-nums">{process.numThreads}</p>
             </div>
           </div>
@@ -307,18 +308,18 @@ function ProcessDetailDialog({ process, onClose, onKill }: ProcessDetailDialogPr
           {/* 用户和路径 */}
           <div className="space-y-3">
             <div className="p-3 rounded-lg bg-white/5">
-              <p className="text-xs text-white/40 mb-1">运行用户</p>
+              <p className="text-xs text-white/40 mb-1">{t('运行用户')}</p>
               <p className="text-sm font-medium text-white">{process.username}</p>
             </div>
             {process.executablePath && (
               <div className="p-3 rounded-lg bg-white/5">
-                <p className="text-xs text-white/40 mb-1">可执行文件路径</p>
+                <p className="text-xs text-white/40 mb-1">{t('可执行文件路径')}</p>
                 <p className="text-xs text-white/60 break-all">{process.executablePath}</p>
               </div>
             )}
             {process.cmdLine && (
               <div className="p-3 rounded-lg bg-white/5">
-                <p className="text-xs text-white/40 mb-1">命令行</p>
+                <p className="text-xs text-white/40 mb-1">{t('命令行')}</p>
                 <p className="text-xs text-white/60 break-all font-mono">{process.cmdLine}</p>
               </div>
             )}
@@ -331,20 +332,20 @@ function ProcessDetailDialog({ process, onClose, onKill }: ProcessDetailDialogPr
               onClick={() => onKill()}
             >
               <Icon name="close" size={16} />
-              正常终止
+              {t('正常终止')}
             </button>
             <button
               className="flex-1 px-4 py-2.5 rounded-lg bg-[#EF4444] text-white hover:bg-[#DC2626] transition-all duration-200 text-sm font-medium clickable flex items-center justify-center gap-2"
               onClick={() => onKill(true)}
             >
               <Icon name="alert-circle" size={16} />
-              强制终止
+              {t('强制终止')}
             </button>
             <button
               className="px-4 py-2.5 rounded-lg bg-white/10 text-white hover:bg-white/20 transition-all duration-200 text-sm font-medium clickable"
               onClick={onClose}
             >
-              关闭
+              {t('关闭')}
             </button>
           </div>
         </div>
@@ -494,15 +495,15 @@ export function ProcessManagerWidget(): JSX.Element {
 
   // 处理终止进程
   const handleKillProcess = (pid: number, force = false) => {
-    const action = force ? '强制终止' : '终止';
+    const action = force ? t('强制终止') : t('终止');
     const warning = force
-      ? '警告：强制终止可能会导致数据丢失！'
-      : '此操作无法撤销。';
+      ? t('警告：强制终止可能会导致数据丢失！')
+      : t('此操作无法撤销。');
 
     setConfirmDialog({
       show: true,
-      title: `${action}进程`,
-      message: `确定要${action}进程 ${pid} 吗？\n\n${warning}`,
+      title: t('{action}进程', { action }),
+      message: t('确定要{action}进程 {pid} 吗？\n\n{warning}', { action, pid, warning }),
       confirmText: action,
       type: force ? 'danger' : 'warning',
       onConfirm: async () => {
@@ -521,9 +522,9 @@ export function ProcessManagerWidget(): JSX.Element {
           console.error('Failed to kill process:', err);
           setConfirmDialog({
             show: true,
-            title: '操作失败',
-            message: `终止进程失败: ${err}`,
-            confirmText: '确定',
+            title: t('操作失败'),
+            message: t('终止进程失败: {err}', { err: String(err) }),
+            confirmText: t('确定'),
             type: 'warning',
             onConfirm: () => setConfirmDialog({ ...confirmDialog, show: false }),
           });
@@ -545,7 +546,7 @@ export function ProcessManagerWidget(): JSX.Element {
         <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-white/5 animate-pulse">
           <Icon name="refresh" size={20} color="rgba(255,255,255,0.3)" />
         </div>
-        <p className="text-white/40 mt-4">加载进程列表中...</p>
+        <p className="text-white/40 mt-4">{t('加载进程列表中...')}</p>
       </div>
     );
   }
@@ -556,9 +557,9 @@ export function ProcessManagerWidget(): JSX.Element {
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-white flex items-center gap-2">
           <Icon name="process" size={18} color="#A78BFA" />
-          进程管理器
+          {t('进程管理器')}
           <span className="text-sm text-white/40 font-normal">
-            ({totalCount} 个进程)
+            ({totalCount} {t('个进程)')}
           </span>
         </h2>
         <button
@@ -566,7 +567,7 @@ export function ProcessManagerWidget(): JSX.Element {
           onClick={handleRefresh}
         >
           <Icon name="refresh" size={14} />
-          刷新
+          {t('刷新')}
         </button>
       </div>
 
@@ -581,7 +582,7 @@ export function ProcessManagerWidget(): JSX.Element {
           />
           <input
             type="text"
-            placeholder="搜索进程名称、PID 或命令行..."
+            placeholder={t("搜索进程名称、PID 或命令行...")}
             className="w-full pl-10 pr-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-white/20 text-sm"
             value={searchTerm}
             onChange={(e) => handleSearchChange(e.target.value)}
@@ -594,7 +595,7 @@ export function ProcessManagerWidget(): JSX.Element {
             onChange={(e) => handleShowSystemChange(e.target.checked)}
             className="w-4 h-4 rounded"
           />
-          <span className="text-sm text-white/60">显示系统进程</span>
+          <span className="text-sm text-white/60">{t('显示系统进程')}</span>
         </label>
       </div>
 
@@ -614,7 +615,7 @@ export function ProcessManagerWidget(): JSX.Element {
                   className="px-3 py-3 text-left text-xs font-medium text-white/40 uppercase tracking-wide cursor-pointer hover:text-white/60 select-none"
                   onClick={() => handleSort('name')}
                 >
-                  名称 {sortBy === 'name' && (sortDesc ? '↓' : '↑')}
+                  {t('名称')} {sortBy === 'name' && (sortDesc ? '↓' : '↑')}
                 </th>
                 <th
                   className="px-3 py-3 text-left text-xs font-medium text-white/40 uppercase tracking-wide cursor-pointer hover:text-white/60 select-none"
@@ -626,16 +627,16 @@ export function ProcessManagerWidget(): JSX.Element {
                   className="px-3 py-3 text-left text-xs font-medium text-white/40 uppercase tracking-wide cursor-pointer hover:text-white/60 select-none"
                   onClick={() => handleSort('memory')}
                 >
-                  内存 {sortBy === 'memory' && (sortDesc ? '↓' : '↑')}
+                  {t('内存')} {sortBy === 'memory' && (sortDesc ? '↓' : '↑')}
                 </th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-white/40 uppercase tracking-wide">
-                  状态
+                  {t('状态')}
                 </th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-white/40 uppercase tracking-wide">
-                  线程
+                  {t('线程')}
                 </th>
                 <th className="px-3 py-3 text-right text-xs font-medium text-white/40 uppercase tracking-wide">
-                  操作
+                  {t('操作')}
                 </th>
               </tr>
             </thead>
@@ -643,7 +644,7 @@ export function ProcessManagerWidget(): JSX.Element {
               {processes.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-3 py-8 text-center text-white/40">
-                    没有找到匹配的进程
+                    {t('没有找到匹配的进程')}
                   </td>
                 </tr>
               ) : (
@@ -665,7 +666,7 @@ export function ProcessManagerWidget(): JSX.Element {
       {totalCount > pageSize && (
         <div className="flex items-center justify-between">
           <p className="text-xs text-white/30">
-            显示 {currentPage * pageSize + 1} - {Math.min((currentPage + 1) * pageSize, totalCount)} / 共 {totalCount} 个进程
+            {t('显示')} {currentPage * pageSize + 1} - {Math.min((currentPage + 1) * pageSize, totalCount)} {t('/ 共')} {totalCount} {t('个进程')}
           </p>
           <div className="flex items-center gap-2">
             <button
@@ -673,17 +674,17 @@ export function ProcessManagerWidget(): JSX.Element {
               disabled={currentPage === 0}
               onClick={() => handlePageChange(Math.max(0, currentPage - 1))}
             >
-              上一页
+              {t('上一页')}
             </button>
             <span className="text-sm text-white/60">
-              第 {currentPage + 1} / {Math.ceil(totalCount / pageSize)} 页
+              {t('第')} {currentPage + 1} / {Math.ceil(totalCount / pageSize)} {t('页')}
             </span>
             <button
               className="px-3 py-1.5 rounded-lg bg-white/5 text-white/60 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed text-sm clickable"
               disabled={(currentPage + 1) * pageSize >= totalCount}
               onClick={() => handlePageChange(currentPage + 1)}
             >
-              下一页
+              {t('下一页')}
             </button>
           </div>
         </div>
@@ -692,7 +693,7 @@ export function ProcessManagerWidget(): JSX.Element {
       {/* 最后更新时间 */}
       <div className="text-center">
         <p className="text-xs text-white/20">
-          最后更新: {lastUpdate.toLocaleString('zh-CN')} ({formatRelativeTime(lastUpdate.getTime())})
+          {t('最后更新:')} {lastUpdate.toLocaleString('zh-CN')} ({formatRelativeTime(lastUpdate.getTime())})
         </p>
       </div>
 

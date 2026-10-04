@@ -8,6 +8,7 @@ import EntryEditor from './EntryEditor';
 import CategorySidebar from './CategorySidebar';
 import ChangePasswordDialog from './ChangePasswordDialog';
 import { Icon } from '../Icon';
+import { t } from '@/i18n';
 
 type ViewMode = 'setup' | 'unlock' | 'list' | 'edit';
 
@@ -223,7 +224,7 @@ const VaultWidget: React.FC = () => {
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
               className="p-2 rounded-lg hover:bg-white/10 transition-colors"
-              title={sidebarOpen ? '隐藏侧边栏' : '显示侧边栏'}
+              title={sidebarOpen ? t('隐藏侧边栏') : t('显示侧边栏')}
             >
               <Icon name="sidebar" className="w-5 h-5" />
             </button>
@@ -233,7 +234,7 @@ const VaultWidget: React.FC = () => {
               <Icon name="search" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
                 type="text"
-                placeholder="搜索密码..."
+                placeholder={t("搜索密码...")}
                 value={searchQuery}
                 onChange={(e) => handleSearch(e.target.value)}
                 className="pl-10 pr-4 py-2 w-64 bg-white/5 border border-white/10 rounded-lg
@@ -249,19 +250,19 @@ const VaultWidget: React.FC = () => {
                        rounded-lg transition-colors text-white"
             >
               <Icon name="plus" className="w-4 h-4" />
-              <span>新建</span>
+              <span>{t('新建')}</span>
             </button>
             <button
               onClick={() => setShowChangePassword(true)}
               className="p-2 rounded-lg hover:bg-white/10 transition-colors"
-              title="修改主密码"
+              title={t("修改主密码")}
             >
               <Icon name="key" className="w-5 h-5" />
             </button>
             <button
               onClick={handleLock}
               className="p-2 rounded-lg hover:bg-white/10 transition-colors"
-              title="锁定保险库"
+              title={t("锁定保险库")}
             >
               <Icon name="lock" className="w-5 h-5" />
             </button>

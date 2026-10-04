@@ -6,6 +6,7 @@ import { getPluginIcon, getPluginIconName } from '../utils/pluginHelpers'
 import { PluginMetadata, PluginState } from '../../bindings/ltools/internal/plugins'
 import { SysInfoService } from '../../bindings/ltools/plugins/sysinfo'
 import { Events } from '@wailsio/runtime'
+import { t } from '@/i18n';
 
 // ==================== 类型定义 ====================
 
@@ -61,16 +62,16 @@ function EmptyState({ onBrowse }: { onBrowse: () => void }) {
           <Icon name="puzzle-piece" size={36} className="text-[#A78BFA]" />
         </div>
         <h2 className="text-xl font-semibold text-white/80 mb-2">
-          暂无启用的插件
+          {t('暂无启用的插件')}
         </h2>
         <p className="text-sm text-white/40 mb-6">
-          启用插件后，它们将显示在这里以便快速访问
+          {t('启用插件后，它们将显示在这里以便快速访问')}
         </p>
         <button
           onClick={onBrowse}
           className="px-6 py-2.5 bg-[#7C3AED] hover:bg-[#6D28D9] text-white rounded-lg font-medium transition-colors"
         >
-          浏览插件
+          {t('浏览插件')}
         </button>
       </div>
     </div>
@@ -104,7 +105,7 @@ function PluginIcon({
   }
 
   return (
-    <span className={emojiSize} role="img" aria-label={plugin.name}>
+    <span className={emojiSize} role="img" aria-label={t(plugin.name)}>
       {emoji}
     </span>
   )
@@ -133,10 +134,10 @@ function PluginCard({
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-white/80 truncate group-hover:text-white transition-colors">
-            {plugin.name}
+            {t(plugin.name)}
           </p>
           <p className="text-xs text-white/40 truncate">
-            {plugin.description || '点击打开'}
+            {plugin.description || t('点击打开')}
           </p>
         </div>
         <Icon name="chevron-right" size={14} className="text-white/20 group-hover:text-white/40 transition-colors" />
@@ -153,7 +154,7 @@ function PluginCard({
         <PluginIcon plugin={plugin} />
       </div>
       <p className="text-sm font-medium text-white/80 truncate group-hover:text-white transition-colors">
-        {plugin.name}
+        {t(plugin.name)}
       </p>
     </button>
   )
@@ -198,10 +199,10 @@ function RecentPlugins({
     const hours = Math.floor(diff / 3600000)
     const days = Math.floor(diff / 86400000)
 
-    if (minutes < 1) return '刚刚'
-    if (minutes < 60) return `${minutes} 分钟前`
-    if (hours < 24) return `${hours} 小时前`
-    if (days < 7) return `${days} 天前`
+    if (minutes < 1) return t('刚刚')
+    if (minutes < 60) return t('{n} 分钟前', { n: minutes })
+    if (hours < 24) return t('{n} 小时前', { n: hours })
+    if (days < 7) return t('{n} 天前', { n: days })
     return date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })
   }
 
@@ -210,7 +211,7 @@ function RecentPlugins({
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-medium text-white/60 flex items-center gap-2">
           <Icon name="clock" size={14} color="#A78BFA" />
-          最近使用
+          {t('最近使用')}
         </h3>
       </div>
 
@@ -231,7 +232,7 @@ function RecentPlugins({
         </div>
       ) : frequentPlugins.length > 0 ? (
         <div className="space-y-1">
-          <p className="text-xs text-white/30 mb-2 px-1">常用工具</p>
+          <p className="text-xs text-white/30 mb-2 px-1">{t('常用工具')}</p>
           {frequentPlugins.map(plugin => (
             <PluginCard
               key={plugin.id}
@@ -244,7 +245,7 @@ function RecentPlugins({
       ) : (
         <div className="text-center py-6">
           <Icon name="clock" size={24} className="text-white/20 mx-auto mb-2" />
-          <p className="text-xs text-white/30">暂无使用记录</p>
+          <p className="text-xs text-white/30">{t('暂无使用记录')}</p>
         </div>
       )}
     </div>
@@ -260,7 +261,7 @@ function SystemStatusCard({ status }: { status: SystemStatus | null }) {
       <div className="glass-light rounded-xl p-4">
         <div className="flex items-center gap-2 mb-3">
           <Icon name="server" size={14} color="#22C55E" />
-          <h3 className="text-sm font-medium text-white/60">系统状态</h3>
+          <h3 className="text-sm font-medium text-white/60">{t('系统状态')}</h3>
         </div>
         <div className="space-y-3 animate-pulse">
           <div className="h-8 bg-white/5 rounded" />
@@ -299,7 +300,7 @@ function SystemStatusCard({ status }: { status: SystemStatus | null }) {
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-medium text-white/60 flex items-center gap-2">
           <Icon name="server" size={14} color="#22C55E" />
-          系统状态
+          {t('系统状态')}
         </h3>
         <span className="text-xs text-white/30">{status.uptime}</span>
       </div>
@@ -328,7 +329,7 @@ function SystemStatusCard({ status }: { status: SystemStatus | null }) {
         <div className="flex items-center justify-between mb-1.5">
           <div className="flex items-center gap-2">
             <Icon name="memory" size={14} className="text-white/40" />
-            <span className="text-xs text-white/50">内存</span>
+            <span className="text-xs text-white/50">{t('内存')}</span>
           </div>
           <span className={`text-sm font-semibold tabular-nums ${getMemoryColor(status.memory)}`}>
             {status.memory.toFixed(0)}%
@@ -461,8 +462,8 @@ function Home() {
       <div className="max-w-7xl mx-auto">
         {/* 页面标题 */}
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-white/90 mb-1">仪表盘</h1>
-          <p className="text-sm text-white/40">快速访问您的工具</p>
+          <h1 className="text-2xl font-bold text-white/90 mb-1">{t('仪表盘')}</h1>
+          <p className="text-sm text-white/40">{t('快速访问您的工具')}</p>
         </div>
 
         {/* 主布局网格 */}
@@ -473,10 +474,10 @@ function Home() {
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-base font-medium text-white/80 flex items-center gap-2">
                   <Icon name="sparkles" size={16} color="#A78BFA" />
-                  快速启动
+                  {t('快速启动')}
                 </h2>
                 <span className="text-xs text-white/30">
-                  {enabledPlugins.length} 个插件
+                  {enabledPlugins.length} {t('个插件')}
                 </span>
               </div>
 
@@ -497,7 +498,7 @@ function Home() {
                   onClick={handleBrowsePlugins}
                   className="text-xs text-white/30 hover:text-white/50 transition-colors flex items-center gap-1"
                 >
-                  管理插件
+                  {t('管理插件')}
                   <Icon name="arrow-right" size={12} />
                 </button>
               </div>

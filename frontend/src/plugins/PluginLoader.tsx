@@ -1,6 +1,7 @@
 import { lazy, Suspense, ReactNode } from 'react';
 import { PluginMetadata, PluginType, PluginState } from '../../bindings/ltools/internal/plugins';
 
+import { t } from '@/i18n';
 // 插件注册表
 const pluginRegistry = new Map<string, () => Promise<{ default: React.ComponentType }>>();
 
@@ -116,6 +117,8 @@ export function searchPlugins(
       plugin.name,
       plugin.description,
       plugin.author,
+      t(plugin.name),
+      t(plugin.description),
       ...(plugin.keywords || []),
     ].join(' ').toLowerCase();
 

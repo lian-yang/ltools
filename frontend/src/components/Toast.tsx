@@ -1,5 +1,7 @@
 import { useEffect } from 'react';
 import { Icon } from './Icon';
+import { t } from '@/i18n';
+import { tAuto } from '@/i18n';
 
 export type ToastType = 'success' | 'error' | 'info' | 'warning';
 
@@ -58,11 +60,11 @@ function ToastItem({ toast, onRemove }: ToastItemProps): JSX.Element {
       role="alert"
     >
       <Icon name={getIcon()} size={20} />
-      <p className="flex-1 text-sm text-white/90">{toast.message}</p>
+      <p className="flex-1 text-sm text-white/90">{tAuto(toast.message)}</p>
       <button
         className="p-1 rounded hover:bg-white/5 transition-colors clickable"
         onClick={() => onRemove(toast.id)}
-        aria-label="关闭"
+        aria-label={t("关闭")}
       >
         <Icon name="x-circle" size={16} />
       </button>

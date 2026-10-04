@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Events } from '@wailsio/runtime';
 import * as UpdateService from '../../bindings/ltools/internal/update/service';
 import { Icon } from '../components/Icon';
+import { t } from '@/i18n';
 
 interface UpdateInfo {
   version: string;
@@ -38,7 +39,7 @@ export function UpdateNotification() {
 
   const handleInstall = useCallback(async () => {
     if (!downloadedFilePath) {
-      setError('安装失败：文件路径不存在');
+      setError(t('安装失败：文件路径不存在'));
       return;
     }
 
@@ -63,7 +64,7 @@ export function UpdateNotification() {
 
     // 参数验证
     if (!updateInfo.downloadUrl || !updateInfo.checksum) {
-      setError('更新信息不完整，请稍后重试');
+      setError(t('更新信息不完整，请稍后重试'));
       return;
     }
 
@@ -151,12 +152,12 @@ export function UpdateNotification() {
 
         <div className="flex-1 min-w-0">
           <h3 className="font-semibold text-lg mb-1">
-            发现新版本 {updateInfo.version}
+            {t('发现新版本')} {updateInfo.version}
           </h3>
 
           <div className="text-sm text-white/80 mb-2">
-            大小: {updateInfo.hasPatch
-              ? `${(updateInfo.patchSize / 1024).toFixed(0)} KB (补丁)`
+            {t('大小:')} {updateInfo.hasPatch
+              ? t('{size} KB (补丁)', { size: (updateInfo.patchSize / 1024).toFixed(0) })
               : `${(updateInfo.size / 1024 / 1024).toFixed(1)} MB`
             }
           </div>
@@ -184,7 +185,7 @@ export function UpdateNotification() {
                 />
               </div>
               <div className="text-sm text-white/80">
-                下载中... {downloadProgress}%
+                {t('下载中...')} {downloadProgress}%
               </div>
             </div>
           )}
@@ -196,7 +197,7 @@ export function UpdateNotification() {
                   onClick={handleDownload}
                   className="flex-1 bg-white text-purple-600 font-medium px-4 py-2 rounded-lg hover:bg-white/90 transition-colors"
                 >
-                  立即下载
+                  {t('立即下载')}
                 </button>
 
                 {!updateInfo.mandatory && (
@@ -204,7 +205,7 @@ export function UpdateNotification() {
                     onClick={handleDismiss}
                     className="px-4 py-2 rounded-lg hover:bg-white/20 transition-colors"
                   >
-                    稍后提醒
+                    {t('稍后提醒')}
                   </button>
                 )}
               </>
@@ -216,7 +217,7 @@ export function UpdateNotification() {
                   onClick={handleInstall}
                   className="flex-1 bg-white text-purple-600 font-medium px-4 py-2 rounded-lg hover:bg-white/90 transition-colors"
                 >
-                  安装更新
+                  {t('安装更新')}
                 </button>
 
                 {!updateInfo.mandatory && (
@@ -224,7 +225,7 @@ export function UpdateNotification() {
                     onClick={handleDismiss}
                     className="px-4 py-2 rounded-lg hover:bg-white/20 transition-colors"
                   >
-                    稍后安装
+                    {t('稍后安装')}
                   </button>
                 )}
               </>

@@ -4,6 +4,7 @@ import * as Screenshot2Service from '../../../bindings/ltools/plugins/screenshot
 import { useAnnotation } from './hooks/useAnnotation';
 import Toolbar from './Toolbar';
 import './styles.css';
+import { t } from '@/i18n';
 
 // 选区类型
 interface Selection {
@@ -608,14 +609,14 @@ const Screenshot2Overlay: React.FC = () => {
       console.log('[Screenshot2Overlay] Copying to clipboard...');
       await Screenshot2Service.CopyToClipboard(base64Data);
 
-      showToast('已复制到剪贴板');
+      showToast(t('已复制到剪贴板'));
 
       setTimeout(async () => {
         await Screenshot2Service.CancelCapture();
       }, 500);
     } catch (e) {
       console.error('[Screenshot2Overlay] Double-click copy failed:', e);
-      showToast('复制失败');
+      showToast(t('复制失败'));
     }
   }, [showToast]);
 
@@ -792,14 +793,14 @@ const Screenshot2Overlay: React.FC = () => {
       const base64Data = cropCanvas.toDataURL('image/png');
       await Screenshot2Service.CopyToClipboard(base64Data);
 
-      showToast('已复制到剪贴板');
+      showToast(t('已复制到剪贴板'));
 
       setTimeout(async () => {
         await Screenshot2Service.CancelCapture();
       }, 500);
     } catch (e) {
       console.error('[Screenshot2Overlay] Copy failed:', e);
-      showToast('复制失败');
+      showToast(t('复制失败'));
     }
   }, [selection, annotations, scaleFactor, showToast]);
 
@@ -810,11 +811,11 @@ const Screenshot2Overlay: React.FC = () => {
     try {
       // 使用 Wails SaveFile 对话框
       const filePath = await Dialogs.SaveFile({
-        Title: '保存截图',
+        Title: t('保存截图'),
         Filename: `screenshot_${Date.now()}.png`,
         Filters: [
-          { DisplayName: 'PNG 图片', Pattern: '*.png' },
-          { DisplayName: 'JPEG 图片', Pattern: '*.jpg' },
+          { DisplayName: t('PNG 图片'), Pattern: '*.png' },
+          { DisplayName: t('JPEG 图片'), Pattern: '*.jpg' },
         ],
       });
 
@@ -846,14 +847,14 @@ const Screenshot2Overlay: React.FC = () => {
 
       // 调用后端保存文件
       await Screenshot2Service.SaveImage(base64Data, filePath);
-      showToast('已保存');
+      showToast(t('已保存'));
 
       setTimeout(async () => {
         await Screenshot2Service.CancelCapture();
       }, 500);
     } catch (e) {
       console.error('[Screenshot2Overlay] Save failed:', e);
-      showToast('保存失败');
+      showToast(t('保存失败'));
     }
   }, [selection, annotations, scaleFactor, showToast]);
 
@@ -887,7 +888,7 @@ const Screenshot2Overlay: React.FC = () => {
 
       await Screenshot2Service.PinImage(base64Data, windowX, windowY, windowWidth, windowHeight);
 
-      showToast('已创建贴图');
+      showToast(t('已创建贴图'));
 
       // 关闭截图窗口
       setTimeout(async () => {
@@ -895,7 +896,7 @@ const Screenshot2Overlay: React.FC = () => {
       }, 300);
     } catch (e) {
       console.error('[Screenshot2Overlay] Pin failed:', e);
-      showToast('贴图失败');
+      showToast(t('贴图失败'));
     }
   }, [selection, annotations, scaleFactor, showToast]);
 

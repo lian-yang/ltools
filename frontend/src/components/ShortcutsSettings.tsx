@@ -5,6 +5,7 @@ import { useToast } from '../hooks/useToast';
 import { PluginState } from '../../bindings/ltools/internal/plugins';
 import { getPluginIcon } from '../utils/pluginHelpers';
 import { ShortcutEditor } from './ShortcutEditor';
+import { t } from '@/i18n';
 
 /**
  * 快捷键信息接口
@@ -66,18 +67,18 @@ export function ShortcutsSettings({ shortcuts, onSetShortcut, onRemoveShortcut }
   const handleSetShortcut = async (pluginId: string, keyCombo: string) => {
     try {
       await onSetShortcut(pluginId, keyCombo);
-      success(`快捷键已设置: ${keyCombo}`);
+      success(t('快捷键已设置: {combo}', { combo: keyCombo }));
     } catch (err: any) {
-      error(`设置失败: ${err.message || err}`);
+      error(t('设置失败: {msg}', { msg: err.message || err }));
     }
   };
 
   const handleRemoveShortcut = async (keyCombo: string) => {
     try {
       await onRemoveShortcut(keyCombo);
-      success(`快捷键已移除`);
+      success(t(`快捷键已移除`));
     } catch (err: any) {
-      error(`移除失败: ${err.message || err}`);
+      error(t('移除失败: {msg}', { msg: err.message || err }));
     }
   };
 
@@ -87,10 +88,10 @@ export function ShortcutsSettings({ shortcuts, onSetShortcut, onRemoveShortcut }
       <div>
         <h2 className="text-xl font-semibold text-white flex items-center gap-2">
           <Icon name="keyboard" size={20} color="#A78BFA" />
-          快捷键设置
+          {t('快捷键设置')}
         </h2>
         <p className="text-white/50 text-sm mt-1">
-          为已启用的插件设置全局快捷键，快速打开对应的插件页面
+          {t('为已启用的插件设置全局快捷键，快速打开对应的插件页面')}
         </p>
       </div>
 
@@ -99,7 +100,7 @@ export function ShortcutsSettings({ shortcuts, onSetShortcut, onRemoveShortcut }
         {pluginShortcuts.length === 0 ? (
           <div className="text-center py-12 text-white/50">
             <Icon name="keyboard" size={32} color="rgba(167, 139, 250, 0.3)" className="mx-auto mb-3" />
-            <p>暂无已启用的插件</p>
+            <p>{t('暂无已启用的插件')}</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -156,7 +157,7 @@ function ShortcutItem({ item, onEdit, onRemove }: ShortcutItemProps) {
               </kbd>
             </div>
           ) : (
-            <p className="text-sm text-white/40 mt-1">未设置快捷键</p>
+            <p className="text-sm text-white/40 mt-1">{t('未设置快捷键')}</p>
           )}
         </div>
       </div>
@@ -168,14 +169,14 @@ function ShortcutItem({ item, onEdit, onRemove }: ShortcutItemProps) {
             <button
               className="p-2 rounded-lg hover:bg-white/10 text-white/60 hover:text-white transition-all duration-200 clickable"
               onClick={onEdit}
-              title="编辑快捷键"
+              title={t("编辑快捷键")}
             >
               <Icon name="refresh" size={16} />
             </button>
             <button
               className="p-2 rounded-lg hover:bg-[#EF4444]/10 text-white/40 hover:text-[#EF4444] transition-all duration-200 clickable"
               onClick={onRemove}
-              title="移除快捷键"
+              title={t("移除快捷键")}
             >
               <Icon name="x-circle" size={16} />
             </button>
@@ -185,7 +186,7 @@ function ShortcutItem({ item, onEdit, onRemove }: ShortcutItemProps) {
             className="px-4 py-2 bg-[#7C3AED]/20 hover:bg-[#7C3AED]/30 text-[#A78BFA] rounded-lg transition-all duration-200 clickable text-sm font-medium"
             onClick={onEdit}
           >
-            设置快捷键
+            {t('设置快捷键')}
           </button>
         )}
       </div>

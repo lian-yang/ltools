@@ -2,6 +2,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Card, Label, Priority } from '../../../bindings/ltools/plugins/kanban/models';
 import { Icon } from '../Icon';
+import { t } from '@/i18n';
 
 interface KanbanCardProps {
   card: Card;
@@ -17,9 +18,9 @@ const priorityColors: Record<string, string> = {
 };
 
 const priorityLabels: Record<string, string> = {
-  [Priority.PriorityHigh]: '高',
-  [Priority.PriorityMedium]: '中',
-  [Priority.PriorityLow]: '低',
+  [Priority.PriorityHigh]: t('高'),
+  [Priority.PriorityMedium]: t('中'),
+  [Priority.PriorityLow]: t('低'),
 };
 
 export function KanbanCard({ card, labels, onClick, isDragging }: KanbanCardProps): JSX.Element {
@@ -50,11 +51,11 @@ export function KanbanCard({ card, labels, onClick, isDragging }: KanbanCardProp
     const now = new Date();
     const diffDays = Math.ceil((d.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
-    if (diffDays === 0) return '今天';
-    if (diffDays === 1) return '明天';
-    if (diffDays === -1) return '昨天';
-    if (diffDays < 0) return `${Math.abs(diffDays)}天前`;
-    if (diffDays <= 7) return `${diffDays}天后`;
+    if (diffDays === 0) return t('今天');
+    if (diffDays === 1) return t('明天');
+    if (diffDays === -1) return t('昨天');
+    if (diffDays < 0) return t('{n}天前', { n: Math.abs(diffDays) });
+    if (diffDays <= 7) return t('{n}天后', { n: diffDays });
 
     return d.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
   };

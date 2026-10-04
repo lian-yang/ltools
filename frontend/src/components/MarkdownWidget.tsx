@@ -11,6 +11,7 @@ import { Icon } from './Icon';
 import { MarkdownService } from '../../bindings/ltools/plugins/markdown';
 import 'katex/dist/katex.min.css';
 import 'highlight.js/styles/github-dark.css';
+import { t } from '@/i18n';
 
 interface MarkdownStats {
   characters: number;
@@ -32,7 +33,7 @@ export function MarkdownWidget(): JSX.Element {
   // 从 localStorage 恢复暂存内容
   const [markdownText, setMarkdownText] = useState(() => {
     const saved = localStorage.getItem(STORAGE_KEY_CONTENT);
-    return saved || '# 欢迎使用 Markdown 编辑器\n\n开始编写你的文档...\n\n## 功能特性\n\n- **实时预览**：编辑时即时查看渲染效果\n- **GFM 支持**：表格、任务列表、删除线等\n- **数学公式**：支持 LaTeX 语法\n- **代码高亮**：多种语言语法高亮\n\n### 代码示例\n\n```javascript\nfunction hello() {\n  console.log("Hello, Markdown!");\n}\n```\n\n### 表格示例\n\n| 功能 | 快捷键 |\n|------|--------|\n| 加粗 | Cmd+B |\n| 斜体 | Cmd+I |\n\n### 数学公式\n\n行内公式：$E = mc^2$\n\n块级公式：\n\n$$\n\\sum_{i=1}^{n} x_i = x_1 + x_2 + \\cdots + x_n\n$$\n';
+    return saved || t('# 欢迎使用 Markdown 编辑器\n\n开始编写你的文档...\n\n## 功能特性\n\n- **实时预览**：编辑时即时查看渲染效果\n- **GFM 支持**：表格、任务列表、删除线等\n- **数学公式**：支持 LaTeX 语法\n- **代码高亮**：多种语言语法高亮\n\n### 代码示例\n\n```javascript\nfunction hello() {\n  console.log("Hello, Markdown!");\n}\n```\n\n### 表格示例\n\n| 功能 | 快捷键 |\n|------|--------|\n| 加粗 | Cmd+B |\n| 斜体 | Cmd+I |\n\n### 数学公式\n\n行内公式：$E = mc^2$\n\n块级公式：\n\n$$\n\\sum_{i=1}^{n} x_i = x_1 + x_2 + \\cdots + x_n\n$$\n');
   });
   const [filename, setFilename] = useState(() => {
     return localStorage.getItem(STORAGE_KEY_FILENAME) || 'untitled.md';
@@ -237,7 +238,7 @@ export function MarkdownWidget(): JSX.Element {
     const position = editor.getPosition();
     editor.executeEdits('', [{
       range: new monaco.Range(position.lineNumber, position.column, position.lineNumber, position.column),
-      text: '\n| 列1 | 列2 | 列3 |\n|-----|-----|-----|\n| 内容 | 内容 | 内容 |\n',
+      text: t('\n| 列1 | 列2 | 列3 |\n|-----|-----|-----|\n| 内容 | 内容 | 内容 |\n'),
     }]);
   }, []);
 
@@ -254,7 +255,7 @@ export function MarkdownWidget(): JSX.Element {
     const position = editor.getPosition();
     editor.executeEdits('', [{
       range: new monaco.Range(position.lineNumber, position.column, position.lineNumber, position.column),
-      text: '![图片描述](image-url)',
+      text: t('![图片描述](image-url)'),
     }]);
   }, []);
 
@@ -361,7 +362,7 @@ export function MarkdownWidget(): JSX.Element {
                     H{level}
                   </button>
                   <span className="absolute left-1/2 -translate-x-1/2 top-full mt-2 px-2 py-1 text-xs bg-black/90 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
-                    标题 {level}
+                    {t('标题')} {level}
                   </span>
                 </div>
               ))}
@@ -378,7 +379,7 @@ export function MarkdownWidget(): JSX.Element {
                 <Icon name="bold" size={16} />
               </button>
               <span className="absolute left-1/2 -translate-x-1/2 top-full mt-2 px-2 py-1 text-xs bg-black/90 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
-                加粗
+                {t('加粗')}
               </span>
             </div>
             <div className="relative group">
@@ -389,7 +390,7 @@ export function MarkdownWidget(): JSX.Element {
                 <Icon name="italic" size={16} />
               </button>
               <span className="absolute left-1/2 -translate-x-1/2 top-full mt-2 px-2 py-1 text-xs bg-black/90 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
-                斜体
+                {t('斜体')}
               </span>
             </div>
             <div className="relative group">
@@ -400,7 +401,7 @@ export function MarkdownWidget(): JSX.Element {
                 <Icon name="strikethrough" size={16} />
               </button>
               <span className="absolute left-1/2 -translate-x-1/2 top-full mt-2 px-2 py-1 text-xs bg-black/90 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
-                删除线
+                {t('删除线')}
               </span>
             </div>
             <div className="relative group">
@@ -411,7 +412,7 @@ export function MarkdownWidget(): JSX.Element {
                 <Icon name="code" size={16} />
               </button>
               <span className="absolute left-1/2 -translate-x-1/2 top-full mt-2 px-2 py-1 text-xs bg-black/90 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
-                代码块
+                {t('代码块')}
               </span>
             </div>
 
@@ -426,7 +427,7 @@ export function MarkdownWidget(): JSX.Element {
                 <Icon name="link" size={16} />
               </button>
               <span className="absolute left-1/2 -translate-x-1/2 top-full mt-2 px-2 py-1 text-xs bg-black/90 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
-                链接
+                {t('链接')}
               </span>
             </div>
             <div className="relative group">
@@ -437,7 +438,7 @@ export function MarkdownWidget(): JSX.Element {
                 <Icon name="image" size={16} />
               </button>
               <span className="absolute left-1/2 -translate-x-1/2 top-full mt-2 px-2 py-1 text-xs bg-black/90 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
-                图片
+                {t('图片')}
               </span>
             </div>
             <div className="relative group">
@@ -448,7 +449,7 @@ export function MarkdownWidget(): JSX.Element {
                 <Icon name="table" size={16} />
               </button>
               <span className="absolute left-1/2 -translate-x-1/2 top-full mt-2 px-2 py-1 text-xs bg-black/90 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
-                表格
+                {t('表格')}
               </span>
             </div>
 
@@ -463,7 +464,7 @@ export function MarkdownWidget(): JSX.Element {
                 <Icon name="list" size={16} />
               </button>
               <span className="absolute left-1/2 -translate-x-1/2 top-full mt-2 px-2 py-1 text-xs bg-black/90 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
-                无序列表
+                {t('无序列表')}
               </span>
             </div>
             <div className="relative group">
@@ -474,7 +475,7 @@ export function MarkdownWidget(): JSX.Element {
                 <Icon name="list-numbered" size={16} />
               </button>
               <span className="absolute left-1/2 -translate-x-1/2 top-full mt-2 px-2 py-1 text-xs bg-black/90 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
-                有序列表
+                {t('有序列表')}
               </span>
             </div>
             <div className="relative group">
@@ -485,7 +486,7 @@ export function MarkdownWidget(): JSX.Element {
                 <Icon name="checkbox" size={16} />
               </button>
               <span className="absolute left-1/2 -translate-x-1/2 top-full mt-2 px-2 py-1 text-xs bg-black/90 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
-                任务列表
+                {t('任务列表')}
               </span>
             </div>
           </div>
@@ -502,7 +503,7 @@ export function MarkdownWidget(): JSX.Element {
                 <Icon name="view-columns" size={16} />
               </button>
               <span className="absolute left-1/2 -translate-x-1/2 top-full mt-2 px-2 py-1 text-xs bg-black/90 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
-                {showPreview ? '隐藏预览' : '显示预览'}
+                {showPreview ? t('隐藏预览') : t('显示预览')}
               </span>
             </div>
             <div className="relative group">
@@ -515,7 +516,7 @@ export function MarkdownWidget(): JSX.Element {
                 <Icon name="eye" size={16} />
               </button>
               <span className="absolute left-1/2 -translate-x-1/2 top-full mt-2 px-2 py-1 text-xs bg-black/90 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
-                同步滚动
+                {t('同步滚动')}
               </span>
             </div>
             <div className="relative group">
@@ -526,7 +527,7 @@ export function MarkdownWidget(): JSX.Element {
                 <Icon name="upload" size={16} />
               </button>
               <span className="absolute left-1/2 -translate-x-1/2 top-full mt-2 px-2 py-1 text-xs bg-black/90 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
-                打开文件
+                {t('打开文件')}
               </span>
             </div>
             <div className="relative group">
@@ -537,7 +538,7 @@ export function MarkdownWidget(): JSX.Element {
                 <Icon name="download" size={16} />
               </button>
               <span className="absolute left-1/2 -translate-x-1/2 top-full mt-2 px-2 py-1 text-xs bg-black/90 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
-                保存文件
+                {t('保存文件')}
               </span>
             </div>
             <div className="relative group">
@@ -548,7 +549,7 @@ export function MarkdownWidget(): JSX.Element {
                 <Icon name="document" size={16} />
               </button>
               <span className="absolute left-1/2 -translate-x-1/2 top-full mt-2 px-2 py-1 text-xs bg-black/90 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
-                导出 HTML
+                {t('导出 HTML')}
               </span>
             </div>
           </div>
@@ -567,7 +568,7 @@ export function MarkdownWidget(): JSX.Element {
         >
           <div className="flex-shrink-0 px-3 py-2 bg-white/5 text-white/40 text-xs border-b border-white/10 flex items-center gap-2">
             <Icon name="edit" size={12} />
-            编辑
+            {t('编辑')}
             <span className="ml-auto">{filename}</span>
           </div>
           <div className="flex-1 min-h-0">
@@ -610,7 +611,7 @@ export function MarkdownWidget(): JSX.Element {
           >
             <div className="flex-shrink-0 px-3 py-2 bg-white/5 text-white/40 text-xs border-b border-white/10 flex items-center gap-2">
               <Icon name="eye" size={12} />
-              预览
+              {t('预览')}
             </div>
             <div
               ref={previewRef}
@@ -638,24 +639,24 @@ export function MarkdownWidget(): JSX.Element {
       {/* 状态栏 */}
       <div className="flex-shrink-0 glass-heavy border-t border-white/10 px-4 py-2 flex items-center justify-between text-xs text-white/40">
         <div className="flex items-center gap-4">
-          <span>字符: {stats.characters}</span>
-          <span>字数: {stats.words}</span>
-          <span>行数: {stats.lines}</span>
-          <span>阅读: {stats.readTime}</span>
+          <span>{t('字符:')} {stats.characters}</span>
+          <span>{t('字数:')} {stats.words}</span>
+          <span>{t('行数:')} {stats.lines}</span>
+          <span>{t('阅读:')} {stats.readTime}</span>
         </div>
         <div className="flex items-center gap-2">
           <button
             className="hover:text-white transition-colors clickable"
             onClick={handleCopy}
           >
-            复制
+            {t('复制')}
           </button>
           <span>|</span>
           <button
             className="hover:text-white transition-colors clickable"
             onClick={handleClear}
           >
-            清空
+            {t('清空')}
           </button>
         </div>
       </div>

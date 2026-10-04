@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import * as VaultService from '../../../bindings/ltools/plugins/vault/vaultservice';
 import { Icon } from '../Icon';
+import { t } from '@/i18n';
 
 interface ChangePasswordDialogProps {
   isOpen: boolean;
@@ -28,10 +29,10 @@ const ChangePasswordDialog: React.FC<ChangePasswordDialogProps> = ({ isOpen, onC
     if (/\d/.test(password)) score++;
     if (/[^a-zA-Z0-9]/.test(password)) score++;
 
-    if (score <= 2) return { level: 1, text: '弱', color: 'bg-red-500' };
-    if (score <= 3) return { level: 2, text: '中等', color: 'bg-yellow-500' };
-    if (score <= 4) return { level: 3, text: '强', color: 'bg-green-500' };
-    return { level: 4, text: '非常强', color: 'bg-green-600' };
+    if (score <= 2) return { level: 1, text: t('弱'), color: 'bg-red-500' };
+    if (score <= 3) return { level: 2, text: t('中等'), color: 'bg-yellow-500' };
+    if (score <= 4) return { level: 3, text: t('强'), color: 'bg-green-500' };
+    return { level: 4, text: t('非常强'), color: 'bg-green-600' };
   };
 
   const strength = getPasswordStrength(newPassword);
@@ -43,22 +44,22 @@ const ChangePasswordDialog: React.FC<ChangePasswordDialogProps> = ({ isOpen, onC
 
     // 验证
     if (!currentPassword) {
-      setError('请输入当前主密码');
+      setError(t('请输入当前主密码'));
       return;
     }
 
     if (newPassword.length < 8) {
-      setError('新主密码至少需要 8 个字符');
+      setError(t('新主密码至少需要 8 个字符'));
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      setError('两次输入的新密码不一致');
+      setError(t('两次输入的新密码不一致'));
       return;
     }
 
     if (strength.level < 2) {
-      setError('新密码强度太弱，请使用更复杂的密码');
+      setError(t('新密码强度太弱，请使用更复杂的密码'));
       return;
     }
 
@@ -74,7 +75,7 @@ const ChangePasswordDialog: React.FC<ChangePasswordDialogProps> = ({ isOpen, onC
         onClose();
       }, 2000);
     } catch (err) {
-      setError('当前主密码错误或修改失败');
+      setError(t('当前主密码错误或修改失败'));
       console.error('Change password failed:', err);
     } finally {
       setLoading(false);
@@ -101,7 +102,7 @@ const ChangePasswordDialog: React.FC<ChangePasswordDialogProps> = ({ isOpen, onC
             <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
               <Icon name="key" className="w-5 h-5 text-primary" />
             </div>
-            <h2 className="text-lg font-bold text-white">修改主密码</h2>
+            <h2 className="text-lg font-bold text-white">{t('修改主密码')}</h2>
           </div>
           <button
             onClick={handleClose}
@@ -116,15 +117,15 @@ const ChangePasswordDialog: React.FC<ChangePasswordDialogProps> = ({ isOpen, onC
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-500/20 mb-4">
               <Icon name="check-circle" className="w-8 h-8 text-green-500" />
             </div>
-            <h3 className="text-lg font-medium text-white mb-2">修改成功</h3>
-            <p className="text-sm text-gray-400">主密码已成功更新</p>
+            <h3 className="text-lg font-medium text-white mb-2">{t('修改成功')}</h3>
+            <p className="text-sm text-gray-400">{t('主密码已成功更新')}</p>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* 当前密码 */}
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
-                当前主密码
+                {t('当前主密码')}
               </label>
               <div className="relative">
                 <input
@@ -134,7 +135,7 @@ const ChangePasswordDialog: React.FC<ChangePasswordDialogProps> = ({ isOpen, onC
                   className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg
                            text-white placeholder-gray-400 focus:outline-none focus:border-primary
                            pr-12"
-                  placeholder="输入当前主密码"
+                  placeholder={t("输入当前主密码")}
                 />
                 <button
                   type="button"
@@ -149,7 +150,7 @@ const ChangePasswordDialog: React.FC<ChangePasswordDialogProps> = ({ isOpen, onC
             {/* 新密码 */}
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
-                新主密码
+                {t('新主密码')}
               </label>
               <div className="relative">
                 <input
@@ -159,7 +160,7 @@ const ChangePasswordDialog: React.FC<ChangePasswordDialogProps> = ({ isOpen, onC
                   className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg
                            text-white placeholder-gray-400 focus:outline-none focus:border-primary
                            pr-12"
-                  placeholder="输入新主密码"
+                  placeholder={t("输入新主密码")}
                 />
                 <button
                   type="button"
@@ -184,7 +185,7 @@ const ChangePasswordDialog: React.FC<ChangePasswordDialogProps> = ({ isOpen, onC
                     ))}
                   </div>
                   <p className="text-xs text-gray-400">
-                    密码强度: <span className="text-white">{strength.text}</span>
+                    {t('密码强度:')} <span className="text-white">{strength.text}</span>
                   </p>
                 </div>
               )}
@@ -193,7 +194,7 @@ const ChangePasswordDialog: React.FC<ChangePasswordDialogProps> = ({ isOpen, onC
             {/* 确认新密码 */}
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
-                确认新密码
+                {t('确认新密码')}
               </label>
               <input
                 type={showNewPassword ? 'text' : 'password'}
@@ -201,7 +202,7 @@ const ChangePasswordDialog: React.FC<ChangePasswordDialogProps> = ({ isOpen, onC
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg
                          text-white placeholder-gray-400 focus:outline-none focus:border-primary"
-                placeholder="再次输入新主密码"
+                placeholder={t("再次输入新主密码")}
               />
             </div>
 
@@ -221,7 +222,7 @@ const ChangePasswordDialog: React.FC<ChangePasswordDialogProps> = ({ isOpen, onC
                 className="flex-1 py-3 bg-white/10 hover:bg-white/20 rounded-lg
                          text-gray-300 transition-colors"
               >
-                取消
+                {t('取消')}
               </button>
               <button
                 type="submit"
@@ -233,12 +234,12 @@ const ChangePasswordDialog: React.FC<ChangePasswordDialogProps> = ({ isOpen, onC
                 {loading ? (
                   <>
                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                    <span>修改中...</span>
+                    <span>{t('修改中...')}</span>
                   </>
                 ) : (
                   <>
                     <Icon name="key" className="w-5 h-5" />
-                    <span>确认修改</span>
+                    <span>{t('确认修改')}</span>
                   </>
                 )}
               </button>

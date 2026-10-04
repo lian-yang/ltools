@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { Events } from '@wailsio/runtime';
 import * as KanbanService from '../../../../bindings/ltools/plugins/kanban/kanbanservice';
 import { Board, Column, Card, Label, CardUpdate, Priority } from '../../../../bindings/ltools/plugins/kanban/models';
+import { t } from '@/i18n';
 
 export interface KanbanState {
   boards: Board[];
@@ -74,7 +75,7 @@ export function useKanban(): UseKanbanReturn {
       setState(prev => ({
         ...prev,
         loading: false,
-        error: err instanceof Error ? err.message : '加载看板失败',
+        error: err instanceof Error ? err.message : t('加载看板失败'),
       }));
     }
   }, []);
@@ -93,7 +94,7 @@ export function useKanban(): UseKanbanReturn {
       setState(prev => ({
         ...prev,
         loading: false,
-        error: err instanceof Error ? err.message : '加载看板失败',
+        error: err instanceof Error ? err.message : t('加载看板失败'),
       }));
     }
   }, []);
@@ -117,7 +118,7 @@ export function useKanban(): UseKanbanReturn {
     } catch (err) {
       setState(prev => ({
         ...prev,
-        error: err instanceof Error ? err.message : '创建看板失败',
+        error: err instanceof Error ? err.message : t('创建看板失败'),
       }));
       return null;
     }
@@ -138,7 +139,7 @@ export function useKanban(): UseKanbanReturn {
     } catch (err) {
       setState(prev => ({
         ...prev,
-        error: err instanceof Error ? err.message : '更新看板失败',
+        error: err instanceof Error ? err.message : t('更新看板失败'),
       }));
     }
   }, []);
@@ -159,7 +160,7 @@ export function useKanban(): UseKanbanReturn {
     } catch (err) {
       setState(prev => ({
         ...prev,
-        error: err instanceof Error ? err.message : '删除看板失败',
+        error: err instanceof Error ? err.message : t('删除看板失败'),
       }));
     }
   }, []);
@@ -188,7 +189,7 @@ export function useKanban(): UseKanbanReturn {
     } catch (err) {
       setState(prev => ({
         ...prev,
-        error: err instanceof Error ? err.message : '创建列失败',
+        error: err instanceof Error ? err.message : t('创建列失败'),
       }));
       return null;
     }
@@ -211,7 +212,7 @@ export function useKanban(): UseKanbanReturn {
     } catch (err) {
       setState(prev => ({
         ...prev,
-        error: err instanceof Error ? err.message : '更新列失败',
+        error: err instanceof Error ? err.message : t('更新列失败'),
       }));
     }
   }, []);
@@ -231,7 +232,7 @@ export function useKanban(): UseKanbanReturn {
     } catch (err) {
       setState(prev => ({
         ...prev,
-        error: err instanceof Error ? err.message : '删除列失败',
+        error: err instanceof Error ? err.message : t('删除列失败'),
       }));
     }
   }, []);
@@ -250,7 +251,7 @@ export function useKanban(): UseKanbanReturn {
     } catch (err) {
       setState(prev => ({
         ...prev,
-        error: err instanceof Error ? err.message : '移动列失败',
+        error: err instanceof Error ? err.message : t('移动列失败'),
       }));
     }
   }, []);
@@ -285,7 +286,7 @@ export function useKanban(): UseKanbanReturn {
     } catch (err) {
       setState(prev => ({
         ...prev,
-        error: err instanceof Error ? err.message : '创建卡片失败',
+        error: err instanceof Error ? err.message : t('创建卡片失败'),
       }));
       return null;
     }
@@ -305,7 +306,7 @@ export function useKanban(): UseKanbanReturn {
     } catch (err) {
       setState(prev => ({
         ...prev,
-        error: err instanceof Error ? err.message : '更新卡片失败',
+        error: err instanceof Error ? err.message : t('更新卡片失败'),
       }));
     }
   }, []);
@@ -329,7 +330,7 @@ export function useKanban(): UseKanbanReturn {
     } catch (err) {
       setState(prev => ({
         ...prev,
-        error: err instanceof Error ? err.message : '删除卡片失败',
+        error: err instanceof Error ? err.message : t('删除卡片失败'),
       }));
     }
   }, []);
@@ -354,7 +355,7 @@ export function useKanban(): UseKanbanReturn {
     } catch (err) {
       setState(prev => ({
         ...prev,
-        error: err instanceof Error ? err.message : '移动卡片失败',
+        error: err instanceof Error ? err.message : t('移动卡片失败'),
       }));
     }
   }, []);
@@ -372,7 +373,7 @@ export function useKanban(): UseKanbanReturn {
     } catch (err) {
       setState(prev => ({
         ...prev,
-        error: err instanceof Error ? err.message : '完成卡片失败',
+        error: err instanceof Error ? err.message : t('完成卡片失败'),
       }));
     }
   }, []);
@@ -390,7 +391,7 @@ export function useKanban(): UseKanbanReturn {
     } catch (err) {
       setState(prev => ({
         ...prev,
-        error: err instanceof Error ? err.message : '取消完成失败',
+        error: err instanceof Error ? err.message : t('取消完成失败'),
       }));
     }
   }, []);
@@ -419,7 +420,7 @@ export function useKanban(): UseKanbanReturn {
     } catch (err) {
       setState(prev => ({
         ...prev,
-        error: err instanceof Error ? err.message : '创建标签失败',
+        error: err instanceof Error ? err.message : t('创建标签失败'),
       }));
       return null;
     }
@@ -442,7 +443,7 @@ export function useKanban(): UseKanbanReturn {
     } catch (err) {
       setState(prev => ({
         ...prev,
-        error: err instanceof Error ? err.message : '更新标签失败',
+        error: err instanceof Error ? err.message : t('更新标签失败'),
       }));
     }
   }, []);
@@ -469,7 +470,7 @@ export function useKanban(): UseKanbanReturn {
     } catch (err) {
       setState(prev => ({
         ...prev,
-        error: err instanceof Error ? err.message : '删除标签失败',
+        error: err instanceof Error ? err.message : t('删除标签失败'),
       }));
     }
   }, []);
@@ -488,7 +489,7 @@ export function useKanban(): UseKanbanReturn {
     } catch (err) {
       setState(prev => ({
         ...prev,
-        error: err instanceof Error ? err.message : '添加检查项失败',
+        error: err instanceof Error ? err.message : t('添加检查项失败'),
       }));
     }
   }, []);
@@ -527,7 +528,7 @@ export function useKanban(): UseKanbanReturn {
     } catch (err) {
       setState(prev => ({
         ...prev,
-        error: err instanceof Error ? err.message : '切换检查项失败',
+        error: err instanceof Error ? err.message : t('切换检查项失败'),
       }));
     }
   }, []);
@@ -562,7 +563,7 @@ export function useKanban(): UseKanbanReturn {
     } catch (err) {
       setState(prev => ({
         ...prev,
-        error: err instanceof Error ? err.message : '删除检查项失败',
+        error: err instanceof Error ? err.message : t('删除检查项失败'),
       }));
     }
   }, []);
@@ -599,7 +600,7 @@ export function useKanban(): UseKanbanReturn {
     } catch (err) {
       setState(prev => ({
         ...prev,
-        error: err instanceof Error ? err.message : '更新检查项失败',
+        error: err instanceof Error ? err.message : t('更新检查项失败'),
       }));
     }
   }, []);

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Icon } from './Icon';
 import { Browser } from '@wailsio/runtime';
 import * as UpdateService from '../../bindings/ltools/internal/update/service';
+import { t } from '@/i18n';
 
 /**
  * 关于页面组件
@@ -10,7 +11,7 @@ import * as UpdateService from '../../bindings/ltools/internal/update/service';
 export function AboutSettings() {
   const [checking, setChecking] = useState(false);
   const [updateMessage, setUpdateMessage] = useState<string | null>(null);
-  const [appVersion, setAppVersion] = useState<string>('加载中...');
+  const [appVersion, setAppVersion] = useState<string>(t('加载中...'));
 
   const goVersion = '1.25+';
   const wailsVersion = 'v3 (alpha)';
@@ -22,7 +23,7 @@ export function AboutSettings() {
       .then(version => setAppVersion(version))
       .catch(err => {
         console.error('Failed to get app version:', err);
-        setAppVersion('未知');
+        setAppVersion(t('未知'));
       });
   }, []);
 
@@ -36,15 +37,15 @@ export function AboutSettings() {
       if (info) {
         // 更新信息会通过 "update:available" 事件发送到 UpdateNotification 组件显示
         // 这里只显示一个简短的提示
-        setUpdateMessage('发现新版本，请查看更新通知');
+        setUpdateMessage(t('发现新版本，请查看更新通知'));
         setTimeout(() => setUpdateMessage(null), 3000);
       } else {
-        setUpdateMessage('您已经在使用最新版本！');
+        setUpdateMessage(t('您已经在使用最新版本！'));
         setTimeout(() => setUpdateMessage(null), 3000);
       }
     } catch (error) {
       console.error('Check update failed:', error);
-      setUpdateMessage('检查更新失败，请稍后重试');
+      setUpdateMessage(t('检查更新失败，请稍后重试'));
       setTimeout(() => setUpdateMessage(null), 3000);
     } finally {
       setChecking(false);
@@ -57,10 +58,10 @@ export function AboutSettings() {
       <div>
         <h2 className="text-xl font-semibold text-white flex items-center gap-2">
           <Icon name="information-circle" size={20} color="#A78BFA" />
-          关于
+          {t('关于')}
         </h2>
         <p className="text-white/50 text-sm mt-1">
-          了解 LTools 的版本信息和技术栈
+          {t('了解 LTools 的版本信息和技术栈')}
         </p>
       </div>
 
@@ -72,14 +73,12 @@ export function AboutSettings() {
           </div>
           <div>
             <h3 className="text-2xl font-bold text-white">LTools</h3>
-            <p className="text-white/50 text-sm">多功能开发工具集</p>
+            <p className="text-white/50 text-sm">{t('多功能开发工具集')}</p>
           </div>
         </div>
 
         <p className="text-white/60 text-sm leading-relaxed">
-          LTools 是一个基于 Wails v3 的插件化跨平台桌面工具箱应用。
-          通过插件架构提供统一的工具集中心，面向开发者和高级用户，
-          支持全局搜索和快捷键快速访问工具。
+          {t('LTools 是一个基于 Wails v3 的插件化跨平台桌面工具箱应用。 通过插件架构提供统一的工具集中心，面向开发者和高级用户， 支持全局搜索和快捷键快速访问工具。')}
         </p>
       </div>
 
@@ -87,11 +86,11 @@ export function AboutSettings() {
       <div className="glass-light rounded-xl p-5 space-y-4">
         <h3 className="text-white font-medium flex items-center gap-2">
           <Icon name="code" size={16} color="#A78BFA" />
-          版本信息
+          {t('版本信息')}
         </h3>
 
         <div className="space-y-3">
-          <VersionRow label="应用版本" value={`v${appVersion}`} />
+          <VersionRow label={t("应用版本")} value={`v${appVersion}`} />
           <VersionRow label="Go" value={goVersion} />
           <VersionRow label="Wails" value={wailsVersion} />
           <VersionRow label="React" value={reactVersion} />
@@ -110,7 +109,7 @@ export function AboutSettings() {
               color="white"
               className={checking ? 'animate-spin' : ''}
             />
-            {checking ? '检查中...' : '检查更新'}
+            {checking ? t('检查中...') : t('检查更新')}
           </button>
 
           {updateMessage && (
@@ -131,16 +130,16 @@ export function AboutSettings() {
       <div className="glass-light rounded-xl p-5">
         <h3 className="text-white font-medium mb-4 flex items-center gap-2">
           <Icon name="terminal" size={16} color="#A78BFA" />
-          技术栈
+          {t('技术栈')}
         </h3>
 
         <div className="grid grid-cols-2 gap-3">
-          <TechBadge name="Go" description="后端框架" />
-          <TechBadge name="Wails v3" description="桌面框架" />
-          <TechBadge name="React" description="前端框架" />
-          <TechBadge name="TypeScript" description="类型安全" />
-          <TechBadge name="Vite" description="构建工具" />
-          <TechBadge name="TailwindCSS" description="样式框架" />
+          <TechBadge name="Go" description={t("后端框架")} />
+          <TechBadge name="Wails v3" description={t("桌面框架")} />
+          <TechBadge name="React" description={t("前端框架")} />
+          <TechBadge name="TypeScript" description={t("类型安全")} />
+          <TechBadge name="Vite" description={t("构建工具")} />
+          <TechBadge name="TailwindCSS" description={t("样式框架")} />
         </div>
       </div>
 
@@ -148,22 +147,22 @@ export function AboutSettings() {
       <div className="glass-light rounded-xl p-5">
         <h3 className="text-white font-medium mb-4 flex items-center gap-2">
           <Icon name="link" size={16} color="#A78BFA" />
-          相关链接
+          {t('相关链接')}
         </h3>
 
         <div className="space-y-2">
           <LinkRow
-            label="Wails 官方文档"
+            label={t("Wails 官方文档")}
             href="https://v3.wails.io/"
             icon="external-link"
           />
           <LinkRow
-            label="GitHub 仓库"
+            label={t("GitHub 仓库")}
             href="https://github.com/lian-yang/ltools"
             icon="external-link"
           />
           <LinkRow
-            label="问题反馈"
+            label={t("问题反馈")}
             href="https://github.com/lian-yang/ltools/issues"
             icon="external-link"
           />

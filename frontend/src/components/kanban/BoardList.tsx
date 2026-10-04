@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Board } from '../../../bindings/ltools/plugins/kanban/models';
 import { Icon } from '../Icon';
+import { t } from '@/i18n';
 
 interface BoardListProps {
   boards: Board[];
@@ -29,8 +30,8 @@ export function BoardList({ boards, onSelect, onDelete }: BoardListProps): JSX.E
     return (
       <div className="flex flex-col items-center justify-center h-full text-white/40">
         <Icon name="kanban" size={64} className="mb-4 opacity-30" />
-        <p className="text-lg mb-2">还没有看板</p>
-        <p className="text-sm">点击右上角"新建看板"开始</p>
+        <p className="text-lg mb-2">{t('还没有看板')}</p>
+        <p className="text-sm">{t('点击右上角"新建看板"开始')}</p>
       </div>
     );
   }
@@ -59,15 +60,15 @@ export function BoardList({ boards, onSelect, onDelete }: BoardListProps): JSX.E
           <div className="flex items-center gap-4 text-xs text-white/40 mb-3">
             <div className="flex items-center gap-1.5">
               <Icon name="view-columns" size={14} />
-              <span>{board.columns.length} 列</span>
+              <span>{board.columns.length} {t('列')}</span>
             </div>
             <div className="flex items-center gap-1.5">
               <Icon name="square" size={14} />
-              <span>{getTotalCards(board)} 卡片</span>
+              <span>{getTotalCards(board)} {t('卡片')}</span>
             </div>
             <div className="flex items-center gap-1.5">
               <Icon name="tag" size={14} />
-              <span>{board.labels.length} 标签</span>
+              <span>{board.labels.length} {t('标签')}</span>
             </div>
           </div>
 
@@ -101,7 +102,7 @@ export function BoardList({ boards, onSelect, onDelete }: BoardListProps): JSX.E
                   onDelete(board.id);
                 }}
                 className="p-1.5 rounded-lg bg-white/5 text-white/40 hover:bg-[#EF4444]/10 hover:text-[#EF4444] clickable"
-                title="删除看板"
+                title={t("删除看板")}
               >
                 <Icon name="trash" size={14} />
               </button>

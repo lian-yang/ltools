@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import Editor from '@monaco-editor/react';
 import { Icon } from './Icon';
 import { JSONEditorService } from '../../bindings/ltools/plugins/jsoneditor';
+import { t } from '@/i18n';
 
 type ViewMode = 'code' | 'tree';
 
@@ -91,7 +92,7 @@ export function JSONEditorWidget(): JSX.Element {
       }
     } catch (err) {
       console.error('Failed to import file:', err);
-      setError(`导入失败: ${String(err)}`);
+      setError(t('导入失败: {msg}', { msg: String(err) }));
     }
   }, []);
 
@@ -105,7 +106,7 @@ export function JSONEditorWidget(): JSX.Element {
       }
     } catch (err) {
       console.error('Failed to export file:', err);
-      setError(`导出失败: ${String(err)}`);
+      setError(t('导出失败: {msg}', { msg: String(err) }));
     }
   }, [jsonText]);
 
@@ -132,8 +133,8 @@ export function JSONEditorWidget(): JSX.Element {
         {/* 标题和工具栏 */}
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="text-xl font-semibold text-white">JSON 编辑器</h3>
-            <p className="text-white/60 text-sm">格式化、验证和编辑 JSON 数据</p>
+            <h3 className="text-xl font-semibold text-white">{t('JSON 编辑器')}</h3>
+            <p className="text-white/60 text-sm">{t('格式化、验证和编辑 JSON 数据')}</p>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -142,7 +143,7 @@ export function JSONEditorWidget(): JSX.Element {
               }`}
               onClick={() => setViewMode('code')}
             >
-              代码视图
+              {t('代码视图')}
             </button>
             <button
               className={`px-3 py-1.5 rounded-lg text-sm transition-all clickable ${
@@ -150,7 +151,7 @@ export function JSONEditorWidget(): JSX.Element {
               }`}
               onClick={() => setViewMode('tree')}
             >
-              树形视图
+              {t('树形视图')}
             </button>
           </div>
         </div>
@@ -196,10 +197,10 @@ export function JSONEditorWidget(): JSX.Element {
         {/* 统计信息 */}
         <div className="flex items-center justify-between text-xs text-white/40">
           <span>
-            类型: {stats.type} | 大小: {stats.size} 字符 | 行数: {stats.lines}
+            {t('类型:')} {stats.type} {t('| 大小:')} {stats.size} {t('字符 | 行数:')} {stats.lines}
           </span>
           <span className={isValid ? 'text-[#22C55E]' : 'text-[#EF4444]'}>
-            {isValid ? '✓ 有效 JSON' : '✗ 无效 JSON'}
+            {isValid ? t('✓ 有效 JSON') : t('✗ 无效 JSON')}
           </span>
         </div>
 
@@ -209,31 +210,31 @@ export function JSONEditorWidget(): JSX.Element {
             className="px-4 py-2 rounded-lg bg-[#7C3AED] text-white hover:bg-[#6D28D9] transition-all clickable"
             onClick={handleFormat}
           >
-            格式化
+            {t('格式化')}
           </button>
           <button
             className="px-4 py-2 rounded-lg bg-white/5 text-white hover:bg-white/10 transition-all clickable"
             onClick={handleMinify}
           >
-            压缩
+            {t('压缩')}
           </button>
           <button
             className="px-4 py-2 rounded-lg bg-white/5 text-white hover:bg-white/10 transition-all clickable"
             onClick={handleValidate}
           >
-            验证
+            {t('验证')}
           </button>
           <button
             className="px-4 py-2 rounded-lg bg-white/5 text-white hover:bg-white/10 transition-all clickable"
             onClick={handleCopy}
           >
-            复制
+            {t('复制')}
           </button>
           <button
             className="px-4 py-2 rounded-lg bg-white/5 text-white hover:bg-white/10 transition-all clickable"
             onClick={handleClear}
           >
-            清空
+            {t('清空')}
           </button>
         </div>
 
@@ -245,7 +246,7 @@ export function JSONEditorWidget(): JSX.Element {
           >
             <div className="flex items-center gap-2">
               <Icon name="upload" size={16} />
-              导入文件
+              {t('导入文件')}
             </div>
           </button>
           <button
@@ -254,7 +255,7 @@ export function JSONEditorWidget(): JSX.Element {
           >
             <div className="flex items-center gap-2">
               <Icon name="download" size={16} />
-              导出文件
+              {t('导出文件')}
             </div>
           </button>
         </div>
@@ -287,7 +288,7 @@ function JSONTreeView({ data, error }: JSONTreeViewProps): JSX.Element {
     return (
       <div className="text-center py-8">
         <Icon name="alert-circle" size={32} color="#EF4444" />
-        <p className="text-[#EF4444] mt-2">无效的 JSON</p>
+        <p className="text-[#EF4444] mt-2">{t('无效的 JSON')}</p>
       </div>
     );
   }
@@ -295,7 +296,7 @@ function JSONTreeView({ data, error }: JSONTreeViewProps): JSX.Element {
   if (!parsed) {
     return (
       <div className="text-center py-8 text-white/40">
-        请输入有效的 JSON 数据
+        {t('请输入有效的 JSON 数据')}
       </div>
     );
   }
@@ -375,7 +376,7 @@ function TreeNode({ data, name }: TreeNodeProps): JSX.Element {
         {isEmpty && <span className={bracketColor}>{type === 'array' ? ']' : '}'}</span>}
         {!isEmpty && (
           <span className="text-white/40 text-xs">
-            {entries.length} {type === 'array' ? '项' : '个属性'}
+            {entries.length} {type === 'array' ? t('项') : t('个属性')}
           </span>
         )}
       </div>

@@ -4,6 +4,7 @@ import { zhCN } from 'date-fns/locale/zh-CN';
 import { Card, Label, Priority, ChecklistItem, CardUpdate } from '../../../bindings/ltools/plugins/kanban/models';
 import { Icon } from '../Icon';
 import 'react-datepicker/dist/react-datepicker.css';
+import { t } from '@/i18n';
 
 // 注册中文语言包
 registerLocale('zh-CN', zhCN);
@@ -22,9 +23,9 @@ interface CardEditorProps {
 }
 
 const priorityOptions: { value: Priority; label: string; color: string }[] = [
-  { value: Priority.PriorityHigh, label: '高', color: '#EF4444' },
-  { value: Priority.PriorityMedium, label: '中', color: '#F59E0B' },
-  { value: Priority.PriorityLow, label: '低', color: '#22C55E' },
+  { value: Priority.PriorityHigh, label: t('高'), color: '#EF4444' },
+  { value: Priority.PriorityMedium, label: t('中'), color: '#F59E0B' },
+  { value: Priority.PriorityLow, label: t('低'), color: '#22C55E' },
 ];
 
 const labelColors = [
@@ -141,13 +142,13 @@ export function CardEditor({
   };
 
   const formatDateDisplay = (date: Date | null) => {
-    if (!date) return '选择日期';
+    if (!date) return t('选择日期');
     const today = new Date();
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    if (date.toDateString() === today.toDateString()) return '今天';
-    if (date.toDateString() === tomorrow.toDateString()) return '明天';
+    if (date.toDateString() === today.toDateString()) return t('今天');
+    if (date.toDateString() === tomorrow.toDateString()) return t('明天');
     return date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
   };
 
@@ -167,17 +168,17 @@ export function CardEditor({
             <button
               onClick={onClose}
               className="p-2 -ml-2 rounded-lg hover:bg-white/10 text-white/60 hover:text-white transition-colors"
-              title="返回"
+              title={t("返回")}
             >
               <Icon name="arrow-left" size={20} />
             </button>
-            <h3 className="text-lg font-semibold text-white">编辑卡片</h3>
+            <h3 className="text-lg font-semibold text-white">{t('编辑卡片')}</h3>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={onDelete}
               className="p-2 rounded-lg hover:bg-[#EF4444]/10 text-white/40 hover:text-[#EF4444] transition-colors"
-              title="删除卡片"
+              title={t("删除卡片")}
             >
               <Icon name="trash" size={18} />
             </button>
@@ -188,26 +189,26 @@ export function CardEditor({
         <div className="flex-1 overflow-y-auto p-5 pt-[72px] space-y-5 scrollbar-thin">
           {/* Title */}
           <div>
-            <label className="block text-sm font-medium text-white/70 mb-2">标题</label>
+            <label className="block text-sm font-medium text-white/70 mb-2">{t('标题')}</label>
             <input
               ref={titleRef}
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-[#7C3AED] focus:ring-1 focus:ring-[#7C3AED]/50 transition-all"
-              placeholder="输入卡片标题..."
+              placeholder={t("输入卡片标题...")}
             />
           </div>
 
           {/* Description */}
           <div>
-            <label className="block text-sm font-medium text-white/70 mb-2">描述</label>
+            <label className="block text-sm font-medium text-white/70 mb-2">{t('描述')}</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
               className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-[#7C3AED] focus:ring-1 focus:ring-[#7C3AED]/50 transition-all resize-none"
-              placeholder="添加详细描述..."
+              placeholder={t("添加详细描述...")}
             />
           </div>
 
@@ -215,7 +216,7 @@ export function CardEditor({
           <div className="grid grid-cols-2 gap-4">
             {/* Priority */}
             <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">优先级</label>
+              <label className="block text-sm font-medium text-white/70 mb-2">{t('优先级')}</label>
               <div className="flex gap-2">
                 {priorityOptions.map((option) => (
                   <button
@@ -239,13 +240,13 @@ export function CardEditor({
 
             {/* Due Date with DatePicker */}
             <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">截止日期</label>
+              <label className="block text-sm font-medium text-white/70 mb-2">{t('截止日期')}</label>
               <DatePicker
                 selected={dueDate}
                 onChange={(date: Date | null) => setDueDate(date)}
                 locale="zh-CN"
-                dateFormat="yyyy年MM月dd日"
-                placeholderText="选择日期"
+                dateFormat={t("yyyy年MM月dd日")}
+                placeholderText={t("选择日期")}
                 className="w-full"
                 customInput={
                   <button
@@ -281,13 +282,13 @@ export function CardEditor({
           {/* Labels */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="text-sm font-medium text-white/70">标签</label>
+              <label className="text-sm font-medium text-white/70">{t('标签')}</label>
               <button
                 type="button"
                 onClick={() => setShowLabelPicker(!showLabelPicker)}
                 className="text-xs text-[#7C3AED] hover:text-[#8B5CF6] transition-colors"
               >
-                {showLabelPicker ? '收起' : '管理标签'}
+                {showLabelPicker ? t('收起') : t('管理标签')}
               </button>
             </div>
 
@@ -311,7 +312,7 @@ export function CardEditor({
                 );
               })}
               {selectedLabels.length === 0 && (
-                <span className="text-xs text-white/30 py-1">点击管理标签添加</span>
+                <span className="text-xs text-white/30 py-1">{t('点击管理标签添加')}</span>
               )}
             </div>
 
@@ -345,7 +346,7 @@ export function CardEditor({
                       type="text"
                       value={newLabelName}
                       onChange={(e) => setNewLabelName(e.target.value)}
-                      placeholder="标签名称"
+                      placeholder={t("标签名称")}
                       className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder-white/30 focus:outline-none focus:border-[#7C3AED]"
                     />
                     <div className="flex gap-2 flex-wrap">
@@ -367,14 +368,14 @@ export function CardEditor({
                         onClick={handleCreateLabel}
                         className="px-4 py-1.5 bg-[#7C3AED] rounded-lg text-sm text-white hover:bg-[#6D28D9] transition-colors"
                       >
-                        创建
+                        {t('创建')}
                       </button>
                       <button
                         type="button"
                         onClick={() => setShowNewLabel(false)}
                         className="px-4 py-1.5 bg-white/5 rounded-lg text-sm text-white/60 hover:text-white transition-colors"
                       >
-                        取消
+                        {t('取消')}
                       </button>
                     </div>
                   </div>
@@ -385,7 +386,7 @@ export function CardEditor({
                     className="text-xs text-[#7C3AED] hover:text-[#8B5CF6] transition-colors flex items-center gap-1"
                   >
                     <Icon name="plus" size={12} />
-                    新建标签
+                    {t('新建标签')}
                   </button>
                 )}
               </div>
@@ -395,7 +396,7 @@ export function CardEditor({
           {/* Checklist */}
           <div>
             <label className="block text-sm font-medium text-white/70 mb-2">
-              子任务
+              {t('子任务')}
               {checklists.length > 0 && (
                 <span className="ml-2 text-xs text-white/40">
                   ({checklists.filter(c => c.completed).length}/{checklists.length})
@@ -448,7 +449,7 @@ export function CardEditor({
                 value={newChecklistText}
                 onChange={(e) => setNewChecklistText(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleAddChecklist()}
-                placeholder="添加子任务..."
+                placeholder={t("添加子任务...")}
                 className="flex-1 px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder-white/30 focus:outline-none focus:border-[#7C3AED] transition-colors"
               />
               <button
@@ -457,7 +458,7 @@ export function CardEditor({
                 disabled={!newChecklistText.trim()}
                 className="px-4 py-2 bg-[#7C3AED]/20 border border-[#7C3AED]/30 rounded-lg text-sm text-[#7C3AED] hover:bg-[#7C3AED]/30 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
-                添加
+                {t('添加')}
               </button>
             </div>
           </div>
@@ -470,14 +471,14 @@ export function CardEditor({
             onClick={onClose}
             className="px-5 py-2.5 rounded-xl bg-white/5 text-white/60 hover:bg-white/10 hover:text-white transition-colors"
           >
-            取消
+            {t('取消')}
           </button>
           <button
             type="button"
             onClick={handleSave}
             className="px-5 py-2.5 rounded-xl bg-[#7C3AED] text-white hover:bg-[#6D28D9] transition-colors shadow-lg shadow-[#7C3AED]/25"
           >
-            保存更改
+            {t('保存更改')}
           </button>
         </div>
       </div>

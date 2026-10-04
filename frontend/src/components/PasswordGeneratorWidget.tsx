@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { Icon } from './Icon';
 import { useToast } from '../hooks/useToast';
+import { t } from '@/i18n';
 
 /**
  * 密码选项接口
@@ -34,10 +35,10 @@ type PasswordStrength = 'weak' | 'medium' | 'strong' | 'very-strong';
  * 密码强度配置
  */
 const STRENGTH_CONFIG = {
-  weak: { color: '#EF4444', label: '弱', width: '25%' },
-  medium: { color: '#F59E0B', label: '中', width: '50%' },
-  strong: { color: '#22C55E', label: '强', width: '75%' },
-  'very-strong': { color: '#7C3AED', label: '很强', width: '100%' },
+  weak: { color: '#EF4444', label: t('弱'), width: '25%' },
+  medium: { color: '#F59E0B', label: t('中'), width: '50%' },
+  strong: { color: '#22C55E', label: t('强'), width: '75%' },
+  'very-strong': { color: '#7C3AED', label: t('很强'), width: '100%' },
 };
 
 /**
@@ -100,19 +101,19 @@ const formatTime = (timestamp: number): string => {
 
   // 小于 1 分钟
   if (diff < 60000) {
-    return '刚刚';
+    return t('刚刚');
   }
 
   // 小于 1 小时
   if (diff < 3600000) {
     const minutes = Math.floor(diff / 60000);
-    return `${minutes}分钟前`;
+    return t('{n}分钟前', { n: minutes });
   }
 
   // 小于 1 天
   if (diff < 86400000) {
     const hours = Math.floor(diff / 3600000);
-    return `${hours}小时前`;
+    return t('{n}小时前', { n: hours });
   }
 
   // 显示具体时间
@@ -149,7 +150,7 @@ function HistoryRecord({ item, onClick }: HistoryRecordProps): JSX.Element {
         <div className="flex-1 min-w-0">
           <p className="text-sm font-mono text-white/90 truncate">{displayPassword}</p>
           <div className="flex items-center gap-2 mt-1">
-            <span className="text-xs text-white/40">{item.length} 位</span>
+            <span className="text-xs text-white/40">{item.length} {t('位')}</span>
             <span
               className="text-xs px-1.5 py-0.5 rounded"
               style={{
@@ -204,7 +205,7 @@ export function PasswordGeneratorWidget(): JSX.Element {
   // 生成新密码
   const generateNewPassword = useCallback(() => {
     if (!hasValidOptions) {
-      error('请至少选择一种字符类型');
+      error(t('请至少选择一种字符类型'));
       return;
     }
 
@@ -226,15 +227,15 @@ export function PasswordGeneratorWidget(): JSX.Element {
   // 复制密码到剪贴板
   const copyPassword = useCallback(async () => {
     if (!password) {
-      error('没有可复制的密码');
+      error(t('没有可复制的密码'));
       return;
     }
 
     try {
       await navigator.clipboard.writeText(password);
-      success('密码已复制到剪贴板');
+      success(t('密码已复制到剪贴板'));
     } catch (err) {
-      error('复制失败，请手动复制');
+      error(t('复制失败，请手动复制'));
     }
   }, [password, success, error]);
 
@@ -300,22 +301,22 @@ export function PasswordGeneratorWidget(): JSX.Element {
         {/* 密码显示区域 */}
         <div className="glass-heavy rounded-2xl p-6 mb-6">
           <div className="mb-4">
-            <label className="text-sm text-white/50 mb-2 block">生成的密码</label>
+            <label className="text-sm text-white/50 mb-2 block">{t('生成的密码')}</label>
             <div className="relative">
               <input
                 type="text"
                 className={`w-full px-4 py-4 bg-[#0D0F1A]/50 border border-white/10 rounded-xl text-2xl text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/50 focus:border-[#7C3AED]/50 transition-all duration-200 font-mono ${
                   !password ? 'text-white/30' : ''
                 }`}
-                value={password || '点击生成按钮创建密码'}
+                value={password || t('点击生成按钮创建密码')}
                 readOnly
-                placeholder="点击生成按钮创建密码"
+                placeholder={t("点击生成按钮创建密码")}
               />
               <button
                 className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg hover:bg-white/10 transition-colors clickable"
                 onClick={copyPassword}
                 disabled={!password}
-                title="复制密码"
+                title={t("复制密码")}
               >
                 <Icon name="copy" size={20} color={!password ? 'rgba(255,255,255,0.2)' : '#A78BFA'} />
               </button>
@@ -325,7 +326,7 @@ export function PasswordGeneratorWidget(): JSX.Element {
           {/* 强度指示条 */}
           <div className="mb-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-white/60">密码强度</span>
+              <span className="text-sm text-white/60">{t('密码强度')}</span>
               <span
                 className="text-sm font-medium"
                 style={{ color: strengthConfig.color }}
@@ -352,13 +353,13 @@ export function PasswordGeneratorWidget(): JSX.Element {
               disabled={!hasValidOptions}
             >
               <Icon name="refresh" size={18} color="white" />
-              生成密码
+              {t('生成密码')}
             </button>
             <button
               className="px-6 py-3 bg-white/5 hover:bg-white/10 text-white rounded-xl transition-all duration-200 font-medium clickable border border-white/10"
               onClick={copyPassword}
               disabled={!password}
-              title="复制密码"
+              title={t("复制密码")}
             >
               <Icon name="copy" size={18} color={!password ? 'rgba(255,255,255,0.2)' : '#A78BFA'} />
             </button>
@@ -369,7 +370,7 @@ export function PasswordGeneratorWidget(): JSX.Element {
             <div className="mt-4 p-3 rounded-lg bg-[#EF4444]/10 border border-[#EF4444]/20">
               <p className="text-sm text-[#EF4444] flex items-center gap-2">
                 <Icon name="exclamation-circle" size={16} color="#EF4444" />
-                请至少选择一种字符类型
+                {t('请至少选择一种字符类型')}
               </p>
             </div>
           )}
@@ -379,13 +380,13 @@ export function PasswordGeneratorWidget(): JSX.Element {
         <div className="glass-light rounded-xl p-5 mb-6">
           <h3 className="text-sm font-medium text-white/60 mb-4 flex items-center gap-2">
             <Icon name="funnel" size={16} color="#A78BFA" />
-            密码选项
+            {t('密码选项')}
           </h3>
 
           {/* 长度控制 */}
           <div className="mb-6">
             <div className="flex items-center justify-between mb-2">
-              <label className="text-sm text-white/70">密码长度</label>
+              <label className="text-sm text-white/70">{t('密码长度')}</label>
               <span className="text-sm font-mono text-[#A78BFA] bg-[#7C3AED]/10 px-2 py-1 rounded">
                 {options.length}
               </span>
@@ -406,7 +407,7 @@ export function PasswordGeneratorWidget(): JSX.Element {
 
           {/* 字符类型选择 */}
           <div className="space-y-3">
-            <label className="text-sm text-white/70 block mb-2">字符类型</label>
+            <label className="text-sm text-white/70 block mb-2">{t('字符类型')}</label>
 
             <label className="flex items-center gap-3 cursor-pointer clickable group">
               <input
@@ -416,7 +417,7 @@ export function PasswordGeneratorWidget(): JSX.Element {
                 className="w-4 h-4 rounded border-white/20 bg-white/5 text-[#7C3AED] focus:ring-[#7C3AED]/50 cursor-pointer clickable"
               />
               <span className="text-sm text-white/70 group-hover:text-white/90 transition-colors">
-                小写字母 (a-z)
+                {t('小写字母 (a-z)')}
               </span>
             </label>
 
@@ -428,7 +429,7 @@ export function PasswordGeneratorWidget(): JSX.Element {
                 className="w-4 h-4 rounded border-white/20 bg-white/5 text-[#7C3AED] focus:ring-[#7C3AED]/50 cursor-pointer clickable"
               />
               <span className="text-sm text-white/70 group-hover:text-white/90 transition-colors">
-                大写字母 (A-Z)
+                {t('大写字母 (A-Z)')}
               </span>
             </label>
 
@@ -440,7 +441,7 @@ export function PasswordGeneratorWidget(): JSX.Element {
                 className="w-4 h-4 rounded border-white/20 bg-white/5 text-[#7C3AED] focus:ring-[#7C3AED]/50 cursor-pointer clickable"
               />
               <span className="text-sm text-white/70 group-hover:text-white/90 transition-colors">
-                数字 (0-9)
+                {t('数字 (0-9)')}
               </span>
             </label>
 
@@ -452,7 +453,7 @@ export function PasswordGeneratorWidget(): JSX.Element {
                 className="w-4 h-4 rounded border-white/20 bg-white/5 text-[#7C3AED] focus:ring-[#7C3AED]/50 cursor-pointer clickable"
               />
               <span className="text-sm text-white/70 group-hover:text-white/90 transition-colors">
-                特殊字符 (!@#$%...)
+                {t('特殊字符 (!@#$%...)')}
               </span>
             </label>
 
@@ -465,10 +466,10 @@ export function PasswordGeneratorWidget(): JSX.Element {
               />
               <div className="flex-1">
                 <span className="text-sm text-white/70 group-hover:text-white/90 transition-colors">
-                  排除相似字符
+                  {t('排除相似字符')}
                 </span>
                 <p className="text-xs text-white/40 mt-0.5">
-                  如 0/o、1/l/I 等容易混淆的字符
+                  {t('如 0/o、1/l/I 等容易混淆的字符')}
                 </p>
               </div>
             </label>
@@ -477,7 +478,7 @@ export function PasswordGeneratorWidget(): JSX.Element {
 
         {/* 键盘快捷键提示 */}
         <div className="text-center text-xs text-white/30">
-          Enter/Space = 生成 | Ctrl+C = 复制 | Esc = 清空
+          {t('Enter/Space = 生成 | Ctrl+C = 复制 | Esc = 清空')}
         </div>
       </div>
 
@@ -488,7 +489,7 @@ export function PasswordGeneratorWidget(): JSX.Element {
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-medium text-white/60 flex items-center gap-2">
               <Icon name="clock" size={14} color="#A78BFA" />
-              生成历史
+              {t('生成历史')}
             </h3>
             <div className="flex items-center gap-2">
               {history.length > 0 && (
@@ -497,14 +498,14 @@ export function PasswordGeneratorWidget(): JSX.Element {
                   onClick={clearHistory}
                 >
                   <Icon name="trash" size={12} />
-                  清空
+                  {t('清空')}
                 </button>
               )}
               <button
                 className="text-xs text-white/30 hover:text-white/60 transition-colors clickable"
                 onClick={() => setShowHistory(!showHistory)}
               >
-                {showHistory ? '收起' : '展开'}
+                {showHistory ? t('收起') : t('展开')}
               </button>
             </div>
           </div>
@@ -515,7 +516,7 @@ export function PasswordGeneratorWidget(): JSX.Element {
               {history.length === 0 ? (
                 <div className="text-center py-8 text-white/30 text-sm">
                   <Icon name="shield-check" size={24} color="rgba(255,255,255,0.2)" />
-                  <p className="mt-2">暂无生成历史</p>
+                  <p className="mt-2">{t('暂无生成历史')}</p>
                 </div>
               ) : (
                 history.map((item, index) => (
@@ -533,7 +534,7 @@ export function PasswordGeneratorWidget(): JSX.Element {
           {history.length > 0 && (
             <div className="mt-4 pt-4 border-t border-white/10">
               <p className="text-xs text-white/30">
-                共 {history.length} 条记录
+                {t('共')} {history.length} {t('条记录')}
               </p>
             </div>
           )}

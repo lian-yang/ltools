@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import type { FontInfo } from '../../../bindings/ltools/plugins/imageprocessor/models';
 import { Icon } from '../Icon';
+import { t } from '@/i18n';
 
 interface FontSelectorProps {
   fonts: FontInfo[];
@@ -94,11 +95,11 @@ export function FontSelector({
           <Icon name="type" className="w-4 h-4 text-white/50 flex-shrink-0" />
           <span className="truncate">
             {loading ? (
-              <span className="text-white/50">加载字体中...</span>
+              <span className="text-white/50">{t('加载字体中...')}</span>
             ) : selectedFont ? (
               selectedFont.name
             ) : (
-              <span className="text-white/70">默认字体</span>
+              <span className="text-white/70">{t('默认字体')}</span>
             )}
           </span>
         </div>
@@ -129,7 +130,7 @@ export function FontSelector({
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={`搜索字体... (共 ${fonts.length} 个)`}
+                placeholder={t('搜索字体... (共 {n} 个)', { n: fonts.length })}
                 className="
                   w-full pl-9 pr-3 py-2
                   bg-white/5 border border-white/5
@@ -166,14 +167,14 @@ export function FontSelector({
               <div className="w-5 h-5 rounded bg-white/10 flex items-center justify-center flex-shrink-0">
                 {!value && <Icon name="check" className="w-3 h-3 text-[#7C3AED]" />}
               </div>
-              <span className="font-medium">默认字体</span>
+              <span className="font-medium">{t('默认字体')}</span>
               <span className="text-xs text-white/50 ml-auto">Go Regular</span>
             </button>
 
             {/* 字体列表 */}
             {filteredFonts.length === 0 ? (
               <div className="px-3 py-8 text-center text-white/50 text-sm">
-                未找到匹配的字体
+                {t('未找到匹配的字体')}
               </div>
             ) : (
               filteredFonts.map((font) => (
@@ -202,7 +203,7 @@ export function FontSelector({
                     <span className="truncate">{font.name}</span>
                     {font.isMonospace && (
                       <span className="px-1.5 py-0.5 bg-white/10 rounded text-[10px] text-white/50 flex-shrink-0">
-                        等宽
+                        {t('等宽')}
                       </span>
                     )}
                   </div>

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Icon } from './Icon';
+import { t } from '@/i18n';
 
 interface HistoryItem {
   expression: string;
@@ -319,7 +320,7 @@ export function CalculatorWidget(): JSX.Element {
                 className="w-full text-center text-sm text-white/40 hover:text-white/60 transition-colors clickable"
                 onClick={() => setDisplay(lastResult)}
               >
-                使用上次结果: {lastResult}
+                {t('使用上次结果:')} {lastResult}
               </button>
             </div>
           )}
@@ -327,7 +328,7 @@ export function CalculatorWidget(): JSX.Element {
 
         {/* 键盘提示 */}
         <div className="mt-4 text-center text-xs text-white/30">
-          支持键盘输入 | Enter = | Esc = 清除
+          {t('支持键盘输入 | Enter = | Esc = 清除')}
         </div>
       </div>
 
@@ -338,7 +339,7 @@ export function CalculatorWidget(): JSX.Element {
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-medium text-white/60 flex items-center gap-2">
               <Icon name="clock" size={14} color="#A78BFA" />
-              计算历史
+              {t('计算历史')}
             </h3>
             <div className="flex items-center gap-2">
               {history.length > 0 && (
@@ -346,14 +347,14 @@ export function CalculatorWidget(): JSX.Element {
                   className="text-xs text-white/30 hover:text-[#EF4444] transition-colors clickable"
                   onClick={clearHistory}
                 >
-                  清空
+                  {t('清空')}
                 </button>
               )}
               <button
                 className="text-xs text-white/30 hover:text-white/60 transition-colors clickable"
                 onClick={() => setShowHistory(!showHistory)}
               >
-                {showHistory ? '收起' : '展开'}
+                {showHistory ? t('收起') : t('展开')}
               </button>
             </div>
           </div>
@@ -364,7 +365,7 @@ export function CalculatorWidget(): JSX.Element {
               {history.length === 0 ? (
                 <div className="text-center py-8 text-white/30 text-sm">
                   <Icon name="clock" size={24} color="rgba(255,255,255,0.2)" />
-                  <p className="mt-2">暂无计算历史</p>
+                  <p className="mt-2">{t('暂无计算历史')}</p>
                 </div>
               ) : (
                 history.map((item, index) => (
@@ -382,7 +383,7 @@ export function CalculatorWidget(): JSX.Element {
           {history.length > 0 && (
             <div className="mt-4 pt-4 border-t border-white/10">
               <p className="text-xs text-white/30">
-                共 {history.length} 条记录
+                {t('共')} {history.length} {t('条记录')}
               </p>
             </div>
           )}

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Icon } from './Icon';
+import { getLanguage, getLanguageSetting, setLanguageSetting, t, type LanguageSetting } from '@/i18n';
 import { useToast } from '../hooks/useToast';
 import * as SettingsService from '../../bindings/ltools/internal/settings/service';
 import {
@@ -15,7 +16,7 @@ import {
  * 包含语言、主题、启动行为等基础设置
  */
 export function GeneralSettings() {
-  const [language] = useState('zh-CN');
+  const [language, setLanguageState] = useState<LanguageSetting>(getLanguageSetting());
   const [theme] = useState('dark');
   const [launchAtLogin, setLaunchAtLogin] = useState(false);
   const [launchAtLoginSupported, setLaunchAtLoginSupported] = useState(true);
@@ -48,12 +49,22 @@ export function GeneralSettings() {
     };
   }, []);
 
-  const handleLanguageChange = () => {
-    info('正在开发中');
+  const handleLanguageChange = (value: string) => {
+    const setting = value as LanguageSetting;
+    const prevLang = getLanguage();
+    setLanguageState(setting);
+    const changed = setLanguageSetting(setting);
+    if (!changed) return;
+    if (getLanguage() !== prevLang) {
+      // 模块级常量中存在 t() 调用，切换语言后整页刷新确保全部生效
+      window.location.reload();
+    } else {
+      info(t('语言设置已保存'));
+    }
   };
 
   const handleThemeChange = () => {
-    info('正在开发中');
+    info(t('正在开发中'));
   };
 
   const handleLaunchAtLoginChange = async (checked: boolean) => {
@@ -66,7 +77,7 @@ export function GeneralSettings() {
     } catch (err: any) {
       console.error('[GeneralSettings] Failed to set launch-at-login:', err);
       setLaunchAtLogin(previous);
-      showError(err?.message || '启动项设置失败');
+      showError(err?.message || t('启动项设置失败'));
     } finally {
       setIsSettingLaunchAtLogin(false);
     }
@@ -78,10 +89,10 @@ export function GeneralSettings() {
       <div>
         <h2 className="text-xl font-semibold text-white flex items-center gap-2">
           <Icon name="cog" size={20} color="#A78BFA" />
-          通用设置
+          {t('通用设置')}
         </h2>
         <p className="text-white/50 text-sm mt-1">
-          配置应用的基础行为和外观
+          {t('配置应用的基础行为和外观')}
         </p>
       </div>
 
@@ -89,16 +100,17 @@ export function GeneralSettings() {
       <div className="glass-light rounded-xl p-5">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-white font-medium">语言</h3>
-            <p className="text-white/40 text-sm mt-0.5">选择应用的显示语言</p>
+            <h3 className="text-white font-medium">{t('语言')}</h3>
+            <p className="text-white/40 text-sm mt-0.5">{t('选择应用的显示语言')}</p>
           </div>
           <Select value={language} onValueChange={handleLanguageChange}>
             <SelectTrigger className="w-40">
-              <SelectValue placeholder="选择语言" />
+              <SelectValue placeholder={t("选择语言")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="zh-CN">简体中文</SelectItem>
-              <SelectItem value="en-US">English</SelectItem>
+              <SelectItem value="auto">{t('跟随系统')}</SelectItem>
+              <SelectItem value="zh">{t('简体中文')}</SelectItem>
+              <SelectItem value="en">English</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -108,17 +120,17 @@ export function GeneralSettings() {
       <div className="glass-light rounded-xl p-5">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-white font-medium">主题</h3>
-            <p className="text-white/40 text-sm mt-0.5">选择应用的外观主题</p>
+            <h3 className="text-white font-medium">{t('主题')}</h3>
+            <p className="text-white/40 text-sm mt-0.5">{t('选择应用的外观主题')}</p>
           </div>
           <Select value={theme} onValueChange={handleThemeChange}>
             <SelectTrigger className="w-40">
-              <SelectValue placeholder="选择主题" />
+              <SelectValue placeholder={t("选择主题")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="dark">深色模式</SelectItem>
-              <SelectItem value="light">浅色模式</SelectItem>
-              <SelectItem value="system">跟随系统</SelectItem>
+              <SelectItem value="dark">{t('深色模式')}</SelectItem>
+              <SelectItem value="light">{t('浅色模式')}</SelectItem>
+              <SelectItem value="system">{t('跟随系统')}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -126,13 +138,13 @@ export function GeneralSettings() {
 
       {/* 启动设置 */}
       <div className="glass-light rounded-xl p-5 space-y-4">
-        <h3 className="text-white font-medium">启动行为</h3>
+        <h3 className="text-white font-medium">{t('启动行为')}</h3>
 
         {/* 登录时启动 */}
         <div className="flex items-center justify-between py-2">
           <div>
-            <p className="text-white/80 text-sm">登录时启动</p>
-            <p className="text-white/40 text-xs mt-0.5">开机后自动运行 LTools</p>
+            <p className="text-white/80 text-sm">{t('登录时启动')}</p>
+            <p className="text-white/40 text-xs mt-0.5">{t('开机后自动运行 LTools')}</p>
           </div>
           <label
             className={`relative inline-flex items-center ${launchAtLoginSupported ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'}`}
@@ -151,8 +163,8 @@ export function GeneralSettings() {
         {/* 显示在菜单栏 */}
         <div className="flex items-center justify-between py-2 border-t border-white/10">
           <div>
-            <p className="text-white/80 text-sm">显示在菜单栏</p>
-            <p className="text-white/40 text-xs mt-0.5">在系统菜单栏显示图标</p>
+            <p className="text-white/80 text-sm">{t('显示在菜单栏')}</p>
+            <p className="text-white/40 text-xs mt-0.5">{t('在系统菜单栏显示图标')}</p>
           </div>
           <label className="relative inline-flex items-center cursor-pointer">
             <input

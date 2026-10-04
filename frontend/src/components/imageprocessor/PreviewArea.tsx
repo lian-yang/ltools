@@ -4,6 +4,7 @@ import 'react-image-crop/dist/ReactCrop.css';
 import { ImageFile, PreviewResult } from './types';
 import { Icon } from '../Icon';
 import { DragAction, DragState, initialDragState, reduceDragState } from './compareSlider';
+import { t } from '@/i18n';
 
 interface PreviewAreaProps {
   files: ImageFile[];
@@ -416,9 +417,9 @@ export function PreviewArea({
         <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mb-4">
           <Icon name="photo" className="w-10 h-10 text-white/30" />
         </div>
-        <h3 className="text-lg font-medium text-white/60 mb-2">暂无图片</h3>
+        <h3 className="text-lg font-medium text-white/60 mb-2">{t('暂无图片')}</h3>
         <p className="text-sm text-white/40 max-w-xs">
-          拖拽图片到此处，或点击选择文件按钮开始处理
+          {t('拖拽图片到此处，或点击选择文件按钮开始处理')}
         </p>
       </div>
     );
@@ -546,7 +547,7 @@ export function PreviewArea({
                   <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
                     <div className="flex flex-col items-center gap-2 text-white/70 text-sm">
                       <div className="w-6 h-6 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                      正在加载原图...
+                      {t('正在加载原图...')}
                     </div>
                   </div>
                 )}
@@ -583,10 +584,10 @@ export function PreviewArea({
             {isProcessing ? (
               <div className="flex flex-col items-center gap-3">
                 <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                <span className="text-sm text-white/60">处理中...</span>
+                <span className="text-sm text-white/60">{t('处理中...')}</span>
               </div>
             ) : (
-              <span className="text-sm text-white/40">点击处理查看预览</span>
+              <span className="text-sm text-white/40">{t('点击处理查看预览')}</span>
             )}
           </div>
         )}
@@ -607,7 +608,7 @@ export function PreviewArea({
           <div className="flex items-center gap-2 min-w-0">
             <Icon name="document" className="w-4 h-4 text-white/40 flex-shrink-0" />
             <span className="text-sm text-white/70 truncate">
-              {files[selectedIndex]?.name || '未选择'}
+              {files[selectedIndex]?.name || t('未选择')}
             </span>
           </div>
           <span className="text-xs text-white/40 flex-shrink-0">

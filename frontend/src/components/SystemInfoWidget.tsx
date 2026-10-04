@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Events } from '@wailsio/runtime';
 import { SysInfoService, SystemInfo } from '../../bindings/ltools/plugins/sysinfo';
 import { Icon } from './Icon';
+import { t, getLanguage } from '@/i18n';
 
 /**
  * 系统信息卡片组件
@@ -51,7 +52,7 @@ function CPUUsage({ usage, cores, modelName }: CPUUsageProps): JSX.Element {
             <Icon name="cpu" size={18} color="#7C3AED" />
           </div>
           <div>
-            <p className="text-xs text-white/40 uppercase tracking-wide">CPU 使用率</p>
+            <p className="text-xs text-white/40 uppercase tracking-wide">{t('CPU 使用率')}</p>
             <p className="text-base font-semibold text-white tabular-nums">{usage.toFixed(1)}%</p>
           </div>
         </div>
@@ -75,7 +76,7 @@ function CPUUsage({ usage, cores, modelName }: CPUUsageProps): JSX.Element {
       {modelName && (
         <p className="text-xs text-white/30 truncate">{modelName}</p>
       )}
-      <p className="text-xs text-white/20 mt-0.5">{cores} 核心</p>
+      <p className="text-xs text-white/20 mt-0.5">{cores} {t('核心')}</p>
     </div>
   );
 }
@@ -101,7 +102,7 @@ function MemoryInfo({ used, total, usedPercent, swapUsed, swapTotal, swapUsedPer
             <Icon name="memory" size={18} color="#22C55E" />
           </div>
           <div>
-            <p className="text-xs text-white/40 uppercase tracking-wide">内存使用</p>
+            <p className="text-xs text-white/40 uppercase tracking-wide">{t('内存使用')}</p>
             <p className="text-base font-semibold text-white tabular-nums">{used} / {total}</p>
           </div>
         </div>
@@ -126,7 +127,7 @@ function MemoryInfo({ used, total, usedPercent, swapUsed, swapTotal, swapUsedPer
       {swapTotal && swapUsed && (
         <div className="pt-2 border-t border-white/5">
           <div className="flex items-center justify-between mb-1.5">
-            <p className="text-xs text-white/30">Swap 使用</p>
+            <p className="text-xs text-white/30">{t('Swap 使用')}</p>
             <p className="text-xs text-white/40 tabular-nums">{swapUsed} / {swapTotal}</p>
           </div>
           <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
@@ -163,7 +164,7 @@ function DiskUsage({ disks }: DiskUsageProps): JSX.Element | null {
     <div className="glass-light rounded-xl p-4 flex flex-col">
       <h3 className="text-sm font-medium text-white/60 mb-3 flex items-center gap-2 flex-shrink-0">
         <Icon name="disk" size={14} color="#A78BFA" />
-        磁盘使用情况
+        {t('磁盘使用情况')}
       </h3>
       <div className="space-y-3 overflow-y-auto max-h-40 pr-1 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent hover:scrollbar-thumb-white/20">
         {disks.map((disk, index) => (
@@ -183,7 +184,7 @@ function DiskUsage({ disks }: DiskUsageProps): JSX.Element | null {
             <p className="text-xs text-right" style={{
               color: disk.usedPercent > 90 ? '#EF4444' : disk.usedPercent > 75 ? '#F59E0B' : 'rgba(255,255,255,0.3)'
             }}>
-              {disk.usedPercent.toFixed(1)}% 已使用 · {disk.free} 可用
+              {disk.usedPercent.toFixed(1)}{t('% 已使用 ·')} {disk.free} {t('可用')}
             </p>
           </div>
         ))}
@@ -214,23 +215,23 @@ function LoadAvg({ load1, load5, load15, cores }: LoadAvgProps): JSX.Element {
     <div className="glass-light rounded-xl p-4">
       <h3 className="text-sm font-medium text-white/60 mb-3 flex items-center gap-2">
         <Icon name="server" size={14} color="#A78BFA" />
-        系统负载 ({cores} 核心)
+        {t('系统负载 (')}{cores} {t('核心)')}
       </h3>
       <div className="grid grid-cols-3 gap-3">
         <div className="text-center">
-          <p className="text-xs text-white/30 mb-1">1 分钟</p>
+          <p className="text-xs text-white/30 mb-1">{t('1 分钟')}</p>
           <p className={`text-base font-semibold tabular-nums ${getLoadColor(load1)}`}>
             {load1.toFixed(2)}
           </p>
         </div>
         <div className="text-center">
-          <p className="text-xs text-white/30 mb-1">5 分钟</p>
+          <p className="text-xs text-white/30 mb-1">{t('5 分钟')}</p>
           <p className={`text-base font-semibold tabular-nums ${getLoadColor(load5)}`}>
             {load5.toFixed(2)}
           </p>
         </div>
         <div className="text-center">
-          <p className="text-xs text-white/30 mb-1">15 分钟</p>
+          <p className="text-xs text-white/30 mb-1">{t('15 分钟')}</p>
           <p className={`text-base font-semibold tabular-nums ${getLoadColor(load15)}`}>
             {load15.toFixed(2)}
           </p>
@@ -269,7 +270,7 @@ function NetworkInfo({ interfaces }: NetworkInfoProps): JSX.Element | null {
     <div className="glass-light rounded-xl p-4 flex flex-col">
       <h3 className="text-sm font-medium text-white/60 mb-3 flex items-center gap-2 flex-shrink-0">
         <Icon name="network" size={14} color="#A78BFA" />
-        网络接口
+        {t('网络接口')}
       </h3>
       <div className="space-y-2 overflow-y-auto max-h-40 pr-1 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent hover:scrollbar-thumb-white/20">
         {interfaces.map((iface, index) => (
@@ -282,11 +283,11 @@ function NetworkInfo({ interfaces }: NetworkInfoProps): JSX.Element | null {
             </div>
             <div className="grid grid-cols-2 gap-2 text-xs">
               <div>
-                <span className="text-white/30">上传:</span>{' '}
+                <span className="text-white/30">{t('上传:')}</span>{' '}
                 <span className="text-white/60 tabular-nums">{formatBytes(iface.bytesSent)}</span>
               </div>
               <div>
-                <span className="text-white/30">下载:</span>{' '}
+                <span className="text-white/30">{t('下载:')}</span>{' '}
                 <span className="text-white/60 tabular-nums">{formatBytes(iface.bytesRecv)}</span>
               </div>
             </div>
@@ -402,7 +403,7 @@ export function SystemInfoWidget(): JSX.Element {
         <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-white/5 animate-pulse">
           <Icon name="refresh" size={20} color="rgba(255,255,255,0.3)" />
         </div>
-        <p className="text-white/40 mt-4">加载系统信息中...</p>
+        <p className="text-white/40 mt-4">{t('加载系统信息中...')}</p>
       </div>
     );
   }
@@ -416,16 +417,16 @@ export function SystemInfoWidget(): JSX.Element {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <InfoCard
           icon={osInfo.icon}
-          title="操作系统"
+          title={t("操作系统")}
           value={systemInfo?.platform || osInfo.name}
           subtitle={`${systemInfo?.platformVersion || ''} · ${getArchName(systemInfo?.arch || '')}`}
           color={osInfo.color}
         />
         <InfoCard
           icon="clock"
-          title="系统运行时间"
+          title={t("系统运行时间")}
           value={systemInfo?.hostUptime || 'Unknown'}
-          subtitle={`自 ${systemInfo?.bootTime ? new Date(systemInfo.bootTime * 1000).toLocaleDateString('zh-CN') : ''} 启动`}
+          subtitle={t('自 {date} 启动', { date: systemInfo?.bootTime ? new Date(systemInfo.bootTime * 1000).toLocaleDateString(getLanguage() === 'en' ? 'en-US' : 'zh-CN') : '' })}
           color="#F59E0B"
         />
       </div>
@@ -473,14 +474,14 @@ export function SystemInfoWidget(): JSX.Element {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <InfoCard
           icon="chip"
-          title="运行进程"
+          title={t("运行进程")}
           value={systemInfo?.procCount || 0}
-          subtitle="当前活动进程数"
+          subtitle={t("当前活动进程数")}
           color="#3B82F6"
         />
         <InfoCard
           icon="document"
-          title="Go 版本"
+          title={t("Go 版本")}
           value={systemInfo?.goVersion || 'Unknown'}
           subtitle={`GOMAXPROCS: ${systemInfo?.goMaxProcs || 0}`}
           color="#7C3AED"
@@ -494,21 +495,21 @@ export function SystemInfoWidget(): JSX.Element {
           onClick={loadSystemInfo}
         >
           <Icon name="refresh" size={14} />
-          刷新信息
+          {t('刷新信息')}
         </button>
         <button
           className="flex-1 px-3 py-2 rounded-lg bg-[#EF4444]/10 text-[#EF4444] hover:bg-[#EF4444]/20 transition-all duration-200 text-sm font-medium clickable border border-[#EF4444]/20 flex items-center justify-center gap-2"
           onClick={handleForceGC}
         >
           <Icon name="refresh" size={14} />
-          强制垃圾回收
+          {t('强制垃圾回收')}
         </button>
       </div>
 
       {/* 最后更新时间 */}
       <div className="text-center">
         <p className="text-xs text-white/20">
-          最后更新: {lastUpdate.toLocaleString('zh-CN')}
+          {t('最后更新:')} {lastUpdate.toLocaleString('zh-CN')}
         </p>
       </div>
     </div>

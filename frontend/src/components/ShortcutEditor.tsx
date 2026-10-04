@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Icon } from './Icon';
+import { t } from '@/i18n';
 
 /**
  * 快捷键信息接口
@@ -79,7 +80,7 @@ export function ShortcutEditor({ pluginId, pluginName, currentShortcut, existing
    */
   const getDisplayText = useCallback((): string => {
     if (recordedKeys.length === 0) {
-      return '按下快捷键组合...';
+      return t('按下快捷键组合...');
     }
 
     // 分离修饰键和主键
@@ -187,7 +188,7 @@ export function ShortcutEditor({ pluginId, pluginName, currentShortcut, existing
    */
   const handleSave = async () => {
     if (recordedKeys.length === 0) {
-      setError('请先录制快捷键');
+      setError(t('请先录制快捷键'));
       return;
     }
 
@@ -201,13 +202,13 @@ export function ShortcutEditor({ pluginId, pluginName, currentShortcut, existing
       // 检查冲突（排除当前插件）
       const conflictingPlugin = existingShortcuts[keyCombo];
       if (conflictingPlugin && conflictingPlugin !== pluginId) {
-        setError(`此快捷键已被其他插件使用`);
+        setError(t(`此快捷键已被其他插件使用`));
         return;
       }
 
       onSave(keyCombo);
     } catch (err: any) {
-      setError(err.message || '保存失败');
+      setError(err.message || t('保存失败'));
     } finally {
       setSaving(false);
     }
@@ -227,7 +228,7 @@ export function ShortcutEditor({ pluginId, pluginName, currentShortcut, existing
         {/* 标题 */}
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold text-white">
-            设置快捷键
+            {t('设置快捷键')}
           </h2>
           <button
             className="p-2 hover:bg-white/10 rounded-lg transition-all duration-200 clickable"
@@ -240,13 +241,13 @@ export function ShortcutEditor({ pluginId, pluginName, currentShortcut, existing
 
         {/* 插件名称 */}
         <div className="mb-6">
-          <p className="text-white/60 text-sm">插件</p>
+          <p className="text-white/60 text-sm">{t('插件')}</p>
           <p className="text-white font-medium">{pluginName}</p>
         </div>
 
         {/* 快捷键录制区域 */}
         <div className="mb-6">
-          <p className="text-white/60 text-sm mb-3">快捷键组合</p>
+          <p className="text-white/60 text-sm mb-3">{t('快捷键组合')}</p>
           <div
             className={`
               relative p-4 rounded-lg border-2 border-dashed transition-all duration-200
@@ -262,9 +263,9 @@ export function ShortcutEditor({ pluginId, pluginName, currentShortcut, existing
               <div className="text-center">
                 <div className="flex items-center justify-center gap-2 mb-2">
                   <div className="w-2 h-2 rounded-full bg-[#EF4444] animate-pulse" />
-                  <span className="text-white/80">录制中...</span>
+                  <span className="text-white/80">{t('录制中...')}</span>
                 </div>
-                <p className="text-white/50 text-sm">按下快捷键组合，松开完成</p>
+                <p className="text-white/50 text-sm">{t('按下快捷键组合，松开完成')}</p>
               </div>
             ) : (
               <div className="text-center">
@@ -275,7 +276,7 @@ export function ShortcutEditor({ pluginId, pluginName, currentShortcut, existing
                   </div>
                 ) : (
                   <div className="text-white/40">
-                    点击开始录制快捷键
+                    {t('点击开始录制快捷键')}
                   </div>
                 )}
               </div>
@@ -286,7 +287,7 @@ export function ShortcutEditor({ pluginId, pluginName, currentShortcut, existing
                 className="mt-3 w-full py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white/80 text-sm transition-all duration-200 clickable"
                 onClick={stopRecording}
               >
-                取消录制
+                {t('取消录制')}
               </button>
             )}
           </div>
@@ -309,7 +310,7 @@ export function ShortcutEditor({ pluginId, pluginName, currentShortcut, existing
             onClick={onCancel}
             disabled={saving}
           >
-            取消
+            {t('取消')}
           </button>
           {recordedKeys.length > 0 && (
             <button
@@ -331,14 +332,14 @@ export function ShortcutEditor({ pluginId, pluginName, currentShortcut, existing
             onClick={handleSave}
             disabled={saving || recordedKeys.length === 0}
           >
-            {saving ? '保存中...' : '保存'}
+            {saving ? t('保存中...') : t('保存')}
           </button>
         </div>
 
         {/* 提示信息 */}
         <div className="mt-6 p-3 bg-white/5 rounded-lg">
           <p className="text-white/40 text-xs">
-            💡 提示：可以使用 Ctrl、Shift、Alt、Cmd (macOS) 等修饰键组合。例如：
+            {t('💡 提示：可以使用 Ctrl、Shift、Alt、Cmd (macOS) 等修饰键组合。例如：')}
           </p>
           <div className="mt-2 space-y-1">
             <p className="text-white/30 text-xs font-mono">• Cmd+Shift+D (macOS)</p>

@@ -3,6 +3,7 @@ import { Icon } from './Icon';
 import * as LocalTranslateService from '../../bindings/ltools/plugins/localtranslate/localtranslateservice';
 import { ProviderType, type ProviderStatus } from '../../bindings/ltools/plugins/localtranslate/models';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { t as tI18n, t } from '@/i18n';
 
 /**
  * SetupWizard - 多供应商翻译配置向导
@@ -37,7 +38,7 @@ interface OllamaModel {
 const PROVIDER_INFO: Record<string, { name: string; description: string; icon: string; requiresApiKey: boolean; requiresBaseUrl: boolean; supportsCustomBaseUrl: boolean; defaultModel: string; defaultBaseUrl: string }> = {
   [ProviderType.ProviderOpenAI]: {
     name: 'OpenAI',
-    description: '使用 GPT-4o-mini 进行翻译',
+    description: tI18n('使用 GPT-4o-mini 进行翻译'),
     icon: 'sparkles',
     requiresApiKey: true,
     requiresBaseUrl: false,
@@ -47,7 +48,7 @@ const PROVIDER_INFO: Record<string, { name: string; description: string; icon: s
   },
   [ProviderType.ProviderAnthropic]: {
     name: 'Anthropic',
-    description: '使用 Claude 3.5 Sonnet 进行翻译',
+    description: tI18n('使用 Claude 3.5 Sonnet 进行翻译'),
     icon: 'cpu',
     requiresApiKey: true,
     requiresBaseUrl: false,
@@ -57,7 +58,7 @@ const PROVIDER_INFO: Record<string, { name: string; description: string; icon: s
   },
   [ProviderType.ProviderDeepSeek]: {
     name: 'DeepSeek',
-    description: '使用 DeepSeek Chat 进行翻译',
+    description: tI18n('使用 DeepSeek Chat 进行翻译'),
     icon: 'code',
     requiresApiKey: true,
     requiresBaseUrl: false,
@@ -67,7 +68,7 @@ const PROVIDER_INFO: Record<string, { name: string; description: string; icon: s
   },
   [ProviderType.ProviderOllama]: {
     name: 'Ollama',
-    description: '本地运行的 Ollama 服务',
+    description: tI18n('本地运行的 Ollama 服务'),
     icon: 'server',
     requiresApiKey: false,
     requiresBaseUrl: true,  // 必须填写
@@ -124,7 +125,7 @@ export function SetupWizard({ isOpen, onClose, onComplete }: SetupWizardProps): 
       setConfigs(initialConfigs);
     } catch (err) {
       console.error('Failed to load provider statuses:', err);
-      setError('加载供应商状态失败');
+      setError(tI18n('加载供应商状态失败'));
     } finally {
       setLoading(false);
     }
@@ -154,12 +155,12 @@ export function SetupWizard({ isOpen, onClose, onComplete }: SetupWizardProps): 
           updateConfig(ProviderType.ProviderOllama, { model: models[0].name });
         }
 
-        return { success: true, message: `检测到 ${models.length} 个模型` };
+        return { success: true, message: t('检测到 {n} 个模型', { n: models.length }) };
       } else {
-        return { success: false, message: '无法连接到 Ollama 服务' };
+        return { success: false, message: tI18n('无法连接到 Ollama 服务') };
       }
     } catch (err) {
-      return { success: false, message: 'Ollama 服务未运行' };
+      return { success: false, message: tI18n('Ollama 服务未运行') };
     } finally {
       setDetectingOllama(false);
     }
@@ -197,7 +198,7 @@ export function SetupWizard({ isOpen, onClose, onComplete }: SetupWizardProps): 
       switch (type) {
         case ProviderType.ProviderOllama:
           if (!config.baseUrl) {
-            return { success: false, message: '请填写 Ollama 服务地址' };
+            return { success: false, message: tI18n('请填写 Ollama 服务地址') };
           }
           const result = await detectOllama(config.baseUrl);
           return result;
@@ -205,7 +206,7 @@ export function SetupWizard({ isOpen, onClose, onComplete }: SetupWizardProps): 
         default:
           // 云端 API 供应商
           if (info.requiresApiKey && !config.apiKey) {
-            return { success: false, message: '请输入 API Key' };
+            return { success: false, message: tI18n('请输入 API Key') };
           }
 
           // 尝试翻译测试
@@ -217,16 +218,16 @@ export function SetupWizard({ isOpen, onClose, onComplete }: SetupWizardProps): 
               type
             );
             if (testResult) {
-              return { success: true, message: '连接成功' };
+              return { success: true, message: tI18n('连接成功') };
             }
-            return { success: false, message: '翻译失败' };
+            return { success: false, message: tI18n('翻译失败') };
           } catch (err) {
-            const message = err instanceof Error ? err.message : '连接失败';
+            const message = err instanceof Error ? err.message : tI18n('连接失败');
             return { success: false, message };
           }
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : '测试失败';
+      const message = err instanceof Error ? err.message : tI18n('测试失败');
       return { success: false, message };
     }
   };
@@ -279,7 +280,7 @@ export function SetupWizard({ isOpen, onClose, onComplete }: SetupWizardProps): 
       onClose();
     } catch (err) {
       console.error('Failed to save config:', err);
-      setError('保存配置失败');
+      setError(tI18n('保存配置失败'));
     } finally {
       setLoading(false);
     }
@@ -308,7 +309,7 @@ export function SetupWizard({ isOpen, onClose, onComplete }: SetupWizardProps): 
         <div className="flex items-center justify-between p-6 border-b border-white/10">
           <div className="flex items-center gap-3">
             <Icon name="language" size={24} color="#7C3AED" />
-            <h2 className="text-xl font-bold text-white">翻译供应商配置</h2>
+            <h2 className="text-xl font-bold text-white">{tI18n('翻译供应商配置')}</h2>
           </div>
           <button
             onClick={handleClose}
@@ -338,7 +339,7 @@ export function SetupWizard({ isOpen, onClose, onComplete }: SetupWizardProps): 
                   s === step ? 'text-white' : 'text-white/40'
                 }`}
               >
-                {s === 1 ? '选择供应商' : s === 2 ? '配置参数' : '测试连接'}
+                {s === 1 ? tI18n('选择供应商') : s === 2 ? tI18n('配置参数') : tI18n('测试连接')}
               </span>
               {s < 3 && <div className="w-8 h-px bg-white/10 ml-2" />}
             </div>
@@ -359,7 +360,7 @@ export function SetupWizard({ isOpen, onClose, onComplete }: SetupWizardProps): 
           {step === 1 && (
             <div className="space-y-4">
               <p className="text-white/60 text-sm mb-4">
-                选择您想要使用的翻译供应商。系统会按照优先级自动选择可用的供应商。
+                {tI18n('选择您想要使用的翻译供应商。系统会按照优先级自动选择可用的供应商。')}
               </p>
 
               <div className="grid grid-cols-1 gap-3">
@@ -394,13 +395,13 @@ export function SetupWizard({ isOpen, onClose, onComplete }: SetupWizardProps): 
                             <h3 className="font-medium text-white">{info.name}</h3>
                             {status.available && (
                               <span className="px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 text-xs">
-                                可用
+                                {tI18n('可用')}
                               </span>
                             )}
                           </div>
                           <p className="text-sm text-white/50 mt-1">{info.description}</p>
                           <p className="text-xs text-white/30 mt-1">
-                            模型: {status.model || info.defaultModel}
+                            {tI18n('模型:')} {status.model || info.defaultModel}
                           </p>
                         </div>
                         <div
@@ -424,7 +425,7 @@ export function SetupWizard({ isOpen, onClose, onComplete }: SetupWizardProps): 
           {step === 2 && (
             <div className="space-y-6">
               <p className="text-white/60 text-sm">
-                为选中的供应商配置参数。API Key 可以稍后从环境变量读取。
+                {tI18n('为选中的供应商配置参数。API Key 可以稍后从环境变量读取。')}
               </p>
 
               {selectedProviders.map((type) => {
@@ -446,17 +447,17 @@ export function SetupWizard({ isOpen, onClose, onComplete }: SetupWizardProps): 
                         <div>
                           <label className="block text-sm text-white/60 mb-2">
                             API Key
-                            <span className="text-white/30 ml-1">(可选，优先从环境变量读取)</span>
+                            <span className="text-white/30 ml-1">{tI18n('(可选，优先从环境变量读取)')}</span>
                           </label>
                           <input
                             type="password"
                             value={config.apiKey}
                             onChange={(e) => updateConfig(type, { apiKey: e.target.value })}
-                            placeholder={`输入 ${info.name} API Key`}
+                            placeholder={t('输入 {name} API Key', { name: info.name })}
                             className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:border-[#7C3AED] transition-colors"
                           />
                           <p className="text-xs text-white/30 mt-1">
-                            环境变量: {type === ProviderType.ProviderOpenAI ? 'OPENAI_API_KEY' : type === ProviderType.ProviderAnthropic ? 'ANTHROPIC_API_KEY' : 'DEEPSEEK_API_KEY'}
+                            {tI18n('环境变量:')} {type === ProviderType.ProviderOpenAI ? 'OPENAI_API_KEY' : type === ProviderType.ProviderAnthropic ? 'ANTHROPIC_API_KEY' : 'DEEPSEEK_API_KEY'}
                           </p>
                         </div>
                       )}
@@ -465,9 +466,9 @@ export function SetupWizard({ isOpen, onClose, onComplete }: SetupWizardProps): 
                       {(info.requiresBaseUrl || info.supportsCustomBaseUrl) && (
                         <div>
                           <label className="block text-sm text-white/60 mb-2">
-                            服务地址
+                            {tI18n('服务地址')}
                             {!info.requiresBaseUrl && (
-                              <span className="text-white/30 ml-1">(可选，留空使用默认地址)</span>
+                              <span className="text-white/30 ml-1">{tI18n('(可选，留空使用默认地址)')}</span>
                             )}
                           </label>
                           <div className="flex gap-2">
@@ -484,13 +485,13 @@ export function SetupWizard({ isOpen, onClose, onComplete }: SetupWizardProps): 
                                 disabled={detectingOllama}
                                 className="px-4 py-2 rounded-lg bg-[#7C3AED]/20 hover:bg-[#7C3AED]/30 text-[#A78BFA] text-sm font-medium transition-colors disabled:opacity-50"
                               >
-                                {detectingOllama ? '检测中...' : '检测'}
+                                {detectingOllama ? tI18n('检测中...') : tI18n('检测')}
                               </button>
                             )}
                           </div>
                           {!info.requiresBaseUrl && (
                             <p className="text-xs text-white/30 mt-1">
-                              默认: {info.defaultBaseUrl}
+                              {tI18n('默认:')} {info.defaultBaseUrl}
                             </p>
                           )}
                         </div>
@@ -498,14 +499,14 @@ export function SetupWizard({ isOpen, onClose, onComplete }: SetupWizardProps): 
 
                       {/* 模型选择 */}
                       <div>
-                        <label className="block text-sm text-white/60 mb-2">模型</label>
+                        <label className="block text-sm text-white/60 mb-2">{tI18n('模型')}</label>
                         {type === ProviderType.ProviderOllama && ollamaModels.length > 0 ? (
                           <Select
                             value={config.model}
                             onValueChange={(value) => updateConfig(type, { model: value })}
                           >
                             <SelectTrigger>
-                              <SelectValue placeholder="选择模型" />
+                              <SelectValue placeholder={tI18n("选择模型")} />
                             </SelectTrigger>
                             <SelectContent>
                               {ollamaModels.map((model) => (
@@ -528,7 +529,7 @@ export function SetupWizard({ isOpen, onClose, onComplete }: SetupWizardProps): 
 
                       {/* Max Tokens */}
                       <div>
-                        <label className="block text-sm text-white/60 mb-2">最大 Token 数</label>
+                        <label className="block text-sm text-white/60 mb-2">{tI18n('最大 Token 数')}</label>
                         <input
                           type="number"
                           value={config.maxTokens}
@@ -549,7 +550,7 @@ export function SetupWizard({ isOpen, onClose, onComplete }: SetupWizardProps): 
           {step === 3 && (
             <div className="space-y-4">
               <p className="text-white/60 text-sm">
-                测试与各个供应商的连接状态。测试成功后即可开始使用翻译功能。
+                {tI18n('测试与各个供应商的连接状态。测试成功后即可开始使用翻译功能。')}
               </p>
 
               <button
@@ -560,12 +561,12 @@ export function SetupWizard({ isOpen, onClose, onComplete }: SetupWizardProps): 
                 {testing ? (
                   <>
                     <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    <span>测试中...</span>
+                    <span>{tI18n('测试中...')}</span>
                   </>
                 ) : (
                   <>
                     <Icon name="refresh-cw" size={18} />
-                    <span>开始测试</span>
+                    <span>{tI18n('开始测试')}</span>
                   </>
                 )}
               </button>
@@ -625,7 +626,7 @@ export function SetupWizard({ isOpen, onClose, onComplete }: SetupWizardProps): 
             onClick={step === 1 ? handleClose : () => setStep(step - 1)}
             className="px-6 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white font-medium transition-colors"
           >
-            {step === 1 ? '取消' : '上一步'}
+            {step === 1 ? tI18n('取消') : tI18n('上一步')}
           </button>
 
           {step < 3 ? (
@@ -634,7 +635,7 @@ export function SetupWizard({ isOpen, onClose, onComplete }: SetupWizardProps): 
               disabled={step === 1 && selectedProviders.length === 0}
               className="px-6 py-2 rounded-lg bg-[#7C3AED] hover:bg-[#6D28D9] disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium transition-colors"
             >
-              下一步
+              {tI18n('下一步')}
             </button>
           ) : (
             <button
@@ -645,12 +646,12 @@ export function SetupWizard({ isOpen, onClose, onComplete }: SetupWizardProps): 
               {loading ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  <span>保存中...</span>
+                  <span>{tI18n('保存中...')}</span>
                 </>
               ) : (
                 <>
                   <Icon name="check" size={18} />
-                  <span>完成配置</span>
+                  <span>{tI18n('完成配置')}</span>
                 </>
               )}
             </button>

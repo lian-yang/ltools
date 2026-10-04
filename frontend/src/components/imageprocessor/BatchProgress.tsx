@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { BatchProgress as BatchProgressType, ProcessingResult } from './types';
 import { Icon } from '../Icon';
+import { t } from '@/i18n';
 
 interface BatchProgressProps {
   progress: BatchProgressType | null;
@@ -55,7 +56,7 @@ export function BatchProgress({
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-[#FAF5FF] flex items-center gap-2">
             <Icon name="cog-6-tooth" className={`w-5 h-5 text-[#A78BFA] ${progress.isRunning ? 'animate-spin' : ''}`} />
-            批量处理
+            {t('批量处理')}
           </h3>
           <button
             onClick={onClose}
@@ -68,7 +69,7 @@ export function BatchProgress({
         {/* 进度条 */}
         <div className="mb-4">
           <div className="flex justify-between text-sm text-white/60 mb-2">
-            <span>进度</span>
+            <span>{t('进度')}</span>
             <span>{percentage}%</span>
           </div>
           <div className="h-2 bg-white/10 rounded-full overflow-hidden">
@@ -78,16 +79,16 @@ export function BatchProgress({
             />
           </div>
           <div className="flex justify-between text-xs text-white/40 mt-2">
-            <span>{progress.completed} 成功</span>
-            <span>{progress.failed} 失败</span>
-            <span>{progress.total} 总计</span>
+            <span>{progress.completed} {t('成功')}</span>
+            <span>{progress.failed} {t('失败')}</span>
+            <span>{progress.total} {t('总计')}</span>
           </div>
         </div>
 
         {/* 当前文件 */}
         {progress.isRunning && progress.current && (
           <div className="mb-4 px-3 py-2 bg-white/5 rounded-lg">
-            <div className="text-xs text-white/40 mb-1">正在处理</div>
+            <div className="text-xs text-white/40 mb-1">{t('正在处理')}</div>
             <div className="text-sm text-white/70 truncate">{progress.current}</div>
           </div>
         )}
@@ -95,7 +96,7 @@ export function BatchProgress({
         {/* 耗时 */}
         <div className="flex items-center gap-2 mb-4 text-sm text-white/60">
           <Icon name="clock" className="w-4 h-4" />
-          <span>已用时: {formatTime(elapsedTime)}</span>
+          <span>{t('已用时:')} {formatTime(elapsedTime)}</span>
         </div>
 
         {/* 结果列表 */}
@@ -119,14 +120,14 @@ export function BatchProgress({
               className="flex-1 px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
             >
               <Icon name="stop" className="w-4 h-4" />
-              取消处理
+              {t('取消处理')}
             </button>
           ) : (
             <button
               onClick={onClose}
               className="flex-1 px-4 py-2 bg-[#7C3AED] hover:bg-[#6D28D9] text-white rounded-lg font-medium transition-colors"
             >
-              完成
+              {t('完成')}
             </button>
           )}
         </div>

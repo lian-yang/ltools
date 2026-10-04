@@ -1,6 +1,7 @@
 import { FunctionItem } from './types';
 import { Icon } from '../Icon';
 import type { ProcessingMode } from '../../../bindings/ltools/plugins/imageprocessor/models';
+import { t } from '@/i18n';
 
 interface FunctionPanelProps {
   currentMode: ProcessingMode;
@@ -11,33 +12,33 @@ interface FunctionPanelProps {
 const functions: FunctionItem[] = [
   {
     id: 'compress',
-    label: '压缩',
+    label: t('压缩'),
     icon: 'folder',
-    description: '调整质量和尺寸',
+    description: t('调整质量和尺寸'),
   },
   {
     id: 'crop',
-    label: '裁剪',
+    label: t('裁剪'),
     icon: 'pencil',
-    description: '按尺寸或比例裁剪',
+    description: t('按尺寸或比例裁剪'),
   },
   {
     id: 'watermark',
-    label: '水印',
+    label: t('水印'),
     icon: 'photo',
-    description: '添加图片或文字水印',
+    description: t('添加图片或文字水印'),
   },
   {
     id: 'steganography',
-    label: '版权',
+    label: t('版权'),
     icon: 'lock',
-    description: '嵌入/提取数字水印',
+    description: t('嵌入/提取数字水印'),
   },
   {
     id: 'favicon',
     label: 'Favicon',
     icon: 'globe',
-    description: '生成网站图标',
+    description: t('生成网站图标'),
   },
 ];
 
@@ -46,7 +47,7 @@ export function FunctionPanel({ currentMode, onModeChange, disabled }: FunctionP
     <div className="glass-heavy rounded-2xl p-4 h-full flex flex-col">
       <h3 className="text-lg font-semibold text-[#FAF5FF] mb-4 flex items-center gap-2">
         <Icon name="cog-6-tooth" className="w-5 h-5 text-[#A78BFA]" />
-        处理功能
+        {t('处理功能')}
       </h3>
 
       <div className="flex-1 space-y-2 overflow-y-auto">

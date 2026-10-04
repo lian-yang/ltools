@@ -1,4 +1,5 @@
 import { Icon, IconName } from './Icon';
+import { t } from '@/i18n';
 
 /**
  * 设置分类类型
@@ -21,33 +22,33 @@ interface NavItem {
 const navItems: NavItem[] = [
   {
     id: 'general',
-    label: '通用',
+    label: t('通用'),
     icon: 'cog',
-    description: '语言、主题、启动行为',
+    description: t('语言、主题、启动行为'),
   },
   {
     id: 'shortcuts',
-    label: '快捷键',
+    label: t('快捷键'),
     icon: 'keyboard',
-    description: '全局快捷键配置',
+    description: t('全局快捷键配置'),
   },
   {
     id: 'sync',
-    label: '同步',
+    label: t('同步'),
     icon: 'cloud-arrow-up',
-    description: '数据同步设置',
+    description: t('数据同步设置'),
   },
   {
     id: 'plugins',
-    label: '插件',
+    label: t('插件'),
     icon: 'puzzle-piece',
-    description: '插件启用/禁用、权限管理',
+    description: t('插件启用/禁用、权限管理'),
   },
   {
     id: 'about',
-    label: '关于',
+    label: t('关于'),
     icon: 'information-circle',
-    description: '版本信息、更新检查',
+    description: t('版本信息、更新检查'),
   },
 ];
 

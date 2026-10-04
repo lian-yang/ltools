@@ -3,6 +3,7 @@ import { Window } from '@wailsio/runtime';
 import { Icon } from '../Icon';
 import * as Screenshot2Service from '../../../bindings/ltools/plugins/screenshot2/screenshot2service';
 import './PinWindow.css';
+import { t } from '@/i18n';
 
 interface PinWindowProps {
   windowId: number;
@@ -138,7 +139,7 @@ const PinWindow: React.FC<PinWindowProps> = ({ windowId }) => {
       <button
         className="pin-close-btn"
         onClick={handleClose}
-        title="关闭"
+        title={t("关闭")}
         style={{ '--wails-draggable': 'no-drag' } as React.CSSProperties}
       >
         <Icon name="x-mark" size={14} />

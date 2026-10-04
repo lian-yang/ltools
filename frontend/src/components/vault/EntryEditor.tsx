@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import * as VaultService from '../../../bindings/ltools/plugins/vault/vaultservice';
 import { VaultEntry, CreateEntryRequest, UpdateEntryRequest } from '../../../bindings/ltools/plugins/vault/models';
 import { Icon } from '../Icon';
+import { t } from '@/i18n';
 
 interface EntryEditorProps {
   mode: 'create' | 'edit';
@@ -65,15 +66,15 @@ const EntryEditor: React.FC<EntryEditorProps> = ({
 
     // 验证
     if (!title.trim()) {
-      setError('请输入标题');
+      setError(t('请输入标题'));
       return;
     }
     if (!username.trim()) {
-      setError('请输入用户名');
+      setError(t('请输入用户名'));
       return;
     }
     if (!password) {
-      setError('请输入密码');
+      setError(t('请输入密码'));
       return;
     }
 
@@ -105,7 +106,7 @@ const EntryEditor: React.FC<EntryEditorProps> = ({
       }
       onSave();
     } catch (err) {
-      setError('保存失败，请重试');
+      setError(t('保存失败，请重试'));
       console.error('Save failed:', err);
     } finally {
       setLoading(false);
@@ -118,7 +119,7 @@ const EntryEditor: React.FC<EntryEditorProps> = ({
         {/* 头部 */}
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-bold text-white">
-            {mode === 'create' ? '新建密码条目' : '编辑密码条目'}
+            {mode === 'create' ? t('新建密码条目') : t('编辑密码条目')}
           </h2>
           <button
             onClick={onCancel}
@@ -133,7 +134,7 @@ const EntryEditor: React.FC<EntryEditorProps> = ({
           {/* 标题 */}
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
-              标题 <span className="text-red-400">*</span>
+              {t('标题')} <span className="text-red-400">*</span>
             </label>
             <input
               type="text"
@@ -141,14 +142,14 @@ const EntryEditor: React.FC<EntryEditorProps> = ({
               onChange={(e) => setTitle(e.target.value)}
               className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg
                        text-white placeholder-gray-400 focus:outline-none focus:border-primary"
-              placeholder="例如：GitHub 账号"
+              placeholder={t("例如：GitHub 账号")}
             />
           </div>
 
           {/* 网站 */}
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
-              网站
+              {t('网站')}
             </label>
             <input
               type="text"
@@ -156,14 +157,14 @@ const EntryEditor: React.FC<EntryEditorProps> = ({
               onChange={(e) => setWebsite(e.target.value)}
               className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg
                        text-white placeholder-gray-400 focus:outline-none focus:border-primary"
-              placeholder="例如：github.com"
+              placeholder={t("例如：github.com")}
             />
           </div>
 
           {/* 用户名 */}
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
-              用户名 <span className="text-red-400">*</span>
+              {t('用户名')} <span className="text-red-400">*</span>
             </label>
             <input
               type="text"
@@ -171,14 +172,14 @@ const EntryEditor: React.FC<EntryEditorProps> = ({
               onChange={(e) => setUsername(e.target.value)}
               className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg
                        text-white placeholder-gray-400 focus:outline-none focus:border-primary"
-              placeholder="输入用户名或邮箱"
+              placeholder={t("输入用户名或邮箱")}
             />
           </div>
 
           {/* 密码 */}
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
-              密码 <span className="text-red-400">*</span>
+              {t('密码')} <span className="text-red-400">*</span>
             </label>
             <div className="flex gap-2">
               <div className="relative flex-1">
@@ -189,7 +190,7 @@ const EntryEditor: React.FC<EntryEditorProps> = ({
                   className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg
                            text-white placeholder-gray-400 focus:outline-none focus:border-primary
                            pr-12 font-mono"
-                  placeholder="输入密码"
+                  placeholder={t("输入密码")}
                 />
                 <button
                   type="button"
@@ -204,10 +205,10 @@ const EntryEditor: React.FC<EntryEditorProps> = ({
                 onClick={generatePassword}
                 className="px-4 py-3 bg-white/10 hover:bg-white/20 rounded-lg transition-colors
                          text-gray-300 hover:text-white flex items-center gap-2"
-                title="生成随机密码"
+                title={t("生成随机密码")}
               >
                 <Icon name="refresh-cw" className="w-4 h-4" />
-                <span>生成</span>
+                <span>{t('生成')}</span>
               </button>
             </div>
 
@@ -231,7 +232,7 @@ const EntryEditor: React.FC<EntryEditorProps> = ({
           {/* 分类 */}
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
-              分类
+              {t('分类')}
             </label>
             <select
               value={category}
@@ -240,7 +241,7 @@ const EntryEditor: React.FC<EntryEditorProps> = ({
                        text-white focus:outline-none focus:border-primary appearance-none
                        cursor-pointer"
             >
-              <option value="" className="bg-gray-800">选择分类</option>
+              <option value="" className="bg-gray-800">{t('选择分类')}</option>
               {categories.map((cat) => (
                 <option key={cat} value={cat} className="bg-gray-800">
                   {cat}
@@ -252,7 +253,7 @@ const EntryEditor: React.FC<EntryEditorProps> = ({
           {/* 备注 */}
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
-              备注
+              {t('备注')}
             </label>
             <textarea
               value={notes}
@@ -261,7 +262,7 @@ const EntryEditor: React.FC<EntryEditorProps> = ({
               className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg
                        text-white placeholder-gray-400 focus:outline-none focus:border-primary
                        resize-none"
-              placeholder="添加备注信息..."
+              placeholder={t("添加备注信息...")}
             />
           </div>
 
@@ -277,7 +278,7 @@ const EntryEditor: React.FC<EntryEditorProps> = ({
               }`}
             >
               <Icon name="star" className={`w-4 h-4 ${favorite ? 'fill-current' : ''}`} />
-              <span>收藏</span>
+              <span>{t('收藏')}</span>
             </button>
           </div>
 
@@ -296,7 +297,7 @@ const EntryEditor: React.FC<EntryEditorProps> = ({
               className="flex-1 py-3 bg-white/10 hover:bg-white/20 rounded-lg
                        text-gray-300 transition-colors"
             >
-              取消
+              {t('取消')}
             </button>
             <button
               type="submit"
@@ -308,12 +309,12 @@ const EntryEditor: React.FC<EntryEditorProps> = ({
               {loading ? (
                 <>
                   <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                  <span>保存中...</span>
+                  <span>{t('保存中...')}</span>
                 </>
               ) : (
                 <>
                   <Icon name="save" className="w-5 h-5" />
-                  <span>保存</span>
+                  <span>{t('保存')}</span>
                 </>
               )}
             </button>

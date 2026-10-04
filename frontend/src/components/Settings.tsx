@@ -6,6 +6,7 @@ import { ShortcutsSettings } from './ShortcutsSettings';
 import { SyncSettings } from './SyncSettings';
 import { PluginsSettings } from './PluginsSettings';
 import { AboutSettings } from './AboutSettings';
+import { t } from '@/i18n';
 
 interface SettingsProps {
   shortcuts: Record<string, string>;
@@ -52,10 +53,10 @@ export function Settings({ shortcuts, onSetShortcut, onRemoveShortcut }: Setting
             <div>
               <h2 className="text-xl font-semibold text-white flex items-center gap-2">
                 <Icon name="cloud-arrow-up" size={20} color="#A78BFA" />
-                同步设置
+                {t('同步设置')}
               </h2>
               <p className="text-white/50 text-sm mt-1">
-                配置数据同步和备份选项
+                {t('配置数据同步和备份选项')}
               </p>
             </div>
             <div className="glass-light rounded-xl p-5">

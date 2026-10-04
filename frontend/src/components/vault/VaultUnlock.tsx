@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import * as VaultService from '../../../bindings/ltools/plugins/vault/vaultservice';
 import { Icon } from '../Icon';
+import { t } from '@/i18n';
 
 interface VaultUnlockProps {
   onSuccess: () => void;
@@ -21,7 +22,7 @@ const VaultUnlock: React.FC<VaultUnlockProps> = ({ onSuccess }) => {
       await VaultService.Unlock(masterPassword);
       onSuccess();
     } catch (err) {
-      setError('主密码错误，请重试');
+      setError(t('主密码错误，请重试'));
       setMasterPassword('');
     } finally {
       setLoading(false);
@@ -36,9 +37,9 @@ const VaultUnlock: React.FC<VaultUnlockProps> = ({ onSuccess }) => {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/20 mb-4">
             <Icon name="lock" className="w-8 h-8 text-primary" />
           </div>
-          <h1 className="text-2xl font-bold text-white mb-2">解锁保险库</h1>
+          <h1 className="text-2xl font-bold text-white mb-2">{t('解锁保险库')}</h1>
           <p className="text-gray-400">
-            输入您的主密码以访问密码保险库
+            {t('输入您的主密码以访问密码保险库')}
           </p>
         </div>
 
@@ -47,7 +48,7 @@ const VaultUnlock: React.FC<VaultUnlockProps> = ({ onSuccess }) => {
           {/* 主密码 */}
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
-              主密码
+              {t('主密码')}
             </label>
             <div className="relative">
               <input
@@ -58,7 +59,7 @@ const VaultUnlock: React.FC<VaultUnlockProps> = ({ onSuccess }) => {
                 className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg
                          text-white placeholder-gray-400 focus:outline-none focus:border-primary
                          pr-12"
-                placeholder="输入主密码"
+                placeholder={t("输入主密码")}
               />
               <button
                 type="button"
@@ -89,12 +90,12 @@ const VaultUnlock: React.FC<VaultUnlockProps> = ({ onSuccess }) => {
             {loading ? (
               <>
                 <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                <span>解锁中...</span>
+                <span>{t('解锁中...')}</span>
               </>
             ) : (
               <>
                 <Icon name="unlock" className="w-5 h-5" />
-                <span>解锁</span>
+                <span>{t('解锁')}</span>
               </>
             )}
           </button>

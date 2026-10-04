@@ -6,6 +6,7 @@ import { ProviderType } from '../../bindings/ltools/plugins/localtranslate/model
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { SetupWizard } from './SetupWizard';
 import { useToast } from '../hooks/useToast';
+import { t } from '@/i18n';
 
 /**
  * LocalTranslateWidget - 多供应商翻译组件
@@ -32,9 +33,9 @@ const PROVIDER_ICONS: Record<string, IconName> = {
 };
 
 const LANGUAGES = [
-  { code: 'zh', name: '中文', flag: '🇨🇳' },
+  { code: 'zh', name: t('中文'), flag: '🇨🇳' },
   { code: 'en', name: 'English', flag: '🇺🇸' },
-  { code: 'ja', name: '日本語', flag: '🇯🇵' },
+  { code: 'ja', name: t('日本語'), flag: '🇯🇵' },
   { code: 'ko', name: '한국어', flag: '🇰🇷' },
   { code: 'fr', name: 'Français', flag: '🇫🇷' },
   { code: 'de', name: 'Deutsch', flag: '🇩🇪' },
@@ -90,14 +91,14 @@ export function LocalTranslateWidget(): JSX.Element {
   // 执行翻译
   const handleTranslate = async () => {
     if (!inputText.trim()) {
-      setError('请输入要翻译的文本');
+      setError(t('请输入要翻译的文本'));
       return;
     }
 
     // 检查是否有可用的供应商
     const availableProviders = providerStatuses.filter(s => s.available);
     if (availableProviders.length === 0) {
-      setError('没有可用的翻译供应商，请先配置');
+      setError(t('没有可用的翻译供应商，请先配置'));
       setShowSetupWizard(true);
       return;
     }
@@ -113,7 +114,7 @@ export function LocalTranslateWidget(): JSX.Element {
         setActiveProvider(result.provider || null);
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : '翻译失败，请重试';
+      const errorMessage = err instanceof Error ? err.message : t('翻译失败，请重试');
       setError(errorMessage);
       console.error('Translation error:', err);
     } finally {
@@ -125,10 +126,10 @@ export function LocalTranslateWidget(): JSX.Element {
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(outputText);
-      success('已复制到剪贴板');
+      success(t('已复制到剪贴板'));
     } catch (err) {
       console.error('Failed to copy:', err);
-      showError('复制失败');
+      showError(t('复制失败'));
     }
   };
 
@@ -140,16 +141,16 @@ export function LocalTranslateWidget(): JSX.Element {
           <Icon name="language" size={40} color="#A78BFA" />
         </div>
         <h2 className="text-2xl font-semibold text-white mb-3">
-          欢迎使用智能翻译
+          {t('欢迎使用智能翻译')}
         </h2>
         <p className="text-white/40 mb-8 max-w-md mx-auto">
-          支持多种 AI 翻译服务，包括本地 Ollama 和云端 API
+          {t('支持多种 AI 翻译服务，包括本地 Ollama 和云端 API')}
         </p>
         <button
           onClick={() => setShowSetupWizard(true)}
           className="px-8 py-3 bg-[#7C3AED] hover:bg-[#6D28D9] text-white rounded-xl transition-all font-medium"
         >
-          开始配置
+          {t('开始配置')}
         </button>
       </div>
     );
@@ -180,9 +181,9 @@ export function LocalTranslateWidget(): JSX.Element {
       {/* 页头 */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-white">智能翻译</h2>
+          <h2 className="text-xl font-semibold text-white">{t('智能翻译')}</h2>
           <p className="text-sm text-white/40">
-            {providerStatuses.filter(s => s.available).length} 个可用供应商
+            {providerStatuses.filter(s => s.available).length} {t('个可用供应商')}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -200,7 +201,7 @@ export function LocalTranslateWidget(): JSX.Element {
           <button
             onClick={() => setShowSetupWizard(true)}
             className="p-2.5 hover:bg-white/5 rounded-lg transition-colors clickable"
-            title="设置"
+            title={t("设置")}
           >
             <Icon name="cog" size={18} color="rgba(255,255,255,0.6)" />
           </button>
@@ -234,7 +235,7 @@ export function LocalTranslateWidget(): JSX.Element {
           <button
             onClick={handleSwapLanguages}
             className="p-2.5 hover:bg-[#7C3AED]/10 rounded-xl transition-all clickable"
-            title="交换语言"
+            title={t("交换语言")}
           >
             <Icon name="refresh-cw" size={18} color="#A78BFA" />
           </button>
@@ -269,7 +270,7 @@ export function LocalTranslateWidget(): JSX.Element {
           <textarea
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
-            placeholder="输入要翻译的文本..."
+            placeholder={t("输入要翻译的文本...")}
             className="w-full h-full bg-transparent resize-none focus:outline-none text-white/90 placeholder-white/30 text-base leading-relaxed min-h-[320px]"
           />
           {inputText && (
@@ -281,7 +282,7 @@ export function LocalTranslateWidget(): JSX.Element {
             </button>
           )}
           <div className="absolute bottom-4 left-6 text-xs text-white/30">
-            {inputText.length} 字符
+            {inputText.length} {t('字符')}
           </div>
         </div>
 
@@ -291,7 +292,7 @@ export function LocalTranslateWidget(): JSX.Element {
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="flex flex-col items-center gap-3">
                 <Icon name="refresh-cw" size={32} color="#A78BFA" className="animate-spin" />
-                <span className="text-sm text-white/40">翻译中...</span>
+                <span className="text-sm text-white/40">{t('翻译中...')}</span>
               </div>
             </div>
           ) : error ? (
@@ -313,7 +314,7 @@ export function LocalTranslateWidget(): JSX.Element {
                   {activeProvider && (
                     <div className="flex items-center gap-2 text-xs text-white/40">
                       <Icon name={PROVIDER_ICONS[activeProvider] || 'cube'} size={14} />
-                      <span>使用 {PROVIDER_NAMES[activeProvider] || activeProvider}</span>
+                      <span>{t('使用')} {PROVIDER_NAMES[activeProvider] || activeProvider}</span>
                     </div>
                   )}
                   <button
@@ -321,7 +322,7 @@ export function LocalTranslateWidget(): JSX.Element {
                     className="flex items-center gap-1.5 px-3 py-1.5 bg-[#7C3AED]/10 hover:bg-[#7C3AED]/20 border border-[#7C3AED]/20 rounded-lg transition-colors text-xs text-[#A78BFA] font-medium clickable"
                   >
                     <Icon name="clipboard" size={14} />
-                    复制
+                    {t('复制')}
                   </button>
                 </div>
               </div>
@@ -330,7 +331,7 @@ export function LocalTranslateWidget(): JSX.Element {
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="flex flex-col items-center gap-3">
                 <Icon name="language" size={48} color="rgba(255,255,255,0.1)" />
-                <p className="text-sm text-white/30">翻译结果将显示在这里</p>
+                <p className="text-sm text-white/30">{t('翻译结果将显示在这里')}</p>
               </div>
             </div>
           )}
@@ -352,12 +353,12 @@ export function LocalTranslateWidget(): JSX.Element {
         {loading ? (
           <>
             <Icon name="refresh-cw" size={16} className="animate-spin" />
-            翻译中...
+            {t('翻译中...')}
           </>
         ) : (
           <>
             <Icon name="language" size={16} />
-            翻译
+            {t('翻译')}
           </>
         )}
       </button>

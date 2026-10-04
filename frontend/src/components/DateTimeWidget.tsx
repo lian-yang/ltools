@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Events } from '@wailsio/runtime';
 import { DateTimeService } from '../../bindings/ltools/plugins/datetime';
 import { Icon } from './Icon';
+import { t } from '@/i18n';
 
 /**
  * 日期时间小部件组件
@@ -28,7 +29,7 @@ export function DateTimeWidget(): JSX.Element {
         setWeekday(day || '');
 
         // 检查是否是周末
-        const weekendDays = ['星期六', '星期日', 'Saturday', 'Sunday', '周六', '周日'];
+        const weekendDays = [t('星期六'), t('星期日'), 'Saturday', 'Sunday', t('周六'), t('周日')];
         setIsWeekend(weekendDays.some(wd => day?.includes(wd)));
       } catch (err) {
         console.error('Failed to initialize datetime:', err);
@@ -49,7 +50,7 @@ export function DateTimeWidget(): JSX.Element {
     // 监听星期更新
     const unsubscribeWeekday = Events.On('datetime:weekday', (ev: { data: string }) => {
       setWeekday(ev.data);
-      const weekendDays = ['星期六', '星期日', 'Saturday', 'Sunday', '周六', '周日'];
+      const weekendDays = [t('星期六'), t('星期日'), 'Saturday', 'Sunday', t('周六'), t('周日')];
       setIsWeekend(weekendDays.some(wd => ev.data?.includes(wd)));
     });
 
@@ -83,7 +84,7 @@ export function DateTimeWidget(): JSX.Element {
         </span>
         {isWeekend && (
           <span className="text-xs font-medium">
-            周末
+            {t('周末')}
           </span>
         )}
       </div>
@@ -165,12 +166,12 @@ export function TimestampConverter(): JSX.Element {
   // 时间戳转日期时间
   const timestampToDatetime = (ts: string): string => {
     const timestamp = parseInt(ts, 10);
-    if (isNaN(timestamp)) return '无效的时间戳';
+    if (isNaN(timestamp)) return t('无效的时间戳');
 
     // 判断是秒还是毫秒
     const date = timestamp > 9999999999 ? new Date(timestamp) : new Date(timestamp * 1000);
 
-    if (isNaN(date.getTime())) return '无效的日期';
+    if (isNaN(date.getTime())) return t('无效的日期');
 
     // 格式化输出多种格式
     const formats = [
@@ -184,7 +185,7 @@ export function TimestampConverter(): JSX.Element {
 
   // 日期时间转时间戳
   const datetimeToTimestamp = (dt: string): string => {
-    if (!dt.trim()) return '请输入日期时间';
+    if (!dt.trim()) return t('请输入日期时间');
 
     // 尝试多种日期格式解析
     let date: Date;
@@ -192,7 +193,7 @@ export function TimestampConverter(): JSX.Element {
     // 尝试直接解析
     date = new Date(dt);
     if (!isNaN(date.getTime())) {
-      return `秒级: ${Math.floor(date.getTime() / 1000)}\n毫秒级: ${date.getTime()}`;
+      return t('秒级: {s}\n毫秒级: {ms}', { s: Math.floor(date.getTime() / 1000), ms: date.getTime() });
     }
 
     // 尝试常见格式
@@ -216,12 +217,12 @@ export function TimestampConverter(): JSX.Element {
           parseInt(second)
         );
         if (!isNaN(date.getTime())) {
-          return `秒级: ${Math.floor(date.getTime() / 1000)}\n毫秒级: ${date.getTime()}`;
+          return t('秒级: {s}\n毫秒级: {ms}', { s: Math.floor(date.getTime() / 1000), ms: date.getTime() });
         }
       }
     }
 
-    return '无法解析日期格式，请使用格式如：2024-01-01 12:00:00';
+    return t('无法解析日期格式，请使用格式如：2024-01-01 12:00:00');
   };
 
   // 处理转换
@@ -264,7 +265,7 @@ export function TimestampConverter(): JSX.Element {
     <div className="glass-light rounded-xl p-6">
       <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
         <Icon name="refresh" size={18} color="#A78BFA" />
-        时间戳转换工具
+        {t('时间戳转换工具')}
       </h3>
 
       {/* 模式切换 */}
@@ -280,7 +281,7 @@ export function TimestampConverter(): JSX.Element {
             setResult('');
           }}
         >
-          时间戳 → 日期时间
+          {t('时间戳 → 日期时间')}
         </button>
         <button
           className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 clickable ${
@@ -293,7 +294,7 @@ export function TimestampConverter(): JSX.Element {
             setResult('');
           }}
         >
-          日期时间 → 时间戳
+          {t('日期时间 → 时间戳')}
         </button>
       </div>
 
@@ -301,12 +302,12 @@ export function TimestampConverter(): JSX.Element {
       {mode === 'toDatetime' && (
         <div className="space-y-4">
           <div>
-            <label className="block text-sm text-white/60 mb-2">输入时间戳</label>
+            <label className="block text-sm text-white/60 mb-2">{t('输入时间戳')}</label>
             <div className="flex gap-2">
               <input
                 type="text"
                 className="flex-1 px-4 py-3 bg-[#0D0F1A]/50 border border-white/10 rounded-lg text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/50 focus:border-[#7C3AED]/50 transition-all duration-200 font-mono"
-                placeholder="例如: 1704067200 或 1704067200000"
+                placeholder={t("例如: 1704067200 或 1704067200000")}
                 value={timestamp}
                 onChange={(e) => setTimestamp(e.target.value)}
                 onKeyPress={(e) => {
@@ -317,31 +318,31 @@ export function TimestampConverter(): JSX.Element {
                 className="px-4 py-3 rounded-lg bg-[#7C3AED] hover:bg-[#6D28D9] text-white transition-all duration-200 text-sm font-medium clickable"
                 onClick={handleConvert}
               >
-                转换
+                {t('转换')}
               </button>
               <button
                 className="px-4 py-3 rounded-lg bg-white/5 hover:bg-white/10 text-white/80 transition-all duration-200 text-sm font-medium clickable border border-white/10"
                 onClick={useCurrentTimestamp}
-                title="使用当前时间戳"
+                title={t("使用当前时间戳")}
               >
                 <Icon name="clock" size={16} />
               </button>
             </div>
             <p className="text-xs text-white/30 mt-2">
-              当前时间戳: <span className="font-mono text-[#A78BFA]">{currentTime}</span> (秒级)
+              {t('当前时间戳:')} <span className="font-mono text-[#A78BFA]">{currentTime}</span> {t('(秒级)')}
             </p>
           </div>
 
           {result && (
             <div className="glass-heavy rounded-lg p-4">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-white/40">转换结果</span>
+                <span className="text-xs text-white/40">{t('转换结果')}</span>
                 <button
                   className="text-xs text-[#7C3AED] hover:text-[#A78BFA] transition-colors clickable flex items-center gap-1"
                   onClick={copyResult}
                 >
                   <Icon name="document" size={12} />
-                  复制
+                  {t('复制')}
                 </button>
               </div>
               <pre className="text-sm text-white whitespace-pre-wrap font-mono">{result}</pre>
@@ -354,12 +355,12 @@ export function TimestampConverter(): JSX.Element {
       {mode === 'toTimestamp' && (
         <div className="space-y-4">
           <div>
-            <label className="block text-sm text-white/60 mb-2">输入日期时间</label>
+            <label className="block text-sm text-white/60 mb-2">{t('输入日期时间')}</label>
             <div className="flex gap-2">
               <input
                 type="text"
                 className="flex-1 px-4 py-3 bg-[#0D0F1A]/50 border border-white/10 rounded-lg text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/50 focus:border-[#7C3AED]/50 transition-all duration-200 font-mono"
-                placeholder="例如: 2024-01-01 12:00:00 或 2024/01/01"
+                placeholder={t("例如: 2024-01-01 12:00:00 或 2024/01/01")}
                 value={datetime}
                 onChange={(e) => setDatetime(e.target.value)}
                 onKeyPress={(e) => {
@@ -370,31 +371,31 @@ export function TimestampConverter(): JSX.Element {
                 className="px-4 py-3 rounded-lg bg-[#7C3AED] hover:bg-[#6D28D9] text-white transition-all duration-200 text-sm font-medium clickable"
                 onClick={handleConvert}
               >
-                转换
+                {t('转换')}
               </button>
               <button
                 className="px-4 py-3 rounded-lg bg-white/5 hover:bg-white/10 text-white/80 transition-all duration-200 text-sm font-medium clickable border border-white/10"
                 onClick={useCurrentDatetime}
-                title="使用当前日期时间"
+                title={t("使用当前日期时间")}
               >
                 <Icon name="clock" size={16} />
               </button>
             </div>
             <p className="text-xs text-white/30 mt-2">
-              支持格式: YYYY-MM-DD HH:MM:SS, YYYY/MM/DD 等
+              {t('支持格式: YYYY-MM-DD HH:MM:SS, YYYY/MM/DD 等')}
             </p>
           </div>
 
           {result && (
             <div className="glass-heavy rounded-lg p-4">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-white/40">转换结果</span>
+                <span className="text-xs text-white/40">{t('转换结果')}</span>
                 <button
                   className="text-xs text-[#7C3AED] hover:text-[#A78BFA] transition-colors clickable flex items-center gap-1"
                   onClick={copyResult}
                 >
                   <Icon name="document" size={12} />
-                  复制
+                  {t('复制')}
                 </button>
               </div>
               <pre className="text-sm text-white whitespace-pre-wrap font-mono">{result}</pre>
@@ -405,13 +406,13 @@ export function TimestampConverter(): JSX.Element {
 
       {/* 快捷时间戳参考 */}
       <div className="mt-6 pt-4 border-t border-white/10">
-        <p className="text-xs text-white/40 mb-2">快捷参考</p>
+        <p className="text-xs text-white/40 mb-2">{t('快捷参考')}</p>
         <div className="flex flex-wrap gap-2">
           {[
-            { label: '1分钟前', seconds: -60 },
-            { label: '1小时前', seconds: -3600 },
-            { label: '1天后', seconds: 86400 },
-            { label: '1周后', seconds: 604800 },
+            { label: t('1分钟前'), seconds: -60 },
+            { label: t('1小时前'), seconds: -3600 },
+            { label: t('1天后'), seconds: 86400 },
+            { label: t('1周后'), seconds: 604800 },
           ].map((item) => (
             <button
               key={item.label}

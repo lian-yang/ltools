@@ -3,6 +3,7 @@ import { Window } from '@wailsio/runtime';
 import { Icon } from '../components/Icon';
 import * as StickyService from '../../bindings/ltools/plugins/sticky/stickyservice';
 import { StickyNote } from '../../bindings/ltools/plugins/sticky/models';
+import { t } from '@/i18n';
 
 interface ColorOption {
   name: string;
@@ -110,7 +111,7 @@ const StickyWindow: React.FC = () => {
           lastSavedContentRef.current = noteData.content || '';
           // Store content in state to be applied when DOM is ready
           setInitialContent(noteData.content || '');
-          await Window.SetTitle('便利贴');
+          await Window.SetTitle(t('便利贴'));
           console.log('[StickyWindow] Loaded note from backend:', noteData.id, 'content length:', noteData.content?.length || 0);
         }
       } catch (error) {
@@ -418,7 +419,7 @@ const StickyWindow: React.FC = () => {
   if (!note) {
     return (
       <div className="fixed inset-0 flex items-center justify-center" style={{ backgroundColor: '#f3f4f6' }}>
-        <div className="text-gray-500">加载中...</div>
+        <div className="text-gray-500">{t('加载中...')}</div>
       </div>
     );
   }
@@ -455,7 +456,7 @@ const StickyWindow: React.FC = () => {
                 borderColor: color.borderColor,
                 boxShadow: note.color === color.name ? `0 0 0 2px ${color.textColor}` : undefined,
               }}
-              title={`切换到${color.name === 'yellow' ? '黄色' : color.name === 'pink' ? '粉色' : color.name === 'green' ? '绿色' : color.name === 'blue' ? '蓝色' : '紫色'}`}
+              title={t('切换到{color}', { color: color.name === 'yellow' ? t('黄色') : color.name === 'pink' ? t('粉色') : color.name === 'green' ? t('绿色') : color.name === 'blue' ? t('蓝色') : t('紫色') })}
             />
           ))}
         </div>
@@ -467,7 +468,7 @@ const StickyWindow: React.FC = () => {
         >
           {isSaving && (
             <span className="text-xs mr-1" style={{ color: currentColor.textColor, opacity: 0.6 }}>
-              保存中...
+              {t('保存中...')}
             </span>
           )}
 
@@ -475,7 +476,7 @@ const StickyWindow: React.FC = () => {
             onClick={() => setShowDeleteConfirm(true)}
             className="p-1 rounded transition-colors cursor-pointer hover:bg-black/10"
             style={{ color: currentColor.textColor }}
-            title="删除"
+            title={t("删除")}
           >
             <Icon name="trash" size={14} />
           </button>
@@ -484,7 +485,7 @@ const StickyWindow: React.FC = () => {
             onClick={handleClose}
             className="p-1 rounded transition-colors cursor-pointer hover:bg-black/10"
             style={{ color: currentColor.textColor }}
-            title="关闭"
+            title={t("关闭")}
           >
             <Icon name="x-mark" size={14} />
           </button>
@@ -502,7 +503,7 @@ const StickyWindow: React.FC = () => {
           color: currentColor.textColor,
           '--wails-draggable': 'no-drag',
         } as React.CSSProperties}
-        data-placeholder="在此输入内容... (支持粘贴图片)"
+        data-placeholder={t("在此输入内容... (支持粘贴图片)")}
         spellCheck={false}
       />
 
@@ -519,7 +520,7 @@ const StickyWindow: React.FC = () => {
             onClick={(e) => e.stopPropagation()}
           >
             <p className="mb-4 text-center" style={{ color: currentColor.textColor }}>
-              确定要删除这个便利贴吗？
+              {t('确定要删除这个便利贴吗？')}
             </p>
             <div className="flex gap-2 justify-center">
               <button
@@ -530,13 +531,13 @@ const StickyWindow: React.FC = () => {
                   color: currentColor.textColor,
                 }}
               >
-                取消
+                {t('取消')}
               </button>
               <button
                 onClick={handleDeleteConfirm}
                 className="px-4 py-2 rounded transition-colors bg-red-500 text-white"
               >
-                删除
+                {t('删除')}
               </button>
             </div>
           </div>

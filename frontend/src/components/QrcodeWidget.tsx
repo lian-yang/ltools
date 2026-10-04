@@ -3,6 +3,7 @@ import { QRCodeCanvas } from 'qrcode.react';
 import { Icon } from './Icon';
 import { useToast } from '../hooks/useToast';
 import * as QrcodeService from '../../bindings/ltools/plugins/qrcode/qrcodeservice';
+import { t } from '@/i18n';
 
 /**
  * 纠错级别选项
@@ -26,10 +27,10 @@ const SIZE_PRESETS: Record<SizePreset, number> = {
 };
 
 const ERROR_LEVELS: Array<{ value: ErrorCorrectionLevel; label: string; description: string }> = [
-  { value: 'L', label: 'L', description: '7% 容错' },
-  { value: 'M', label: 'M', description: '15% 容错' },
-  { value: 'Q', label: 'Q', description: '25% 容错' },
-  { value: 'H', label: 'H', description: '30% 容错' },
+  { value: 'L', label: 'L', description: t('7% 容错') },
+  { value: 'M', label: 'M', description: t('15% 容错') },
+  { value: 'Q', label: 'Q', description: t('25% 容错') },
+  { value: 'H', label: 'H', description: t('30% 容错') },
 ];
 
 /**
@@ -92,10 +93,10 @@ export function QrcodeWidget(): JSX.Element {
 
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-      success('二维码已复制到剪贴板');
+      success(t('二维码已复制到剪贴板'));
     } catch (err) {
       console.error('复制失败:', err);
-      showError('复制失败: ' + (err as Error).message);
+      showError(t('复制失败: ') + (err as Error).message);
     }
   }, [showError]);
 
@@ -113,10 +114,10 @@ export function QrcodeWidget(): JSX.Element {
       console.log('File saved to:', savedPath);
 
       // 显示成功消息
-      success(`二维码已保存到:\n${savedPath}`);
+      success(t('二维码已保存到:\n{path}', { path: savedPath }));
     } catch (err) {
       console.error('保存失败:', err);
-      showError('保存失败: ' + (err as Error).message);
+      showError(t('保存失败: ') + (err as Error).message);
     }
   }, [content, success, showError]);
 
@@ -137,8 +138,8 @@ export function QrcodeWidget(): JSX.Element {
             <Icon name="qrcode" size={24} color="#A78BFA" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-white">二维码生成器</h1>
-            <p className="text-sm text-white/50">输入文本或链接，快速生成二维码</p>
+            <h1 className="text-2xl font-bold text-white">{t('二维码生成器')}</h1>
+            <p className="text-sm text-white/50">{t('输入文本或链接，快速生成二维码')}</p>
           </div>
         </div>
 
@@ -146,27 +147,27 @@ export function QrcodeWidget(): JSX.Element {
         <div className="space-y-4 mb-8">
           <div>
             <label className="block text-sm font-medium text-white/70 mb-2">
-              输入内容
+              {t('输入内容')}
             </label>
             <textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              placeholder="输入网址、文本或任何内容..."
+              placeholder={t("输入网址、文本或任何内容...")}
               className="w-full h-32 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-[#7C3AED]/50 focus:bg-white/10 transition-all resize-none"
             />
             {/* 输入类型指示器 */}
             {inputType !== 'empty' && (
               <div className="mt-2 flex items-center gap-2">
-                <span className="text-xs text-white/40">类型:</span>
+                <span className="text-xs text-white/40">{t('类型:')}</span>
                 <span className={`text-xs px-2 py-1 rounded ${
                   inputType === 'url'
                     ? 'bg-green-500/20 text-green-400'
                     : 'bg-blue-500/20 text-blue-400'
                 }`}>
-                  {inputType === 'url' ? '链接' : '文本'}
+                  {inputType === 'url' ? t('链接') : t('文本')}
                 </span>
                 <span className="text-xs text-white/30">
-                  {content.length} 字符
+                  {content.length} {t('字符')}
                 </span>
               </div>
             )}
@@ -174,7 +175,7 @@ export function QrcodeWidget(): JSX.Element {
 
           {/* 快速填充按钮 */}
           <div className="flex flex-wrap gap-2">
-            <span className="text-xs text-white/40 self-center">快速填充:</span>
+            <span className="text-xs text-white/40 self-center">{t('快速填充:')}</span>
             <button
               className="text-xs px-3 py-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors clickable"
               onClick={() => quickFill('https://github.com')}
@@ -185,19 +186,19 @@ export function QrcodeWidget(): JSX.Element {
               className="text-xs px-3 py-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors clickable"
               onClick={() => quickFill('https://example.com')}
             >
-              示例网址
+              {t('示例网址')}
             </button>
             <button
               className="text-xs px-3 py-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors clickable"
               onClick={() => quickFill('Hello, World!')}
             >
-              文本示例
+              {t('文本示例')}
             </button>
             <button
               className="text-xs px-3 py-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors clickable"
               onClick={() => quickFill('WIFI:S:MyNetwork;T:WPA;P:password;;')}
             >
-              WiFi 配置
+              {t('WiFi 配置')}
             </button>
           </div>
         </div>
@@ -207,7 +208,7 @@ export function QrcodeWidget(): JSX.Element {
           {/* 尺寸选择 */}
           <div>
             <label className="block text-sm font-medium text-white/70 mb-3">
-              二维码尺寸
+              {t('二维码尺寸')}
             </label>
             <div className="flex gap-2">
               {(['small', 'medium', 'large'] as SizePreset[]).map((preset) => (
@@ -220,19 +221,19 @@ export function QrcodeWidget(): JSX.Element {
                   } clickable`}
                   onClick={() => setSizePreset(preset)}
                 >
-                  {preset === 'small' ? '小' : preset === 'medium' ? '中' : '大'}
+                  {preset === 'small' ? t('小') : preset === 'medium' ? t('中') : t('大')}
                 </button>
               ))}
             </div>
             <div className="mt-2 text-xs text-white/30">
-              当前: {actualSize}px
+              {t('当前:')} {actualSize}px
             </div>
           </div>
 
           {/* 纠错级别 */}
           <div>
             <label className="block text-sm font-medium text-white/70 mb-3">
-              纠错级别
+              {t('纠错级别')}
             </label>
             <div className="grid grid-cols-4 gap-2">
               {ERROR_LEVELS.map((level) => (
@@ -265,14 +266,14 @@ export function QrcodeWidget(): JSX.Element {
               onChange={(e) => setIncludeMargin(e.target.checked)}
               className="w-4 h-4 rounded border-white/20 bg-white/5 text-[#7C3AED] focus:ring-[#7C3AED]/50"
             />
-            <span className="text-sm text-white/70">添加边距</span>
+            <span className="text-sm text-white/70">{t('添加边距')}</span>
           </label>
         </div>
 
         {/* 保存目录显示 */}
         <div className="mb-6 p-3 rounded-lg bg-white/5 border border-white/10">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-white/60">保存位置:</span>
+            <span className="text-sm text-white/60">{t('保存位置:')}</span>
             <span className="text-sm text-white/80">{saveDir}</span>
           </div>
         </div>
@@ -305,14 +306,14 @@ export function QrcodeWidget(): JSX.Element {
                   className="flex items-center gap-2 px-6 py-3 bg-[#7C3AED] hover:bg-[#6D28D9] text-white rounded-xl font-medium transition-all shadow-lg shadow-[#7C3AED]/30 clickable"
                 >
                   <Icon name={copied ? 'check' : 'copy'} size={18} />
-                  {copied ? '已复制!' : '复制到剪贴板'}
+                  {copied ? t('已复制!') : t('复制到剪贴板')}
                 </button>
                 <button
                   onClick={saveToFile}
                   className="flex items-center gap-2 px-6 py-3 bg-white/10 hover:bg-white/15 text-white rounded-xl font-medium transition-all clickable"
                 >
                   <Icon name="download" size={18} />
-                  保存为文件
+                  {t('保存为文件')}
                 </button>
               </div>
             </>
@@ -322,19 +323,19 @@ export function QrcodeWidget(): JSX.Element {
               <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-white/5 flex items-center justify-center">
                 <Icon name="qrcode" size={36} color="rgba(167, 139, 250, 0.2)" />
               </div>
-              <p className="text-white/40 text-sm">输入内容后将自动生成二维码</p>
+              <p className="text-white/40 text-sm">{t('输入内容后将自动生成二维码')}</p>
             </div>
           )}
         </div>
 
         {/* 使用提示 */}
         <div className="mt-12 pt-6 border-t border-white/10">
-          <h3 className="text-sm font-medium text-white/60 mb-3">使用提示</h3>
+          <h3 className="text-sm font-medium text-white/60 mb-3">{t('使用提示')}</h3>
           <ul className="space-y-2 text-xs text-white/40">
-            <li>• 较高的纠错级别可以在二维码部分损坏时仍能扫描</li>
-            <li>• WiFi 二维码格式: WIFI:S:网络名;T:加密方式;P:密码;;</li>
-            <li>• 保存位置: ~/Pictures/QRCodes/</li>
-            <li>• 支持纯前端复制和后端保存两种方式</li>
+            <li>{t('• 较高的纠错级别可以在二维码部分损坏时仍能扫描')}</li>
+            <li>{t('• WiFi 二维码格式: WIFI:S:网络名;T:加密方式;P:密码;;')}</li>
+            <li>{t('• 保存位置: ~/Pictures/QRCodes/')}</li>
+            <li>{t('• 支持纯前端复制和后端保存两种方式')}</li>
           </ul>
         </div>
       </div>

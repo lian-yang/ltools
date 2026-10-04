@@ -2,15 +2,16 @@ import React, { useState } from 'react';
 import { Icon } from '../../Icon';
 import { AnnotationType } from '../hooks/useAnnotation';
 import './toolbar.css';
+import { t } from '@/i18n';
 
 // 工具定义
 const ANNOTATION_TOOLS: { type: AnnotationType; icon: string; label: string; shortcut: string }[] = [
-  { type: 'rect', icon: 'rectangle', label: '矩形', shortcut: 'R' },
-  { type: 'ellipse', icon: 'circle', label: '圆形', shortcut: 'O' },
-  { type: 'arrow', icon: 'arrow-right', label: '箭头', shortcut: 'A' },
-  { type: 'text', icon: 'type', label: '文字', shortcut: 'T' },
-  { type: 'brush', icon: 'brush', label: '画笔', shortcut: 'B' },
-  { type: 'mosaic', icon: 'mosaic', label: '马赛克', shortcut: 'M' },
+  { type: 'rect', icon: 'rectangle', label: t('矩形'), shortcut: 'R' },
+  { type: 'ellipse', icon: 'circle', label: t('圆形'), shortcut: 'O' },
+  { type: 'arrow', icon: 'arrow-right', label: t('箭头'), shortcut: 'A' },
+  { type: 'text', icon: 'type', label: t('文字'), shortcut: 'T' },
+  { type: 'brush', icon: 'brush', label: t('画笔'), shortcut: 'B' },
+  { type: 'mosaic', icon: 'mosaic', label: t('马赛克'), shortcut: 'M' },
 ];
 
 // 预设颜色
@@ -156,7 +157,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             className={`color-btn ${currentColor === color ? 'active' : ''}`}
             style={{ backgroundColor: color }}
             onClick={() => onColorChange(color)}
-            title={`颜色 ${color}`}
+            title={t('颜色 {color}', { color })}
           />
         ))}
       </div>
@@ -168,7 +169,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             key={width}
             className={`stroke-btn ${strokeWidth === width ? 'active' : ''}`}
             onClick={() => onStrokeWidthChange(width)}
-            title={`线宽 ${width}px`}
+            title={t('线宽 {width}px', { width })}
           >
             <div className="stroke-indicator">
               <span style={{ width: width + 4, height: width }} />
@@ -183,7 +184,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           <button
             className="toolbar-btn font-size-trigger"
             onClick={() => setShowFontMenu(!showFontMenu)}
-            title={`字号: ${fontSize}px`}
+            title={t('字号: {size}px', { size: fontSize })}
           >
             <span className="font-size-label">{fontSize}</span>
             <Icon name="chevron-down" size={12} />
@@ -213,7 +214,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           className="toolbar-btn"
           onClick={onUndo}
           disabled={!canUndo}
-          title="撤销 (Ctrl+Z)"
+          title={t("撤销 (Ctrl+Z)")}
         >
           <Icon name="undo" size={16} />
         </button>
@@ -221,14 +222,14 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           className="toolbar-btn"
           onClick={onRedo}
           disabled={!canRedo}
-          title="重做 (Ctrl+Shift+Z)"
+          title={t("重做 (Ctrl+Shift+Z)")}
         >
           <Icon name="redo" size={16} />
         </button>
         <button
           className="toolbar-btn"
           onClick={onClear}
-          title="清除标注 (Delete)"
+          title={t("清除标注 (Delete)")}
         >
           <Icon name="trash" size={16} />
         </button>
@@ -239,28 +240,28 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         <button
           className="toolbar-btn"
           onClick={onCopy}
-          title="复制到剪贴板 (Enter)"
+          title={t("复制到剪贴板 (Enter)")}
         >
           <Icon name="copy" size={16} />
         </button>
         <button
           className="toolbar-btn"
           onClick={onSave}
-          title="保存文件"
+          title={t("保存文件")}
         >
           <Icon name="download" size={16} />
         </button>
         <button
           className="toolbar-btn"
           onClick={onPin}
-          title="贴图 (P)"
+          title={t("贴图 (P)")}
         >
           <Icon name="pin" size={16} />
         </button>
         <button
           className="toolbar-btn"
           onClick={onCancel}
-          title="取消 (ESC)"
+          title={t("取消 (ESC)")}
         >
           <Icon name="x-mark" size={16} />
         </button>

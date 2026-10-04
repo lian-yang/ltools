@@ -4,6 +4,7 @@ import { Song } from '../../bindings/ltools/plugins/musicplayer/models';
 import { Icon } from '../components/Icon';
 import { Dialogs } from '@wailsio/runtime';
 import { useToast } from '../hooks/useToast';
+import { t } from '@/i18n';
 
 export function MusicPlayerWidget() {
     const [songs, setSongs] = useState<Song[]>([]);
@@ -724,10 +725,10 @@ export function MusicPlayerWidget() {
         const diffHours = Math.floor(diffMs / 3600000);
         const diffDays = Math.floor(diffMs / 86400000);
 
-        if (diffMins < 1) return '刚刚';
-        if (diffMins < 60) return `${diffMins}分钟前`;
-        if (diffHours < 24) return `${diffHours}小时前`;
-        if (diffDays < 7) return `${diffDays}天前`;
+        if (diffMins < 1) return t('刚刚');
+        if (diffMins < 60) return t('{n}分钟前', { n: diffMins });
+        if (diffHours < 24) return t('{n}小时前', { n: diffHours });
+        if (diffDays < 7) return t('{n}天前', { n: diffDays });
 
         return date.toLocaleDateString('zh-CN');
     };
@@ -761,7 +762,7 @@ export function MusicPlayerWidget() {
             }));
         } catch (error) {
             console.error('加载喜欢列表失败:', error);
-            toast.error('加载失败');
+            toast.error(t('加载失败'));
         } finally {
             setIsLoadingLikes(false);
         }
@@ -795,7 +796,7 @@ export function MusicPlayerWidget() {
             }));
         } catch (error) {
             console.error('加载热门歌曲失败:', error);
-            toast.error('加载失败');
+            toast.error(t('加载失败'));
         } finally {
             setIsLoadingHot(false);
         }
@@ -806,7 +807,7 @@ export function MusicPlayerWidget() {
         try {
             const songs = await MusicPlayerService.PlayLikeList();
             if (songs.length === 0) {
-                toast.warning('喜欢列表为空');
+                toast.warning(t('喜欢列表为空'));
                 return;
             }
 
@@ -814,10 +815,10 @@ export function MusicPlayerWidget() {
             setCurrentIndex(0);
             await playSong(songs[0]);
             setViewMode('player'); // 切回播放器视图
-            toast.success(`开始播放 ${songs.length} 首喜欢的歌曲`);
+            toast.success(t('开始播放 {n} 首喜欢的歌曲', { n: songs.length }));
         } catch (error) {
             console.error('播放失败:', error);
-            toast.error('播放失败');
+            toast.error(t('播放失败'));
         }
     };
 
@@ -826,7 +827,7 @@ export function MusicPlayerWidget() {
         try {
             const songs = await MusicPlayerService.PlayHotSongs();
             if (songs.length === 0) {
-                toast.warning('暂无热门歌曲');
+                toast.warning(t('暂无热门歌曲'));
                 return;
             }
 
@@ -834,10 +835,10 @@ export function MusicPlayerWidget() {
             setCurrentIndex(0);
             await playSong(songs[0]);
             setViewMode('player');
-            toast.success(`开始播放 ${songs.length} 首热门歌曲`);
+            toast.success(t('开始播放 {n} 首热门歌曲', { n: songs.length }));
         } catch (error) {
             console.error('播放失败:', error);
-            toast.error('播放失败');
+            toast.error(t('播放失败'));
         }
     };
 
@@ -855,10 +856,10 @@ export function MusicPlayerWidget() {
                 setIsLiked(false);
             }
 
-            toast.success('已取消喜欢');
+            toast.success(t('已取消喜欢'));
         } catch (error) {
             console.error('取消喜欢失败:', error);
-            toast.error('操作失败');
+            toast.error(t('操作失败'));
         }
     };
 
@@ -871,13 +872,13 @@ export function MusicPlayerWidget() {
 
             // 1. 打开保存对话框
             const savePath = await Dialogs.SaveFile({
-                Title: `保存音乐 - ${currentSong.name}`,
+                Title: t('保存音乐 - {name}', { name: currentSong.name }),
                 Filename: `${currentSong.name}.mp3`,
                 Filters: [
-                    { DisplayName: '音频文件', Pattern: '*.mp3;*.flac;*.aac;*.m4a' },
-                    { DisplayName: 'MP3 音频', Pattern: '*.mp3' },
-                    { DisplayName: 'FLAC 无损', Pattern: '*.flac' },
-                    { DisplayName: '所有文件', Pattern: '*.*' }
+                    { DisplayName: t('音频文件'), Pattern: '*.mp3;*.flac;*.aac;*.m4a' },
+                    { DisplayName: t('MP3 音频'), Pattern: '*.mp3' },
+                    { DisplayName: t('FLAC 无损'), Pattern: '*.flac' },
+                    { DisplayName: t('所有文件'), Pattern: '*.*' }
                 ]
             });
 
@@ -887,11 +888,11 @@ export function MusicPlayerWidget() {
             await MusicPlayerService.DownloadSong(currentSong, savePath);
 
             // 3. 显示成功提示
-            toast.success(`下载完成：${currentSong.name}`);
+            toast.success(t('下载完成：{name}', { name: currentSong.name }));
 
         } catch (error: any) {
             console.error('Download failed:', error);
-            toast.error(`下载失败：${error?.message || '未知错误'}`);
+            toast.error(t('下载失败：{msg}', { msg: error?.message || t('未知错误') }));
         } finally {
             setIsDownloading(false);
         }
@@ -905,13 +906,13 @@ export function MusicPlayerWidget() {
 
             // 1. 打开保存对话框
             const savePath = await Dialogs.SaveFile({
-                Title: `保存音乐 - ${song.name}`,
+                Title: t('保存音乐 - {name}', { name: song.name }),
                 Filename: `${song.name}.mp3`,
                 Filters: [
-                    { DisplayName: '音频文件', Pattern: '*.mp3;*.flac;*.aac;*.m4a' },
-                    { DisplayName: 'MP3 音频', Pattern: '*.mp3' },
-                    { DisplayName: 'FLAC 无损', Pattern: '*.flac' },
-                    { DisplayName: '所有文件', Pattern: '*.*' }
+                    { DisplayName: t('音频文件'), Pattern: '*.mp3;*.flac;*.aac;*.m4a' },
+                    { DisplayName: t('MP3 音频'), Pattern: '*.mp3' },
+                    { DisplayName: t('FLAC 无损'), Pattern: '*.flac' },
+                    { DisplayName: t('所有文件'), Pattern: '*.*' }
                 ]
             });
 
@@ -929,11 +930,11 @@ export function MusicPlayerWidget() {
             await MusicPlayerService.DownloadSong(song, savePath);
 
             // 3. 显示成功提示
-            toast.success(`下载完成：${song.name}`);
+            toast.success(t('下载完成：{name}', { name: song.name }));
 
         } catch (error: any) {
             console.error('Download failed:', error);
-            toast.error(`下载失败：${error?.message || '未知错误'}`);
+            toast.error(t('下载失败：{msg}', { msg: error?.message || t('未知错误') }));
         } finally {
             // 从下载中集合移除
             setDownloadingSongs(prev => {
@@ -979,7 +980,7 @@ export function MusicPlayerWidget() {
                             className="vinyl-top-group-btn"
                         >
                             <Icon name="heart" size={16} />
-                            <span>喜欢</span>
+                            <span>{t('喜欢')}</span>
                             {likesTotal > 0 && <span className="vinyl-badge">{likesTotal}</span>}
                         </button>
 
@@ -993,7 +994,7 @@ export function MusicPlayerWidget() {
                             className="vinyl-top-group-btn"
                         >
                             <Icon name="fire" size={16} />
-                            <span>热门</span>
+                            <span>{t('热门')}</span>
                         </button>
                     </div>
                 )}
@@ -1005,7 +1006,7 @@ export function MusicPlayerWidget() {
                         onClick={() => MusicPlayerService.HideWindow()}
                         className="vinyl-close-btn"
                         style={{ '--wails-draggable': 'no-drag' } as React.CSSProperties}
-                        title="关闭窗口"
+                        title={t("关闭窗口")}
                     >
                         <Icon name="x" size={14} />
                     </button>
@@ -1015,7 +1016,7 @@ export function MusicPlayerWidget() {
                         className="vinyl-disc-container"
                         onClick={() => setShowLyrics(!showLyrics)}
                         style={{ cursor: 'pointer' }}
-                        title={showLyrics ? '点击显示封面' : '点击显示歌词'}
+                        title={showLyrics ? t('点击显示封面') : t('点击显示歌词')}
                     >
                         {/* 旋转的唱片背景和封面 */}
                         <div className={`vinyl-disc ${isPlaying ? 'spinning' : ''}`}>
@@ -1062,7 +1063,7 @@ export function MusicPlayerWidget() {
                                     })
                                 ) : (
                                     <div className="lyrics-empty">
-                                        {lyrics ? '解析歌词失败' : '暂无歌词'}
+                                        {lyrics ? t('解析歌词失败') : t('暂无歌词')}
                                     </div>
                                 )}
                             </div>
@@ -1077,7 +1078,7 @@ export function MusicPlayerWidget() {
 
                     {/* 歌曲信息 */}
                     <div className="vinyl-info">
-                        <h3 className="vinyl-title">{currentSong ? currentSong.name : '暂未播放'}</h3>
+                        <h3 className="vinyl-title">{currentSong ? currentSong.name : t('暂未播放')}</h3>
                         <p className="vinyl-artist">{currentSong ? currentSong.artist.join(', ') : '—'}</p>
                     </div>
 
@@ -1101,7 +1102,7 @@ export function MusicPlayerWidget() {
                             <button
                                 onClick={handleDownloadCurrentSong}
                                 className="vinyl-download-btn"
-                                title="下载当前歌曲"
+                                title={t("下载当前歌曲")}
                                 disabled={isDownloading}
                             >
                                 {isDownloading ? (
@@ -1119,7 +1120,7 @@ export function MusicPlayerWidget() {
                         <button
                             onClick={toggleLike}
                             className={`vinyl-like-btn ${isLiked ? 'liked' : ''}`}
-                            title={isLiked ? '取消喜欢' : '喜欢'}
+                            title={isLiked ? t('取消喜欢') : t('喜欢')}
                         >
                             <Icon name="heart" size={18} />
                         </button>
@@ -1130,7 +1131,7 @@ export function MusicPlayerWidget() {
                         <button
                             onClick={playRandom}
                             className="vinyl-btn vinyl-btn-secondary"
-                            title="随机播放"
+                            title={t("随机播放")}
                             disabled={isLoading}
                         >
                             <Icon name="refresh" size={20} />
@@ -1139,7 +1140,7 @@ export function MusicPlayerWidget() {
                         <button
                             onClick={playPrev}
                             className="vinyl-btn vinyl-btn-tertiary"
-                            title="上一曲"
+                            title={t("上一曲")}
                         >
                             <Icon name="chevron-left" size={20} />
                         </button>
@@ -1147,7 +1148,7 @@ export function MusicPlayerWidget() {
                         <button
                             onClick={togglePlay}
                             className="vinyl-btn vinyl-btn-primary"
-                            title={isPlaying ? '暂停' : '播放'}
+                            title={isPlaying ? t('暂停') : t('播放')}
                         >
                             <Icon name={isPlaying ? 'pause' : 'play'} size={24} />
                         </button>
@@ -1155,7 +1156,7 @@ export function MusicPlayerWidget() {
                         <button
                             onClick={playNext}
                             className="vinyl-btn vinyl-btn-tertiary"
-                            title="下一曲"
+                            title={t("下一曲")}
                         >
                             <Icon name="chevron-right" size={20} />
                         </button>
@@ -1169,7 +1170,7 @@ export function MusicPlayerWidget() {
                                 }
                             }}
                             className="vinyl-btn vinyl-btn-secondary"
-                            title={viewMode === 'search' ? '关闭搜索' : '搜索'}
+                            title={viewMode === 'search' ? t('关闭搜索') : t('搜索')}
                         >
                             <Icon name={viewMode === 'search' ? 'x' : 'search'} size={20} />
                         </button>
@@ -1187,7 +1188,7 @@ export function MusicPlayerWidget() {
                                 disabled={likedSongs.length === 0}
                             >
                                 <Icon name="play" size={16} />
-                                播放全部 ({likesTotal})
+                                {t('播放全部 (')}{likesTotal})
                             </button>
                         </div>
 
@@ -1225,7 +1226,7 @@ export function MusicPlayerWidget() {
                                                 e.stopPropagation();
                                                 playSong(item.song);
                                             }}
-                                            title="播放"
+                                            title={t("播放")}
                                         >
                                             <Icon name="play" size={16} />
                                         </button>
@@ -1234,7 +1235,7 @@ export function MusicPlayerWidget() {
                                                 e.stopPropagation();
                                                 handleRemoveFromLikes(item.song.id);
                                             }}
-                                            title="取消喜欢"
+                                            title={t("取消喜欢")}
                                             className="liked"
                                         >
                                             <Icon name="heart" size={16} />
@@ -1251,7 +1252,7 @@ export function MusicPlayerWidget() {
                             </div>
                         )}
                         {!hasMoreLikes && likedSongs.length > 0 && (
-                            <div className="vinyl-list-end">已加载全部</div>
+                            <div className="vinyl-list-end">{t('已加载全部')}</div>
                         )}
                     </div>
                 )}
@@ -1262,7 +1263,7 @@ export function MusicPlayerWidget() {
                         <div className="vinyl-list-header">
                             <button onClick={playAllHot} className="vinyl-play-all-btn">
                                 <Icon name="play" size={16} />
-                                播放全部热门
+                                {t('播放全部热门')}
                             </button>
                         </div>
 
@@ -1297,7 +1298,7 @@ export function MusicPlayerWidget() {
                                                 e.stopPropagation();
                                                 playSong(song);
                                             }}
-                                            title="播放"
+                                            title={t("播放")}
                                         >
                                             <Icon name="play" size={16} />
                                         </button>
@@ -1306,7 +1307,7 @@ export function MusicPlayerWidget() {
                                                 e.stopPropagation();
                                                 handleDownloadSearchSong(song);
                                             }}
-                                            title="下载"
+                                            title={t("下载")}
                                             disabled={downloadingSongs.has(song.id)}
                                         >
                                             {downloadingSongs.has(song.id) ? (
@@ -1327,7 +1328,7 @@ export function MusicPlayerWidget() {
                             </div>
                         )}
                         {!hasMoreHot && hotSongs.length > 0 && (
-                            <div className="vinyl-list-end">已加载全部</div>
+                            <div className="vinyl-list-end">{t('已加载全部')}</div>
                         )}
                     </div>
                 )}
@@ -1345,7 +1346,7 @@ export function MusicPlayerWidget() {
                                     value={searchKeyword}
                                     onChange={(e) => setSearchKeyword(e.target.value)}
                                     onKeyPress={(e) => e.key === 'Enter' && searchSongs()}
-                                    placeholder="搜索歌曲..."
+                                    placeholder={t("搜索歌曲...")}
                                     className="vinyl-search-input"
                                     autoFocus
                                 />
@@ -1385,7 +1386,7 @@ export function MusicPlayerWidget() {
                                                         e.stopPropagation();
                                                         playSong(song);
                                                     }}
-                                                    title="播放"
+                                                    title={t("播放")}
                                                 >
                                                     <Icon name="play" size={16} />
                                                 </button>
@@ -1394,7 +1395,7 @@ export function MusicPlayerWidget() {
                                                         e.stopPropagation();
                                                         handleDownloadSearchSong(song);
                                                     }}
-                                                    title="下载"
+                                                    title={t("下载")}
                                                     disabled={downloadingSongs.has(song.id)}
                                                 >
                                                     {downloadingSongs.has(song.id) ? (
@@ -1415,7 +1416,7 @@ export function MusicPlayerWidget() {
                                     </div>
                                 )}
                                 {!hasMoreResults && songs.length > 0 && !isLoadingMore && (
-                                    <div className="vinyl-list-end">已加载全部结果</div>
+                                    <div className="vinyl-list-end">{t('已加载全部结果')}</div>
                                 )}
                             </div>
                         )}

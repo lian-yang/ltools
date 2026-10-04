@@ -4,6 +4,7 @@ import { ClipboardService } from '../../bindings/ltools/plugins/clipboard';
 import { ClipboardItem } from '../../bindings/ltools/plugins/clipboard/models';
 import { Icon } from './Icon';
 import { useToast } from '../hooks/useToast';
+import { t } from '@/i18n';
 
 // Image preview modal component
 interface ImagePreviewModalProps {
@@ -68,22 +69,22 @@ function ClipboardHistoryItem({ item, index, onCopy, onCopyImage, onSaveImage, o
         await ClipboardService.CopyImageToClipboard(item.content);
         setImageCopied(true);
         onCopyImage(item.content);
-        success('图片已复制到剪贴板');
+        success(t('图片已复制到剪贴板'));
         setTimeout(() => setImageCopied(false), 2000);
       } catch (err) {
         console.error('Failed to copy image:', err);
-        showError('复制图片失败');
+        showError(t('复制图片失败'));
       }
     } else {
       try {
         await navigator.clipboard.writeText(item.content);
         setCopied(true);
         onCopy(item.content);
-        success('已复制到剪贴板');
+        success(t('已复制到剪贴板'));
         setTimeout(() => setCopied(false), 2000);
       } catch (err) {
         console.error('Failed to copy:', err);
-        showError('复制失败');
+        showError(t('复制失败'));
       }
     }
   };
@@ -93,13 +94,13 @@ function ClipboardHistoryItem({ item, index, onCopy, onCopyImage, onSaveImage, o
       const timestamp = new Date().getTime();
       const defaultFilename = `clipboard_image_${timestamp}.png`;
       const filePath = await ClipboardService.SaveImageToFile(item.content, defaultFilename);
-      success(`图片已保存到: ${filePath}`);
+      success(t('图片已保存到: {path}', { path: filePath }));
       onSaveImage(item.content);
     } catch (err) {
       console.error('Failed to save image:', err);
       // User cancelled or error - don't show error for cancellation
       if (err instanceof Error && !err.message.includes('cancelled')) {
-        showError('保存图片失败');
+        showError(t('保存图片失败'));
       }
     }
   };
@@ -117,10 +118,10 @@ function ClipboardHistoryItem({ item, index, onCopy, onCopyImage, onSaveImage, o
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
 
-    if (diffMins < 1) return '刚刚';
-    if (diffMins < 60) return `${diffMins}分钟前`;
-    if (diffHours < 24) return `${diffHours}小时前`;
-    if (diffDays < 7) return `${diffDays}天前`;
+    if (diffMins < 1) return t('刚刚');
+    if (diffMins < 60) return t('{n}分钟前', { n: diffMins });
+    if (diffHours < 24) return t('{n}小时前', { n: diffHours });
+    if (diffDays < 7) return t('{n}天前', { n: diffDays });
 
     return date.toLocaleDateString('zh-CN', {
       month: 'short',
@@ -155,12 +156,12 @@ function ClipboardHistoryItem({ item, index, onCopy, onCopyImage, onSaveImage, o
           >
             <img
               src={item.content}
-              alt="剪贴板图片"
+              alt={t("剪贴板图片")}
               className="max-h-24 max-w-32 rounded-lg object-contain bg-white/5"
             />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs text-white/40 mb-1">图片</p>
+            <p className="text-xs text-white/40 mb-1">{t('图片')}</p>
             <p className="text-sm text-white/60 font-mono">
               {truncateContent(item.content.substring(0, 50))}...
             </p>
@@ -210,21 +211,21 @@ function ClipboardHistoryItem({ item, index, onCopy, onCopyImage, onSaveImage, o
               }`}
               onClick={handleCopy}
             >
-              {copied || imageCopied ? '已复制' : (item.type === 'image' ? '复制图片' : '复制')}
+              {copied || imageCopied ? t('已复制') : (item.type === 'image' ? t('复制图片') : t('复制'))}
             </button>
             {item.type === 'image' && (
               <button
                 className="px-3 py-1.5 rounded-lg text-xs font-medium bg-[#3B82F6]/10 text-[#60A5FA] hover:bg-[#3B82F6]/20 border border-[#3B82F6]/20 transition-all duration-200 clickable"
                 onClick={handleSaveImage}
               >
-                保存图片
+                {t('保存图片')}
               </button>
             )}
             <button
               className="px-3 py-1.5 rounded-lg text-xs font-medium bg-white/5 text-white/60 hover:bg-[#EF4444]/10 hover:text-[#EF4444] border border-white/10 transition-all duration-200 clickable"
               onClick={handleDelete}
             >
-              删除
+              {t('删除')}
             </button>
           </div>
         </div>
@@ -242,9 +243,9 @@ function EmptyState(): JSX.Element {
       <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-white/5 mb-4">
         <Icon name="clipboard" size={28} color="rgba(255,255,255,0.3)" />
       </div>
-      <h3 className="text-lg font-medium text-white mb-2">剪贴板历史为空</h3>
+      <h3 className="text-lg font-medium text-white mb-2">{t('剪贴板历史为空')}</h3>
       <p className="text-white/40 text-sm">
-        复制的内容将自动出现在这里
+        {t('复制的内容将自动出现在这里')}
       </p>
     </div>
   );
@@ -395,12 +396,12 @@ export function ClipboardWidget(): JSX.Element {
       if (currentContent) {
         await ClipboardService.AddToHistory(currentContent, 'text');
         await loadHistory();
-        success('已添加当前剪贴板内容');
+        success(t('已添加当前剪贴板内容'));
       } else {
-        showError('剪贴板为空或无法访问');
+        showError(t('剪贴板为空或无法访问'));
       }
     } catch (err) {
-      showError(`添加失败: ${err instanceof Error ? err.message : '未知错误'}`);
+      showError(t('添加失败: {msg}', { msg: err instanceof Error ? err.message : t('未知错误') }));
     } finally {
       setAddingClipboard(false);
     }
@@ -412,7 +413,7 @@ export function ClipboardWidget(): JSX.Element {
         <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-white/5 animate-pulse">
           <Icon name="refresh" size={20} color="rgba(255,255,255,0.3)" />
         </div>
-        <p className="text-white/40 mt-4">加载中...</p>
+        <p className="text-white/40 mt-4">{t('加载中...')}</p>
       </div>
     );
   }
@@ -430,9 +431,9 @@ export function ClipboardWidget(): JSX.Element {
       {/* 页头 */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-white">剪贴板历史</h2>
+          <h2 className="text-xl font-semibold text-white">{t('剪贴板历史')}</h2>
           <p className="text-sm text-white/40">
-            {totalCount} 条记录 · 最大 {maxHistory} 条
+            {totalCount} {t('条记录 · 最大')} {maxHistory} {t('条')}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -441,14 +442,14 @@ export function ClipboardWidget(): JSX.Element {
             onClick={handleAddCurrentClipboard}
             disabled={addingClipboard}
           >
-            {addingClipboard ? '添加中...' : '添加当前剪贴板'}
+            {addingClipboard ? t('添加中...') : t('添加当前剪贴板')}
           </button>
           <button
             className={`px-4 py-2 rounded-lg bg-[#EF4444]/10 text-[#EF4444] border border-[#EF4444]/20 hover:bg-[#EF4444]/20 transition-all duration-200 text-sm font-medium clickable disabled:opacity-50 disabled:cursor-not-allowed ${totalCount === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
             onClick={handleClear}
             disabled={totalCount === 0}
           >
-            清空历史 {totalCount === 0 ? '(无记录)' : ''}
+            {t('清空历史')} {totalCount === 0 ? t('(无记录)') : ''}
           </button>
         </div>
       </div>
@@ -462,7 +463,7 @@ export function ClipboardWidget(): JSX.Element {
           <input
             type="text"
             className="flex-1 bg-transparent text-white placeholder-white/30 focus:outline-none"
-            placeholder="搜索剪贴板内容..."
+            placeholder={t("搜索剪贴板内容...")}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyPress={(e) => {
@@ -486,7 +487,7 @@ export function ClipboardWidget(): JSX.Element {
             className="px-5 py-2 rounded-lg bg-[#7C3AED] text-white hover:bg-[#6D28D9] transition-all duration-200 text-sm font-medium clickable"
             onClick={handleSearch}
           >
-            搜索
+            {t('搜索')}
           </button>
         </div>
       </div>
@@ -515,7 +516,7 @@ export function ClipboardWidget(): JSX.Element {
       {searchQuery && filteredHistory.length > 0 && (
         <div className="text-center">
           <p className="text-sm text-white/40">
-            找到 {filteredHistory.length} 条匹配结果
+            {t('找到')} {filteredHistory.length} {t('条匹配结果')}
           </p>
         </div>
       )}

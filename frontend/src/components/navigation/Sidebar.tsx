@@ -5,14 +5,15 @@ import { usePlugins } from '../../plugins/usePlugins'
 import { PluginState } from '../../../bindings/ltools/internal/plugins'
 import * as PluginService from '../../../bindings/ltools/internal/plugins/pluginservice'
 import type { IconName, NavItem } from '../../router/types'
+import { t } from '@/i18n';
 
 /**
  * 基础导航项配置
  */
 const baseNavItems: NavItem[] = [
-  { id: 'home', label: '首页', icon: 'home', path: '/' },
-  { id: 'plugins', label: '插件市场', icon: 'puzzle-piece', path: '/plugins' },
-  { id: 'settings', label: '设置', icon: 'cog', path: '/settings' },
+  { id: 'home', label: t('首页'), icon: 'home', path: '/' },
+  { id: 'plugins', label: t('插件市场'), icon: 'puzzle-piece', path: '/plugins' },
+  { id: 'settings', label: t('设置'), icon: 'cog', path: '/settings' },
 ]
 
 /**
@@ -109,7 +110,7 @@ export function Sidebar() {
     pinnedPlugins.sort(sortPinnedPlugins).forEach(plugin => {
       items.push({
         id: `plugin-${plugin.id}`,
-        label: plugin.name,
+        label: t(plugin.name),
         icon: getPluginIconName(plugin.id),
         path: `/plugins/${plugin.id}`,
         pluginId: plugin.id,
@@ -121,7 +122,7 @@ export function Sidebar() {
     normalPlugins.sort(sortNormalPlugins).forEach(plugin => {
       items.push({
         id: `plugin-${plugin.id}`,
-        label: plugin.name,
+        label: t(plugin.name),
         icon: getPluginIconName(plugin.id),
         path: `/plugins/${plugin.id}`,
         pluginId: plugin.id,
@@ -160,7 +161,7 @@ export function Sidebar() {
           </div>
           <div>
             <h1 className="text-xl font-bold text-white">LTools</h1>
-            <p className="text-xs text-white/50">插件式工具箱</p>
+            <p className="text-xs text-white/50">{t('插件式工具箱')}</p>
           </div>
         </div>
       </div>
@@ -205,7 +206,7 @@ export function Sidebar() {
                           : 'text-white/40 hover:text-[#A78BFA]'
                       }`}
                       onClick={(e) => handleTogglePin(item.pluginId!, e)}
-                      title={isPinned ? '取消固定' : '固定到顶部'}
+                      title={isPinned ? t('取消固定') : t('固定到顶部')}
                     >
                       <Icon name={isPinned ? 'x-mark' : 'pin'} size={14} />
                     </button>

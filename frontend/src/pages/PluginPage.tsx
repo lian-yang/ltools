@@ -25,6 +25,7 @@ import { StickyWidget } from '../components/StickyWidget'
 import { ImageBedWidget } from '../components/ImageBedWidget'
 import { ImageProcessorWidget } from '../components/ImageProcessorWidget'
 import { LocalTranslateWidget } from '../components/LocalTranslateWidget'
+import { t } from '@/i18n';
 
 /**
  * 插件页面组件
@@ -69,8 +70,8 @@ function PluginPage() {
         <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[#EF4444]/10 mb-4">
           <Icon name="exclamation-circle" size={32} color="#EF4444" />
         </div>
-        <h2 className="text-xl font-semibold text-white mb-2">插件未找到</h2>
-        <p className="text-white/60">插件 "{pluginId}" 不存在或未启用</p>
+        <h2 className="text-xl font-semibold text-white mb-2">{t('插件未找到')}</h2>
+        <p className="text-white/60">{t('插件 "')}{pluginId}{t('" 不存在或未启用')}</p>
       </div>
     )
   }
@@ -83,15 +84,15 @@ function PluginPage() {
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-[#7C3AED] to-[#A78BFA] mb-6">
             <Icon name="cube" size={36} color="white" />
           </div>
-          <h1 className="text-3xl font-bold mb-2">{plugin.name}</h1>
-          <p className="text-white/50 mb-4">{plugin.description}</p>
+          <h1 className="text-3xl font-bold mb-2">{t(plugin.name)}</h1>
+          <p className="text-white/50 mb-4">{t(plugin.description)}</p>
           <div className="glass-light rounded-xl p-6">
             <p className="text-white/60">
-              此插件通过快捷键或其他方式调用，无需独立页面。
+              {t('此插件通过快捷键或其他方式调用，无需独立页面。')}
             </p>
             {plugin.keywords && plugin.keywords.length > 0 && (
               <div className="mt-4">
-                <p className="text-sm text-white/40 mb-2">关键词：</p>
+                <p className="text-sm text-white/40 mb-2">{t('关键词：')}</p>
                 <div className="flex flex-wrap justify-center gap-2">
                   {plugin.keywords.map((kw: string, i: number) => (
                     <span key={i} className="px-2 py-1 rounded bg-[#7C3AED]/10 text-[#A78BFA] text-xs border border-[#7C3AED]/20">
@@ -150,8 +151,8 @@ function PluginContent({ pluginId, plugin, pluginIcon, onBack, isActive }: Plugi
                     <Icon name="clipboard" size={28} color="white" />
                   </div>
                   <div>
-                    <h1 className="text-3xl font-bold mb-1">剪贴板管理器</h1>
-                    <p className="text-white/50">管理系统剪贴板历史记录</p>
+                    <h1 className="text-3xl font-bold mb-1">{t('剪贴板管理器')}</h1>
+                    <p className="text-white/50">{t('管理系统剪贴板历史记录')}</p>
                     <p className="text-sm text-white/30 mt-1">v1.0.0 · by LTools</p>
                   </div>
                 </div>
@@ -169,8 +170,8 @@ function PluginContent({ pluginId, plugin, pluginIcon, onBack, isActive }: Plugi
                 <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-[#7C3AED] to-[#A78BFA] mb-6">
                   <Icon name="information-circle" size={36} color="white" />
                 </div>
-                <h1 className="text-3xl font-bold mb-2">系统信息</h1>
-                <p className="text-white/50">查看系统硬件和运行信息</p>
+                <h1 className="text-3xl font-bold mb-2">{t('系统信息')}</h1>
+                <p className="text-white/50">{t('查看系统硬件和运行信息')}</p>
                 <p className="text-sm text-white/30 mt-2">v1.0.0 · by LTools</p>
               </div>
               <SystemInfoWidget />
@@ -186,8 +187,8 @@ function PluginContent({ pluginId, plugin, pluginIcon, onBack, isActive }: Plugi
                 <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-[#7C3AED] to-[#A78BFA] mb-6">
                   <Icon name="calculator" size={36} color="white" />
                 </div>
-                <h1 className="text-3xl font-bold mb-2">计算器</h1>
-                <p className="text-white/50">支持基本运算和科学计算</p>
+                <h1 className="text-3xl font-bold mb-2">{t('计算器')}</h1>
+                <p className="text-white/50">{t('支持基本运算和科学计算')}</p>
                 <p className="text-sm text-white/30 mt-2">v1.0.0 · by LTools</p>
               </div>
               <CalculatorWidget />
@@ -203,8 +204,8 @@ function PluginContent({ pluginId, plugin, pluginIcon, onBack, isActive }: Plugi
                 <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-[#7C3AED] to-[#A78BFA] mb-6">
                   <Icon name="code" size={36} color="white" />
                 </div>
-                <h1 className="text-3xl font-bold mb-2">JSON 编辑器</h1>
-                <p className="text-white/50">格式化、验证和编辑 JSON 数据</p>
+                <h1 className="text-3xl font-bold mb-2">{t('JSON 编辑器')}</h1>
+                <p className="text-white/50">{t('格式化、验证和编辑 JSON 数据')}</p>
                 <p className="text-sm text-white/30 mt-2">v1.0.0 · by LTools</p>
               </div>
               <JSONEditorWidget />
@@ -220,8 +221,8 @@ function PluginContent({ pluginId, plugin, pluginIcon, onBack, isActive }: Plugi
                 <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-[#7C3AED] to-[#A78BFA] mb-6">
                   <Icon name="process" size={36} color="white" />
                 </div>
-                <h1 className="text-3xl font-bold mb-2">进程管理器</h1>
-                <p className="text-white/50">查看和管理系统运行中的进程</p>
+                <h1 className="text-3xl font-bold mb-2">{t('进程管理器')}</h1>
+                <p className="text-white/50">{t('查看和管理系统运行中的进程')}</p>
                 <p className="text-sm text-white/30 mt-2">v1.0.0 · by LTools</p>
               </div>
               <ProcessManagerWidget />
@@ -237,8 +238,8 @@ function PluginContent({ pluginId, plugin, pluginIcon, onBack, isActive }: Plugi
                 <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-[#7C3AED] to-[#A78BFA] mb-6">
                   <Icon name="qrcode" size={36} color="white" />
                 </div>
-                <h1 className="text-3xl font-bold mb-2">二维码生成器</h1>
-                <p className="text-white/50">快速生成二维码，支持一键复制到剪贴板</p>
+                <h1 className="text-3xl font-bold mb-2">{t('二维码生成器')}</h1>
+                <p className="text-white/50">{t('快速生成二维码，支持一键复制到剪贴板')}</p>
                 <p className="text-sm text-white/30 mt-2">v1.0.0 · by LTools</p>
               </div>
               <QrcodeWidget />
@@ -254,8 +255,8 @@ function PluginContent({ pluginId, plugin, pluginIcon, onBack, isActive }: Plugi
                 <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-[#7C3AED] to-[#A78BFA] mb-6">
                   <Icon name="server" size={36} color="white" />
                 </div>
-                <h1 className="text-3xl font-bold mb-2">Hosts 管理器</h1>
-                <p className="text-white/50">场景化 hosts 文件切换工具</p>
+                <h1 className="text-3xl font-bold mb-2">{t('Hosts 管理器')}</h1>
+                <p className="text-white/50">{t('场景化 hosts 文件切换工具')}</p>
                 <p className="text-sm text-white/30 mt-2">v1.0.0 · by LTools</p>
               </div>
               <HostsWidget />
@@ -271,8 +272,8 @@ function PluginContent({ pluginId, plugin, pluginIcon, onBack, isActive }: Plugi
                 <div className="inline-flex items-center justify-center w-16 h-16 rounded-xl bg-gradient-to-br from-[#7C3AED] to-[#A78BFA] mb-4">
                   <Icon name="clock" size={28} color="white" />
                 </div>
-                <h1 className="text-3xl font-bold mb-2">日期时间插件</h1>
-                <p className="text-white/50">实时显示当前时间和日期</p>
+                <h1 className="text-3xl font-bold mb-2">{t('日期时间插件')}</h1>
+                <p className="text-white/50">{t('实时显示当前时间和日期')}</p>
                 <p className="text-sm text-white/30 mt-2">v1.0.0 · by LTools</p>
               </div>
               <div className="space-y-8">
@@ -291,8 +292,8 @@ function PluginContent({ pluginId, plugin, pluginIcon, onBack, isActive }: Plugi
                 <div className="inline-flex items-center justify-center w-16 h-16 rounded-xl bg-gradient-to-br from-[#7C3AED] to-[#A78BFA] mb-4">
                   <Icon name="camera" size={28} color="white" />
                 </div>
-                <h1 className="text-3xl font-bold mb-2">截图工具</h1>
-                <p className="text-white/50">微信风格的屏幕截图和标注工具</p>
+                <h1 className="text-3xl font-bold mb-2">{t('截图工具')}</h1>
+                <p className="text-white/50">{t('微信风格的屏幕截图和标注工具')}</p>
                 <p className="text-sm text-white/30 mt-2">v1.0.0 · by LTools</p>
               </div>
               <div className="space-y-8">
@@ -310,8 +311,8 @@ function PluginContent({ pluginId, plugin, pluginIcon, onBack, isActive }: Plugi
                 <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-[#7C3AED] to-[#A78BFA] mb-6">
                   <Icon name="key" size={36} color="white" />
                 </div>
-                <h1 className="text-3xl font-bold mb-2">随机密码生成器</h1>
-                <p className="text-white/50">生成安全的随机密码，支持自定义选项</p>
+                <h1 className="text-3xl font-bold mb-2">{t('随机密码生成器')}</h1>
+                <p className="text-white/50">{t('生成安全的随机密码，支持自定义选项')}</p>
                 <p className="text-sm text-white/30 mt-2">v1.0.0 · by LTools</p>
               </div>
               <PasswordGeneratorWidget />
@@ -369,8 +370,8 @@ function PluginContent({ pluginId, plugin, pluginIcon, onBack, isActive }: Plugi
                 <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-[#7C3AED] to-[#A78BFA] mb-6">
                   <Icon name="document" size={36} color="white" />
                 </div>
-                <h1 className="text-3xl font-bold mb-2">便利贴</h1>
-                <p className="text-white/50">创建和管理多个便利贴窗口</p>
+                <h1 className="text-3xl font-bold mb-2">{t('便利贴')}</h1>
+                <p className="text-white/50">{t('创建和管理多个便利贴窗口')}</p>
                 <p className="text-sm text-white/30 mt-2">v1.0.0 · by LTools</p>
               </div>
               <StickyWidget />
@@ -386,8 +387,8 @@ function PluginContent({ pluginId, plugin, pluginIcon, onBack, isActive }: Plugi
                 <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-[#7C3AED] to-[#A78BFA] mb-6">
                   <Icon name="photo" size={36} color="white" />
                 </div>
-                <h1 className="text-3xl font-bold mb-2">图床</h1>
-                <p className="text-white/50">使用 GitHub + jsDelivr 搭建个人图床</p>
+                <h1 className="text-3xl font-bold mb-2">{t('图床')}</h1>
+                <p className="text-white/50">{t('使用 GitHub + jsDelivr 搭建个人图床')}</p>
                 <p className="text-sm text-white/30 mt-2">v1.0.0 · by LTools</p>
               </div>
               <ImageBedWidget />
@@ -410,8 +411,8 @@ function PluginContent({ pluginId, plugin, pluginIcon, onBack, isActive }: Plugi
                 <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-[#7C3AED] to-[#A78BFA] mb-6">
                   <Icon name="language" size={36} color="white" />
                 </div>
-                <h1 className="text-3xl font-bold mb-2">AI翻译</h1>
-                <p className="text-white/50">支持 Ollama、OpenAI、Anthropic、DeepSeek 等，提供本地和云端翻译服务</p>
+                <h1 className="text-3xl font-bold mb-2">{t('AI翻译')}</h1>
+                <p className="text-white/50">{t('支持 Ollama、OpenAI、Anthropic、DeepSeek 等，提供本地和云端翻译服务')}</p>
                 <p className="text-sm text-white/30 mt-2">v1.0.0 · by LTools Team</p>
               </div>
               <LocalTranslateWidget />
@@ -426,8 +427,8 @@ function PluginContent({ pluginId, plugin, pluginIcon, onBack, isActive }: Plugi
               <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-[#7C3AED] to-[#A78BFA] mb-6">
                 <Icon name="play" size={36} color="white" />
               </div>
-              <h1 className="text-3xl font-bold mb-2">随机音乐播放器</h1>
-              <p className="text-white/50 mb-8">基于 Meting API 的随机音乐播放器，支持网易云、腾讯、酷狗等多个平台</p>
+              <h1 className="text-3xl font-bold mb-2">{t('随机音乐播放器')}</h1>
+              <p className="text-white/50 mb-8">{t('基于 Meting API 的随机音乐播放器，支持网易云、腾讯、酷狗等多个平台')}</p>
 
               <div className="glass-light rounded-xl p-8 mb-6">
                 <button
@@ -444,35 +445,35 @@ function PluginContent({ pluginId, plugin, pluginIcon, onBack, isActive }: Plugi
                 >
                   <div className="flex items-center gap-3">
                     <Icon name="play" size={24} color="white" />
-                    <span>打开播放器</span>
+                    <span>{t('打开播放器')}</span>
                   </div>
                 </button>
                 <p className="text-white/40 text-sm mt-4">
-                  点击打开独立的音乐播放器窗口
+                  {t('点击打开独立的音乐播放器窗口')}
                 </p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="glass-light rounded-xl p-4 text-left">
-                  <h3 className="text-sm font-medium text-white/60 mb-2">功能特性</h3>
+                  <h3 className="text-sm font-medium text-white/60 mb-2">{t('功能特性')}</h3>
                   <ul className="text-sm text-white/40 space-y-1">
-                    <li>• 多平台音乐源支持</li>
-                    <li>• 随机播放模式</li>
-                    <li>• 自动播放下一曲</li>
-                    <li>• 预加载队列优化</li>
+                    <li>{t('• 多平台音乐源支持')}</li>
+                    <li>{t('• 随机播放模式')}</li>
+                    <li>{t('• 自动播放下一曲')}</li>
+                    <li>{t('• 预加载队列优化')}</li>
                   </ul>
                 </div>
                 <div className="glass-light rounded-xl p-4 text-left">
-                  <h3 className="text-sm font-medium text-white/60 mb-2">支持平台</h3>
+                  <h3 className="text-sm font-medium text-white/60 mb-2">{t('支持平台')}</h3>
                   <div className="flex flex-wrap gap-2">
                     <span className="px-2 py-1 rounded bg-[#7C3AED]/10 text-[#A78BFA] text-xs border border-[#7C3AED]/20">
-                      网易云音乐
+                      {t('网易云音乐')}
                     </span>
                     <span className="px-2 py-1 rounded bg-[#7C3AED]/10 text-[#A78BFA] text-xs border border-[#7C3AED]/20">
-                      腾讯音乐
+                      {t('腾讯音乐')}
                     </span>
                     <span className="px-2 py-1 rounded bg-[#7C3AED]/10 text-[#A78BFA] text-xs border border-[#7C3AED]/20">
-                      酷狗音乐
+                      {t('酷狗音乐')}
                     </span>
                   </div>
                 </div>
@@ -491,8 +492,8 @@ function PluginContent({ pluginId, plugin, pluginIcon, onBack, isActive }: Plugi
                 <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-[#7C3AED] to-[#A78BFA] mb-6">
                   <span className="text-4xl">{pluginIcon}</span>
                 </div>
-                <h1 className="text-3xl font-bold mb-2">{plugin.name}</h1>
-                <p className="text-white/50">{plugin.description}</p>
+                <h1 className="text-3xl font-bold mb-2">{t(plugin.name)}</h1>
+                <p className="text-white/50">{t(plugin.description)}</p>
                 <p className="text-sm text-white/30 mt-2">
                   v{plugin.version} · by {plugin.author}
                 </p>
@@ -502,9 +503,9 @@ function PluginContent({ pluginId, plugin, pluginIcon, onBack, isActive }: Plugi
               <div className="glass-light rounded-xl p-8">
                 <div className="text-center py-12">
                   <Icon name="cube" size={48} color="rgba(167, 139, 250, 0.3)" />
-                  <p className="text-white/40 mt-4">插件功能正在开发中...</p>
+                  <p className="text-white/40 mt-4">{t('插件功能正在开发中...')}</p>
                   <p className="text-white/30 text-sm mt-2">
-                    此插件 ({plugin.id}) 已成功启用，但尚未实现用户界面。
+                    {t('此插件 (')}{plugin.id}{t(') 已成功启用，但尚未实现用户界面。')}
                   </p>
                 </div>
               </div>
@@ -513,7 +514,7 @@ function PluginContent({ pluginId, plugin, pluginIcon, onBack, isActive }: Plugi
               <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
                 {plugin.permissions && plugin.permissions.length > 0 && (
                   <div className="glass-light rounded-xl p-4">
-                    <h3 className="text-sm font-medium text-white/60 mb-2">所需权限</h3>
+                    <h3 className="text-sm font-medium text-white/60 mb-2">{t('所需权限')}</h3>
                     <div className="flex flex-wrap gap-2">
                       {plugin.permissions.map((perm: string, i: number) => (
                         <span key={i} className="px-2 py-1 rounded bg-[#F59E0B]/10 text-[#F59E0B] text-xs border border-[#F59E0B]/20">
@@ -525,7 +526,7 @@ function PluginContent({ pluginId, plugin, pluginIcon, onBack, isActive }: Plugi
                 )}
                 {plugin.keywords && plugin.keywords.length > 0 && (
                   <div className="glass-light rounded-xl p-4">
-                    <h3 className="text-sm font-medium text-white/60 mb-2">关键词</h3>
+                    <h3 className="text-sm font-medium text-white/60 mb-2">{t('关键词')}</h3>
                     <div className="flex flex-wrap gap-2">
                       {plugin.keywords.map((kw: string, i: number) => (
                         <span key={i} className="px-2 py-1 rounded bg-[#7C3AED]/10 text-[#A78BFA] text-xs border border-[#7C3AED]/20">

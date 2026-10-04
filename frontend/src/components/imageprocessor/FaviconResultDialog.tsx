@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Icon } from '../Icon';
 import { useToast } from '../../hooks/useToast';
+import { t } from '@/i18n';
 
 interface FaviconResultDialogProps {
   visible: boolean;
@@ -22,7 +23,7 @@ export function FaviconResultDialog({ visible, onClose }: FaviconResultDialogPro
     try {
       await navigator.clipboard.writeText(htmlCode);
       setCopied(true);
-      success('已复制到剪贴板');
+      success(t('已复制到剪贴板'));
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error('Copy failed:', err);
@@ -35,7 +36,7 @@ export function FaviconResultDialog({ visible, onClose }: FaviconResultDialogPro
         <div className="flex items-center justify-between p-4 border-b border-white/10">
           <h2 className="text-lg font-semibold text-[#FAF5FF] flex items-center gap-2">
             <Icon name="check-circle" className="w-5 h-5 text-green-400" />
-            Favicon 生成成功
+            {t('Favicon 生成成功')}
           </h2>
           <button
             onClick={onClose}
@@ -50,7 +51,7 @@ export function FaviconResultDialog({ visible, onClose }: FaviconResultDialogPro
             <div className="flex items-start gap-2">
               <Icon name="information-circle" className="w-5 h-5 text-[#A78BFA] flex-shrink-0 mt-0.5" />
               <div className="text-sm text-[#A78BFA]/80">
-                <p className="mb-2">已生成以下文件：</p>
+                <p className="mb-2">{t('已生成以下文件：')}</p>
                 <ul className="list-disc list-inside space-y-1 text-xs">
                   <li>android-chrome-192x192.png</li>
                   <li>android-chrome-512x512.png</li>
@@ -67,7 +68,7 @@ export function FaviconResultDialog({ visible, onClose }: FaviconResultDialogPro
           <div>
             <div className="flex items-center justify-between mb-2">
               <label className="text-sm text-white/60">
-                将以下代码添加到您的 HTML &lt;head&gt; 标签中：
+                {t('将以下代码添加到您的 HTML &lt;head&gt; 标签中：')}
               </label>
               <button
                 onClick={handleCopy}
@@ -78,7 +79,7 @@ export function FaviconResultDialog({ visible, onClose }: FaviconResultDialogPro
                 }`}
               >
                 <Icon name={copied ? 'check' : 'clipboard'} className="w-4 h-4" />
-                {copied ? '已复制' : '复制代码'}
+                {copied ? t('已复制') : t('复制代码')}
               </button>
             </div>
             <div className="bg-black/40 rounded-lg p-4 font-mono text-sm text-white/80 overflow-x-auto">
@@ -90,12 +91,12 @@ export function FaviconResultDialog({ visible, onClose }: FaviconResultDialogPro
             <div className="flex items-start gap-2">
               <Icon name="information-circle" className="w-4 h-4 text-yellow-400 flex-shrink-0 mt-0.5" />
               <div className="text-sm text-white/60">
-                <p className="font-medium text-white/70 mb-1">使用提示：</p>
+                <p className="font-medium text-white/70 mb-1">{t('使用提示：')}</p>
                 <ul className="list-disc list-inside space-y-1 text-xs">
-                  <li>将生成的文件上传到您网站的根目录</li>
-                  <li>确保文件可通过根路径访问（例如：/favicon.ico）</li>
-                  <li>site.webmanifest 文件用于 PWA 应用</li>
-                  <li>清除浏览器缓存以查看更新后的 favicon</li>
+                  <li>{t('将生成的文件上传到您网站的根目录')}</li>
+                  <li>{t('确保文件可通过根路径访问（例如：/favicon.ico）')}</li>
+                  <li>{t('site.webmanifest 文件用于 PWA 应用')}</li>
+                  <li>{t('清除浏览器缓存以查看更新后的 favicon')}</li>
                 </ul>
               </div>
             </div>
@@ -107,7 +108,7 @@ export function FaviconResultDialog({ visible, onClose }: FaviconResultDialogPro
             onClick={onClose}
             className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white font-medium transition-colors"
           >
-            关闭
+            {t('关闭')}
           </button>
         </div>
       </div>

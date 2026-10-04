@@ -26,6 +26,7 @@ import {
   applyWatermark,
   hasValidWatermarkContent,
 } from './imageprocessor/watermarkPreview';
+import { t } from '@/i18n';
 
 export function ImageProcessorWidget(): JSX.Element {
   const [files, setFiles] = useState<ImageFile[]>([]);
@@ -168,7 +169,7 @@ export function ImageProcessorWidget(): JSX.Element {
     // 更新预览数据为裁剪后的图片
     setPreviewData(croppedPreview);
     setIsCropped(true);
-    success('裁剪完成，点击"处理"按钮保存，或点击"撤销"重新选择');
+    success(t('裁剪完成，点击"处理"按钮保存，或点击"撤销"重新选择'));
   }, [previewData, isCropped, success]);
 
   // 撤销裁剪操作
@@ -496,9 +497,9 @@ export function ImageProcessorWidget(): JSX.Element {
         const successCount = ev.data.completed;
         const failCount = ev.data.failed;
         if (failCount > 0) {
-          showError(`处理完成: ${successCount} 成功, ${failCount} 失败`);
+          showError(t('处理完成: {ok} 成功, {fail} 失败', { ok: successCount, fail: failCount }));
         } else {
-          success(`成功处理 ${successCount} 个文件`);
+          success(t('成功处理 {n} 个文件', { n: successCount }));
           // 如果是 favicon 模式，显示结果对话框
           if (currentMode === ProcessingMode.ModeFavicon) {
             setShowFaviconResult(true);
@@ -562,7 +563,7 @@ export function ImageProcessorWidget(): JSX.Element {
             }
           } catch (err) {
             console.error('Failed to load preview:', err);
-            showError('加载预览失败');
+            showError(t('加载预览失败'));
           } finally {
             // 在下一个事件循环中重置加载文件标志
             setTimeout(() => {
@@ -587,7 +588,7 @@ export function ImageProcessorWidget(): JSX.Element {
       }
     } catch (err) {
       console.error('Failed to get file info:', err);
-      showError('获取图片信息失败');
+      showError(t('获取图片信息失败'));
       isLoadingFileRef.current = false;
     }
   }, [showError, currentMode]);
@@ -631,13 +632,13 @@ export function ImageProcessorWidget(): JSX.Element {
       const isFaviconMode = currentMode === ProcessingMode.ModeFavicon;
 
       const result = await Dialogs.OpenFile({
-        Title: isFaviconMode ? '选择 Logo 图片' : '选择图片或文件夹',
+        Title: isFaviconMode ? t('选择 Logo 图片') : t('选择图片或文件夹'),
         CanChooseFiles: true,
         CanChooseDirectories: !isFaviconMode,
         AllowsMultipleSelection: !isFaviconMode,
         Filters: [
-          { DisplayName: '图片文件', Pattern: '*.jpg;*.jpeg;*.png;*.gif;*.bmp;*.tif;*.tiff;*.webp;*.ico' },
-          { DisplayName: '所有文件', Pattern: '*.*' },
+          { DisplayName: t('图片文件'), Pattern: '*.jpg;*.jpeg;*.png;*.gif;*.bmp;*.tif;*.tiff;*.webp;*.ico' },
+          { DisplayName: t('所有文件'), Pattern: '*.*' },
         ],
       });
 
@@ -646,7 +647,7 @@ export function ImageProcessorWidget(): JSX.Element {
         await addFiles(selectedPaths);
       }
     } catch (err) {
-      showError('选择文件失败');
+      showError(t('选择文件失败'));
     }
   }, [addFiles, showError, currentMode]);
 
@@ -741,7 +742,7 @@ export function ImageProcessorWidget(): JSX.Element {
       // 预览按钮只是查看裁剪效果，不应该覆盖原图缓存
     } catch (err) {
       console.error('Preview failed:', err);
-      showError('预览生成失败');
+      showError(t('预览生成失败'));
     } finally {
       setIsProcessing(false);
     }
@@ -761,34 +762,34 @@ export function ImageProcessorWidget(): JSX.Element {
         const result = await ImageProcessorService.GenerateFavicon(target.path, options);
 
         if (!result || !result.success) {
-          showError(result?.error || '生成 favicon 失败');
+          showError(result?.error || t('生成 favicon 失败'));
           return;
         }
 
         // 获取 zip 文件路径
         const zipPath = result.files['favicon.zip'];
         if (!zipPath) {
-          showError('未找到生成的 zip 文件');
+          showError(t('未找到生成的 zip 文件'));
           return;
         }
 
         // 使用 SaveFile 对话框让用户选择保存位置
         const savePath = await Dialogs.SaveFile({
-          Title: '保存 Favicon 套件',
+          Title: t('保存 Favicon 套件'),
           Filename: 'favicon.zip',
         });
 
         if (savePath) {
           // 使用后端服务复制文件
           await ImageProcessorService.CopyFile(zipPath, savePath);
-          success(`Favicon 套件已保存到: ${savePath}`);
+          success(t('Favicon 套件已保存到: {path}', { path: savePath }));
 
           // 显示 HTML 代码对话框
           setShowFaviconResult(true);
         }
       } catch (err) {
         console.error('Generate favicon failed:', err);
-        showError('生成 favicon 失败');
+        showError(t('生成 favicon 失败'));
       } finally {
         setIsProcessing(false);
       }
@@ -804,19 +805,19 @@ export function ImageProcessorWidget(): JSX.Element {
 
         // 使用 SaveFile 对话框让用户选择保存位置
         const savePath = await Dialogs.SaveFile({
-          Title: '保存裁剪后的图片',
+          Title: t('保存裁剪后的图片'),
           Filename: defaultName,
         });
 
         if (savePath) {
           // 使用后端服务保存 dataURL
           await ImageProcessorService.SaveDataURL(previewData.dataURL, savePath);
-          success(`裁剪后的图片已保存到: ${savePath}`);
+          success(t('裁剪后的图片已保存到: {path}', { path: savePath }));
         }
         return;
       } catch (err) {
         console.error('Save cropped image failed:', err);
-        showError('保存裁剪图片失败');
+        showError(t('保存裁剪图片失败'));
         return;
       }
     }
@@ -825,19 +826,19 @@ export function ImageProcessorWidget(): JSX.Element {
     if (currentMode === ProcessingMode.ModeWatermark) {
       // 检查是否有有效的水印内容
       if (!hasValidWatermarkContent(watermarkOptions)) {
-        showError('请输入水印文字或选择水印图片');
+        showError(t('请输入水印文字或选择水印图片'));
         return;
       }
 
       // 检查是否有待处理的文件
       if (files.length === 0) {
-        showError('请先选择图片');
+        showError(t('请先选择图片'));
         return;
       }
 
       // 选择输出目录
       const outputDir = await Dialogs.OpenFile({
-        Title: '选择输出目录',
+        Title: t('选择输出目录'),
         CanChooseDirectories: true,
         CanChooseFiles: false,
       });
@@ -902,9 +903,9 @@ export function ImageProcessorWidget(): JSX.Element {
       setIsProcessing(false);
 
       if (failed > 0) {
-        showError(`处理完成: ${completed} 成功, ${failed} 失败`);
+        showError(t('处理完成: {ok} 成功, {fail} 失败', { ok: completed, fail: failed }));
       } else {
-        success(`成功处理 ${completed} 个图片，已保存到: ${outputDirPath}`);
+        success(t('成功处理 {n} 个图片，已保存到: {path}', { n: completed, path: outputDirPath }));
       }
       return;
     }
@@ -918,7 +919,7 @@ export function ImageProcessorWidget(): JSX.Element {
         const optionsJson = JSON.stringify(steganographyOptions);
         const result = await ImageProcessorService.DecodeSteganography(target.path, optionsJson);
         if (!result) {
-          showError('解码失败');
+          showError(t('解码失败'));
           return;
         }
         if (result.success) {
@@ -926,13 +927,13 @@ export function ImageProcessorWidget(): JSX.Element {
           // Update the message in steganographyOptions so it shows in the text input
           setSteganographyOptions(prev => ({ ...prev, message }));
           const preview = message.length > 120 ? `${message.slice(0, 120)}...` : message;
-          success(`提取成功: ${preview || '空消息'}`);
+          success(t('提取成功: {text}', { text: preview || t('空消息') }));
         } else {
-          showError(result.error || '提取失败');
+          showError(result.error || t('提取失败'));
         }
       } catch (err) {
         console.error('Decode failed:', err);
-        showError('提取失败');
+        showError(t('提取失败'));
       } finally {
         setIsProcessing(false);
       }
@@ -956,7 +957,7 @@ export function ImageProcessorWidget(): JSX.Element {
       await ImageProcessorService.ProcessBatch(request);
     } catch (err) {
       console.error('Process failed:', err);
-      showError('处理失败');
+      showError(t('处理失败'));
       setIsProcessing(false);
     }
   };
@@ -1062,8 +1063,8 @@ export function ImageProcessorWidget(): JSX.Element {
             <Icon name="photo" className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-[#FAF5FF]">图片处理</h1>
-            <p className="text-sm text-white/50">本地批量图片处理工具</p>
+            <h1 className="text-2xl font-bold text-[#FAF5FF]">{t('图片处理')}</h1>
+            <p className="text-sm text-white/50">{t('本地批量图片处理工具')}</p>
           </div>
         </div>
 
@@ -1080,7 +1081,7 @@ export function ImageProcessorWidget(): JSX.Element {
                   }`}
                 >
                   <Icon name="folder" className="w-4 h-4" />
-                  对比
+                  {t('对比')}
                 </button>
               )}
               {currentMode === ProcessingMode.ModeCrop && isCropped && (
@@ -1089,17 +1090,17 @@ export function ImageProcessorWidget(): JSX.Element {
                   className="px-3 py-2 rounded-lg text-sm font-medium bg-[#F59E0B]/20 text-[#FBBF24] hover:bg-[#F59E0B]/30 transition-colors flex items-center gap-2"
                 >
                   <Icon name="undo" className="w-4 h-4" />
-                  撤销裁剪
+                  {t('撤销裁剪')}
                 </button>
               )}
               <button
                 onClick={clearFiles}
                 className="px-3 py-2 rounded-lg text-sm font-medium text-white/70 hover:bg-white/10 transition-colors"
               >
-                清空
+                {t('清空')}
               </button>
               <span className="px-3 py-1.5 bg-white/10 rounded-lg text-sm text-white/70">
-                {files.length} 个文件
+                {files.length} {t('个文件')}
               </span>
             </>
           )}
@@ -1108,7 +1109,7 @@ export function ImageProcessorWidget(): JSX.Element {
             className="px-4 py-2 bg-[#7C3AED] hover:bg-[#6D28D9] rounded-lg text-white font-medium transition-colors flex items-center gap-2"
           >
             <Icon name="plus" className="w-4 h-4" />
-            选择文件
+            {t('选择文件')}
           </button>
         </div>
       </div>

@@ -3,6 +3,7 @@ import { Events } from '@wailsio/runtime';
 import { Icon } from './Icon';
 import * as StickyService from '../../bindings/ltools/plugins/sticky/stickyservice';
 import { StickyNote } from '../../bindings/ltools/plugins/sticky/models';
+import { t } from '@/i18n';
 
 /**
  * StickyWidget - 便利贴插件页面组件
@@ -149,7 +150,7 @@ const StickyWidget: React.FC = () => {
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 text-white/60 text-sm">
             <Icon name="document" size={16} />
-            <span>共 {notes.length} 个便利贴</span>
+            <span>{t('共')} {notes.length} {t('个便利贴')}</span>
           </div>
         </div>
         <button
@@ -162,7 +163,7 @@ const StickyWidget: React.FC = () => {
           ) : (
             <Icon name="plus" size={18} />
           )}
-          <span>新建便利贴</span>
+          <span>{t('新建便利贴')}</span>
         </button>
       </div>
 
@@ -170,9 +171,9 @@ const StickyWidget: React.FC = () => {
       <div className="mb-6 p-3 rounded-lg bg-[#7C3AED]/10 border border-[#7C3AED]/20">
         <p className="text-sm text-white/70 flex items-center gap-2">
           <Icon name="sparkles" size={16} color="#A78BFA" />
-          <span>快捷键提示：按</span>
+          <span>{t('快捷键提示：按')}</span>
           <kbd className="px-2 py-0.5 bg-white/10 rounded text-xs font-mono">Alt+T</kbd>
-          <span>快速创建新便利贴</span>
+          <span>{t('快速创建新便利贴')}</span>
         </p>
       </div>
 
@@ -182,15 +183,15 @@ const StickyWidget: React.FC = () => {
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-white/5 mb-4">
             <Icon name="document" size={40} color="rgba(255,255,255,0.2)" />
           </div>
-          <h3 className="text-lg font-medium text-white/80 mb-2">还没有便利贴</h3>
-          <p className="text-white/50 mb-6">点击上方按钮或使用快捷键创建第一个便利贴</p>
+          <h3 className="text-lg font-medium text-white/80 mb-2">{t('还没有便利贴')}</h3>
+          <p className="text-white/50 mb-6">{t('点击上方按钮或使用快捷键创建第一个便利贴')}</p>
           <button
             onClick={handleCreateNote}
             disabled={creating}
             className="inline-flex items-center gap-2 px-6 py-3 bg-[#7C3AED] hover:bg-[#6D28D9] disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
           >
             <Icon name="plus" size={20} />
-            <span>创建便利贴</span>
+            <span>{t('创建便利贴')}</span>
           </button>
         </div>
       ) : (
@@ -210,7 +211,7 @@ const StickyWidget: React.FC = () => {
                   type="button"
                   onClick={(e) => showDeleteConfirm(note.id, e)}
                   className="absolute top-2 right-2 p-1.5 rounded-md bg-black/10 hover:bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer z-10"
-                  title="删除"
+                  title={t("删除")}
                 >
                   <Icon name="trash" size={14} className={colors.text} />
                 </button>
@@ -220,7 +221,7 @@ const StickyWidget: React.FC = () => {
                   {preview ? (
                     <p className="text-sm whitespace-pre-wrap line-clamp-4">{preview}</p>
                   ) : (
-                    <p className="text-sm opacity-50 italic">空便利贴</p>
+                    <p className="text-sm opacity-50 italic">{t('空便利贴')}</p>
                   )}
                 </div>
 
@@ -248,7 +249,7 @@ const StickyWidget: React.FC = () => {
                 <Icon name="plus" size={24} color="rgba(255,255,255,0.5)" />
               )}
             </div>
-            <span className="text-white/50 text-sm">创建新便利贴</span>
+            <span className="text-white/50 text-sm">{t('创建新便利贴')}</span>
           </button>
         </div>
       )}
@@ -268,21 +269,21 @@ const StickyWidget: React.FC = () => {
               <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-red-500/20 mb-3">
                 <Icon name="trash" size={24} color="#EF4444" />
               </div>
-              <h3 className="text-lg font-semibold text-white mb-2">确认删除</h3>
-              <p className="text-white/60">确定要删除这个便利贴吗？此操作无法撤销。</p>
+              <h3 className="text-lg font-semibold text-white mb-2">{t('确认删除')}</h3>
+              <p className="text-white/60">{t('确定要删除这个便利贴吗？此操作无法撤销。')}</p>
             </div>
             <div className="flex gap-3">
               <button
                 onClick={handleDeleteCancel}
                 className="flex-1 px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"
               >
-                取消
+                {t('取消')}
               </button>
               <button
                 onClick={handleDeleteConfirm}
                 className="flex-1 px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white transition-colors"
               >
-                删除
+                {t('删除')}
               </button>
             </div>
           </div>

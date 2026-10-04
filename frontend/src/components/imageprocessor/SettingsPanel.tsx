@@ -14,6 +14,7 @@ import { GetSystemFonts } from '../../../bindings/ltools/plugins/imageprocessor/
 import { Icon } from '../Icon';
 import { useToast } from '../../hooks/useToast';
 import { FontSelector } from './FontSelector';
+import { t as tI18n } from '@/i18n';
 
 interface SettingsPanelProps {
   mode: ProcessingMode;
@@ -34,7 +35,7 @@ interface SettingsPanelProps {
 }
 
 const aspectRatios = [
-  { label: '自由', value: '' },
+  { label: tI18n('自由'), value: '' },
   { label: '1:1', value: '1:1' },
   { label: '4:3', value: '4:3' },
   { label: '16:9', value: '16:9' },
@@ -93,13 +94,13 @@ export function SettingsPanel({
   const handleWatermarkSelect = useCallback(async () => {
     try {
       const result = await Dialogs.OpenFile({
-        Title: '选择水印图片',
+        Title: tI18n('选择水印图片'),
         CanChooseFiles: true,
         CanChooseDirectories: false,
         AllowsMultipleSelection: false,
         Filters: [
-          { DisplayName: '图片文件', Pattern: '*.jpg;*.jpeg;*.png;*.gif;*.bmp;*.tif;*.tiff;*.webp;*.ico' },
-          { DisplayName: '所有文件', Pattern: '*.*' },
+          { DisplayName: tI18n('图片文件'), Pattern: '*.jpg;*.jpeg;*.png;*.gif;*.bmp;*.tif;*.tiff;*.webp;*.ico' },
+          { DisplayName: tI18n('所有文件'), Pattern: '*.*' },
         ],
       });
 
@@ -112,14 +113,14 @@ export function SettingsPanel({
         });
       }
     } catch (err) {
-      showError('选择文件失败');
+      showError(tI18n('选择文件失败'));
     }
   }, [watermarkOptions, onWatermarkChange, showError]);
 
   const renderCompressSettings = () => (
     <div className="space-y-4">
       <div>
-        <label className="text-sm text-white/60 mb-2 block">压缩质量: {compressOptions.quality}%</label>
+        <label className="text-sm text-white/60 mb-2 block">{tI18n('压缩质量:')} {compressOptions.quality}%</label>
         <input
           type="range"
           min="1"
@@ -129,27 +130,27 @@ export function SettingsPanel({
           className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer accent-[#7C3AED]"
         />
         <div className="flex justify-between text-xs text-white/40 mt-1">
-          <span>低质量</span>
-          <span>高质量</span>
+          <span>{tI18n('低质量')}</span>
+          <span>{tI18n('高质量')}</span>
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="text-sm text-white/60 mb-1 block">最大宽度 (px)</label>
+          <label className="text-sm text-white/60 mb-1 block">{tI18n('最大宽度 (px)')}</label>
           <input
             type="number"
-            placeholder="不限制"
+            placeholder={tI18n("不限制")}
             value={compressOptions.maxWidth || ''}
             onChange={(e) => onCompressChange({ ...compressOptions, maxWidth: parseInt(e.target.value) || 0 })}
             className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-[#7C3AED]"
           />
         </div>
         <div>
-          <label className="text-sm text-white/60 mb-1 block">最大高度 (px)</label>
+          <label className="text-sm text-white/60 mb-1 block">{tI18n('最大高度 (px)')}</label>
           <input
             type="number"
-            placeholder="不限制"
+            placeholder={tI18n("不限制")}
             value={compressOptions.maxHeight || ''}
             onChange={(e) => onCompressChange({ ...compressOptions, maxHeight: parseInt(e.target.value) || 0 })}
             className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-[#7C3AED]"
@@ -158,7 +159,7 @@ export function SettingsPanel({
       </div>
 
       <div>
-        <label className="text-sm text-white/60 mb-2 block">输出格式</label>
+        <label className="text-sm text-white/60 mb-2 block">{tI18n('输出格式')}</label>
         <div className="flex gap-2">
           {['', 'jpeg', 'png'].map((fmt) => (
             <button
@@ -170,7 +171,7 @@ export function SettingsPanel({
                   : 'bg-white/5 text-white/60 hover:bg-white/10'
               }`}
             >
-              {fmt ? fmt.toUpperCase() : '原格式'}
+              {fmt ? fmt.toUpperCase() : tI18n('原格式')}
             </button>
           ))}
         </div>
@@ -181,7 +182,7 @@ export function SettingsPanel({
   const renderCropSettings = () => (
     <div className="space-y-4">
       <div>
-        <label className="text-sm text-white/60 mb-2 block">裁剪模式</label>
+        <label className="text-sm text-white/60 mb-2 block">{tI18n('裁剪模式')}</label>
         <div className="grid grid-cols-3 gap-2">
           {aspectRatios.map((ratio) => (
             <button
@@ -202,7 +203,7 @@ export function SettingsPanel({
       {!cropOptions.aspectRatio && (
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="text-sm text-white/60 mb-1 block">X 坐标 (px)</label>
+            <label className="text-sm text-white/60 mb-1 block">{tI18n('X 坐标 (px)')}</label>
             <input
               type="number"
               value={cropOptions.x}
@@ -211,7 +212,7 @@ export function SettingsPanel({
             />
           </div>
           <div>
-            <label className="text-sm text-white/60 mb-1 block">Y 坐标 (px)</label>
+            <label className="text-sm text-white/60 mb-1 block">{tI18n('Y 坐标 (px)')}</label>
             <input
               type="number"
               value={cropOptions.y}
@@ -220,7 +221,7 @@ export function SettingsPanel({
             />
           </div>
           <div>
-            <label className="text-sm text-white/60 mb-1 block">宽度 (px)</label>
+            <label className="text-sm text-white/60 mb-1 block">{tI18n('宽度 (px)')}</label>
             <input
               type="number"
               value={cropOptions.width}
@@ -229,7 +230,7 @@ export function SettingsPanel({
             />
           </div>
           <div>
-            <label className="text-sm text-white/60 mb-1 block">高度 (px)</label>
+            <label className="text-sm text-white/60 mb-1 block">{tI18n('高度 (px)')}</label>
             <input
               type="number"
               value={cropOptions.height}
@@ -246,11 +247,11 @@ export function SettingsPanel({
     <div className="space-y-4">
       {/* 水印类型 */}
       <div>
-        <label className="text-sm text-white/60 mb-2 block">水印类型</label>
+        <label className="text-sm text-white/60 mb-2 block">{tI18n('水印类型')}</label>
         <div className="flex gap-2">
           {[
-            { value: 'text', label: '文字' },
-            { value: 'image', label: '图片' },
+            { value: 'text', label: tI18n('文字') },
+            { value: 'image', label: tI18n('图片') },
           ].map((type) => (
             <button
               key={type.value}
@@ -271,10 +272,10 @@ export function SettingsPanel({
       {watermarkOptions.type === 'text' ? (
         <>
           <div>
-            <label className="text-sm text-white/60 mb-1 block">水印文字</label>
+            <label className="text-sm text-white/60 mb-1 block">{tI18n('水印文字')}</label>
             <input
               type="text"
-              placeholder="输入水印文字"
+              placeholder={tI18n("输入水印文字")}
               value={watermarkOptions.text}
               onChange={(e) => onWatermarkChange({ ...watermarkOptions, text: e.target.value })}
               className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-[#7C3AED]"
@@ -282,7 +283,7 @@ export function SettingsPanel({
           </div>
           {/* 字体选择 */}
           <div>
-            <label className="text-sm text-white/60 mb-2 block">字体</label>
+            <label className="text-sm text-white/60 mb-2 block">{tI18n('字体')}</label>
             <FontSelector
               fonts={fonts}
               value={watermarkOptions.fontPath || ''}
@@ -308,7 +309,7 @@ export function SettingsPanel({
           </div>
           {/* 字体大小 */}
           <div>
-            <label className="text-sm text-white/60 mb-2 block">字体大小: {watermarkOptions.fontSize}px</label>
+            <label className="text-sm text-white/60 mb-2 block">{tI18n('字体大小:')} {watermarkOptions.fontSize}px</label>
             <input
               type="range"
               min="12"
@@ -324,7 +325,7 @@ export function SettingsPanel({
           </div>
           {/* 字体颜色 */}
           <div>
-            <label className="text-sm text-white/60 mb-2 block">字体颜色</label>
+            <label className="text-sm text-white/60 mb-2 block">{tI18n('字体颜色')}</label>
             <div className="flex items-center gap-3">
               <div
                 className="w-10 h-10 rounded-lg border-2 border-white/20 cursor-pointer overflow-hidden flex-shrink-0"
@@ -359,17 +360,17 @@ export function SettingsPanel({
         </>
       ) : (
         <div>
-          <label className="text-sm text-white/60 mb-1 block">水印图片</label>
+          <label className="text-sm text-white/60 mb-1 block">{tI18n('水印图片')}</label>
           <button
             onClick={handleWatermarkSelect}
             className="w-full px-3 py-4 bg-white/5 border border-white/10 border-dashed rounded-lg text-white/60 text-sm hover:bg-white/10 transition-colors flex flex-col items-center gap-2"
           >
             <Icon name="photo" className="w-6 h-6" />
-            {getFileName(watermarkOptions.imagePath) || '点击选择水印图片'}
+            {getFileName(watermarkOptions.imagePath) || tI18n('点击选择水印图片')}
           </button>
           {/* 缩放比例仅对图片水印有效 */}
           <div className="mt-3">
-            <label className="text-sm text-white/60 mb-2 block">缩放比例: {Math.round(watermarkOptions.scale * 100)}%</label>
+            <label className="text-sm text-white/60 mb-2 block">{tI18n('缩放比例:')} {Math.round(watermarkOptions.scale * 100)}%</label>
             <input
               type="range"
               min="10"
@@ -384,7 +385,7 @@ export function SettingsPanel({
 
       {/* 水印模式：单个/平铺 */}
       <div>
-        <label className="text-sm text-white/60 mb-2 block">水印模式</label>
+        <label className="text-sm text-white/60 mb-2 block">{tI18n('水印模式')}</label>
         <div className="flex gap-2">
           <button
             onClick={() => onWatermarkChange({ ...watermarkOptions, position: WatermarkPosition.PositionSingle })}
@@ -394,7 +395,7 @@ export function SettingsPanel({
                 : 'bg-white/5 text-white/60 hover:bg-white/10'
             }`}
           >
-            单个水印
+            {tI18n('单个水印')}
           </button>
           <button
             onClick={() => onWatermarkChange({ ...watermarkOptions, position: WatermarkPosition.PositionTile })}
@@ -404,14 +405,14 @@ export function SettingsPanel({
                 : 'bg-white/5 text-white/60 hover:bg-white/10'
             }`}
           >
-            平铺水印
+            {tI18n('平铺水印')}
           </button>
         </div>
       </div>
 
       {/* 旋转角度 */}
       <div>
-        <label className="text-sm text-white/60 mb-2 block">旋转角度: {watermarkOptions.rotation || 0}°</label>
+        <label className="text-sm text-white/60 mb-2 block">{tI18n('旋转角度:')} {watermarkOptions.rotation || 0}°</label>
         <input
           type="range"
           min="-180"
@@ -431,7 +432,7 @@ export function SettingsPanel({
       {watermarkOptions.position === WatermarkPosition.PositionSingle && (
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="text-sm text-white/60 mb-1 block">X 偏移: {watermarkOptions.offsetX || 0}px</label>
+            <label className="text-sm text-white/60 mb-1 block">{tI18n('X 偏移:')} {watermarkOptions.offsetX || 0}px</label>
             <input
               type="range"
               min="-500"
@@ -442,7 +443,7 @@ export function SettingsPanel({
             />
           </div>
           <div>
-            <label className="text-sm text-white/60 mb-1 block">Y 偏移: {watermarkOptions.offsetY || 0}px</label>
+            <label className="text-sm text-white/60 mb-1 block">{tI18n('Y 偏移:')} {watermarkOptions.offsetY || 0}px</label>
             <input
               type="range"
               min="-500"
@@ -459,7 +460,7 @@ export function SettingsPanel({
       {watermarkOptions.position === WatermarkPosition.PositionTile && (
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="text-sm text-white/60 mb-1 block">X 间距: {watermarkOptions.tileSpacingX || 100}px</label>
+            <label className="text-sm text-white/60 mb-1 block">{tI18n('X 间距:')} {watermarkOptions.tileSpacingX || 100}px</label>
             <input
               type="range"
               min="50"
@@ -470,7 +471,7 @@ export function SettingsPanel({
             />
           </div>
           <div>
-            <label className="text-sm text-white/60 mb-1 block">Y 间距: {watermarkOptions.tileSpacingY || 100}px</label>
+            <label className="text-sm text-white/60 mb-1 block">{tI18n('Y 间距:')} {watermarkOptions.tileSpacingY || 100}px</label>
             <input
               type="range"
               min="50"
@@ -485,7 +486,7 @@ export function SettingsPanel({
 
       {/* 透明度 */}
       <div>
-        <label className="text-sm text-white/60 mb-2 block">透明度: {Math.round(watermarkOptions.opacity * 100)}%</label>
+        <label className="text-sm text-white/60 mb-2 block">{tI18n('透明度:')} {Math.round(watermarkOptions.opacity * 100)}%</label>
         <input
           type="range"
           min="0"
@@ -501,13 +502,13 @@ export function SettingsPanel({
   const handleBlindWatermarkSelect = useCallback(async () => {
     try {
       const result = await Dialogs.OpenFile({
-        Title: '选择水印图片',
+        Title: tI18n('选择水印图片'),
         CanChooseFiles: true,
         CanChooseDirectories: false,
         AllowsMultipleSelection: false,
         Filters: [
-          { DisplayName: '图片文件', Pattern: '*.jpg;*.jpeg;*.png;*.gif;*.bmp;*.tif;*.tiff;*.webp;*.ico' },
-          { DisplayName: '所有文件', Pattern: '*.*' },
+          { DisplayName: tI18n('图片文件'), Pattern: '*.jpg;*.jpeg;*.png;*.gif;*.bmp;*.tif;*.tiff;*.webp;*.ico' },
+          { DisplayName: tI18n('所有文件'), Pattern: '*.*' },
         ],
       });
 
@@ -520,7 +521,7 @@ export function SettingsPanel({
         });
       }
     } catch (err) {
-      showError('选择文件失败');
+      showError(tI18n('选择文件失败'));
     }
   }, [steganographyOptions, onSteganographyChange, showError]);
 
@@ -530,18 +531,18 @@ export function SettingsPanel({
         <div className="flex items-start gap-2">
           <Icon name="lock" className="w-5 h-5 text-[#22C55E] flex-shrink-0 mt-0.5" />
           <div className="text-sm text-[#22C55E]/80">
-            <p className="mb-1">盲水印使用 DWT+DCT+SVD 算法，</p>
-            <p>抗压缩、抗裁剪，适合版权保护。</p>
+            <p className="mb-1">{tI18n('盲水印使用 DWT+DCT+SVD 算法，')}</p>
+            <p>{tI18n('抗压缩、抗裁剪，适合版权保护。')}</p>
           </div>
         </div>
       </div>
 
       <div>
-        <label className="text-sm text-white/60 mb-2 block">模式</label>
+        <label className="text-sm text-white/60 mb-2 block">{tI18n('模式')}</label>
         <div className="flex gap-2">
           {[
-            { value: 'encode', label: '嵌入水印' },
-            { value: 'decode', label: '提取水印' },
+            { value: 'encode', label: tI18n('嵌入水印') },
+            { value: 'decode', label: tI18n('提取水印') },
           ].map((m) => (
             <button
               key={m.value}
@@ -561,11 +562,11 @@ export function SettingsPanel({
       {steganographyOptions.mode === 'encode' && (
         <>
           <div>
-            <label className="text-sm text-white/60 mb-2 block">水印类型</label>
+            <label className="text-sm text-white/60 mb-2 block">{tI18n('水印类型')}</label>
             <div className="flex gap-2">
               {[
-                { value: 'text', label: '文本' },
-                { value: 'image', label: '图片' },
+                { value: 'text', label: tI18n('文本') },
+                { value: 'image', label: tI18n('图片') },
               ].map((t) => (
                 <button
                   key={t.value}
@@ -584,9 +585,9 @@ export function SettingsPanel({
 
           {(steganographyOptions.type === 'text' || !steganographyOptions.type) && (
             <div>
-              <label className="text-sm text-white/60 mb-1 block">水印文本</label>
+              <label className="text-sm text-white/60 mb-1 block">{tI18n('水印文本')}</label>
               <textarea
-                placeholder="输入版权信息或标识..."
+                placeholder={tI18n("输入版权信息或标识...")}
                 value={steganographyOptions.message}
                 onChange={(e) => onSteganographyChange({ ...steganographyOptions, message: e.target.value })}
                 rows={3}
@@ -597,34 +598,34 @@ export function SettingsPanel({
 
           {steganographyOptions.type === 'image' && (
             <div>
-              <label className="text-sm text-white/60 mb-1 block">水印图片 (Logo)</label>
+              <label className="text-sm text-white/60 mb-1 block">{tI18n('水印图片 (Logo)')}</label>
               <button
                 onClick={handleBlindWatermarkSelect}
                 className="w-full px-3 py-4 bg-white/5 border border-white/10 border-dashed rounded-lg text-white/60 text-sm hover:bg-white/10 transition-colors flex flex-col items-center gap-2"
               >
                 <Icon name="photo" className="w-6 h-6" />
-                {getFileName(steganographyOptions.imagePath) || '点击选择水印图片'}
+                {getFileName(steganographyOptions.imagePath) || tI18n('点击选择水印图片')}
               </button>
-              <p className="text-xs text-white/40 mt-1">建议使用 64x64 的黑白 Logo 图片</p>
+              <p className="text-xs text-white/40 mt-1">{tI18n('建议使用 64x64 的黑白 Logo 图片')}</p>
             </div>
           )}
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-sm text-white/60 mb-1 block">密码种子 1</label>
+              <label className="text-sm text-white/60 mb-1 block">{tI18n('密码种子 1')}</label>
               <input
                 type="number"
-                placeholder="默认: 12345"
+                placeholder={tI18n("默认: 12345")}
                 value={steganographyOptions.password1 || ''}
                 onChange={(e) => onSteganographyChange({ ...steganographyOptions, password1: parseInt(e.target.value) || 0 })}
                 className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-[#7C3AED]"
               />
             </div>
             <div>
-              <label className="text-sm text-white/60 mb-1 block">密码种子 2</label>
+              <label className="text-sm text-white/60 mb-1 block">{tI18n('密码种子 2')}</label>
               <input
                 type="number"
-                placeholder="默认: 67890"
+                placeholder={tI18n("默认: 67890")}
                 value={steganographyOptions.password2 || ''}
                 onChange={(e) => onSteganographyChange({ ...steganographyOptions, password2: parseInt(e.target.value) || 0 })}
                 className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-[#7C3AED]"
@@ -634,7 +635,7 @@ export function SettingsPanel({
 
           <div className="bg-white/5 border border-white/10 rounded-lg p-2">
             <p className="text-xs text-white/40">
-              💡 密码种子用于加密水印，提取时需要使用相同的密码
+              {tI18n('💡 密码种子用于加密水印，提取时需要使用相同的密码')}
             </p>
           </div>
         </>
@@ -643,11 +644,11 @@ export function SettingsPanel({
       {steganographyOptions.mode === 'decode' && (
         <>
           <div>
-            <label className="text-sm text-white/60 mb-2 block">水印类型</label>
+            <label className="text-sm text-white/60 mb-2 block">{tI18n('水印类型')}</label>
             <div className="flex gap-2">
               {[
-                { value: 'text', label: '文本' },
-                { value: 'image', label: '图片' },
+                { value: 'text', label: tI18n('文本') },
+                { value: 'image', label: tI18n('图片') },
               ].map((t) => (
                 <button
                   key={t.value}
@@ -666,11 +667,11 @@ export function SettingsPanel({
 
           {(steganographyOptions.type === 'text' || !steganographyOptions.type) && (
             <div>
-              <label className="text-sm text-white/60 mb-1 block">提取的水印内容</label>
+              <label className="text-sm text-white/60 mb-1 block">{tI18n('提取的水印内容')}</label>
               <textarea
                 readOnly
                 value={steganographyOptions.message}
-                placeholder="点击「开始处理」提取水印..."
+                placeholder={tI18n("点击「开始处理」提取水印...")}
                 className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-[#7C3AED] min-h-[80px] resize-none"
               />
             </div>
@@ -678,20 +679,20 @@ export function SettingsPanel({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-sm text-white/60 mb-1 block">密码种子 1</label>
+              <label className="text-sm text-white/60 mb-1 block">{tI18n('密码种子 1')}</label>
               <input
                 type="number"
-                placeholder="默认: 12345"
+                placeholder={tI18n("默认: 12345")}
                 value={steganographyOptions.password1 || ''}
                 onChange={(e) => onSteganographyChange({ ...steganographyOptions, password1: parseInt(e.target.value) || 0 })}
                 className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-[#7C3AED]"
               />
             </div>
             <div>
-              <label className="text-sm text-white/60 mb-1 block">密码种子 2</label>
+              <label className="text-sm text-white/60 mb-1 block">{tI18n('密码种子 2')}</label>
               <input
                 type="number"
-                placeholder="默认: 67890"
+                placeholder={tI18n("默认: 67890")}
                 value={steganographyOptions.password2 || ''}
                 onChange={(e) => onSteganographyChange({ ...steganographyOptions, password2: parseInt(e.target.value) || 0 })}
                 className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-[#7C3AED]"
@@ -701,7 +702,7 @@ export function SettingsPanel({
 
           <div className="bg-[#F59E0B]/10 border border-[#F59E0B]/20 rounded-lg p-2">
             <p className="text-xs text-[#F59E0B]/80">
-              ⚠️ 提取水印需要使用嵌入时相同的密码种子
+              {tI18n('⚠️ 提取水印需要使用嵌入时相同的密码种子')}
             </p>
           </div>
         </>
@@ -715,7 +716,7 @@ export function SettingsPanel({
         <div className="flex items-start gap-2">
           <Icon name="information-circle" className="w-5 h-5 text-[#A78BFA] flex-shrink-0 mt-0.5" />
           <div className="text-sm text-[#A78BFA]/80">
-            <p className="mb-2">将自动生成以下标准 favicon 文件：</p>
+            <p className="mb-2">{tI18n('将自动生成以下标准 favicon 文件：')}</p>
             <ul className="list-disc list-inside space-y-1 text-xs">
               <li>android-chrome-192x192.png</li>
               <li>android-chrome-512x512.png</li>
@@ -732,7 +733,7 @@ export function SettingsPanel({
       <div className="bg-white/5 border border-white/10 rounded-lg p-3">
         <div className="flex items-start gap-2 mb-2">
           <Icon name="document" className="w-4 h-4 text-white/60 flex-shrink-0 mt-0.5" />
-          <p className="text-sm text-white/60">处理完成后，将显示 HTML 链接标签，方便您复制到网站头部。</p>
+          <p className="text-sm text-white/60">{tI18n('处理完成后，将显示 HTML 链接标签，方便您复制到网站头部。')}</p>
         </div>
       </div>
     </div>
@@ -762,7 +763,7 @@ export function SettingsPanel({
     <div className="glass-heavy rounded-2xl p-4 h-full flex flex-col">
       <h3 className="text-lg font-semibold text-[#FAF5FF] mb-4 flex items-center gap-2">
         <Icon name="cog-6-tooth" className="w-5 h-5 text-[#A78BFA]" />
-        处理设置
+        {tI18n('处理设置')}
       </h3>
 
       <div className="flex-1 overflow-y-auto">
@@ -777,7 +778,7 @@ export function SettingsPanel({
             className="w-full px-4 py-2 bg-white/10 hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-white font-medium transition-colors flex items-center justify-center gap-2"
           >
             <Icon name="eye" className="w-4 h-4" />
-            预览效果
+            {tI18n('预览效果')}
           </button>
         )}
         <button
@@ -788,12 +789,12 @@ export function SettingsPanel({
           {isProcessing ? (
             <>
               <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              处理中...
+              {tI18n('处理中...')}
             </>
           ) : (
             <>
               <Icon name="play" className="w-4 h-4" />
-              开始处理 {filesCount > 0 && `(${filesCount})`}
+              {tI18n('开始处理')} {filesCount > 0 && `(${filesCount})`}
             </>
           )}
         </button>

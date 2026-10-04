@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import * as BookmarkService from '../../bindings/ltools/plugins/bookmark/bookmarkservice';
 import type { SearchResult } from '../../bindings/ltools/plugins/bookmark/models';
 import type { Bookmark } from '../../bindings/ltools/plugins/bookmark/browser/models';
+import { t } from '@/i18n';
 
 export type { Bookmark, SearchResult };
 
@@ -30,7 +31,7 @@ export function useBookmarks() {
       const results = await BookmarkService.Search(query);
       return results || [];
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : '搜索失败';
+      const errorMsg = err instanceof Error ? err.message : t('搜索失败');
       setError(errorMsg);
       return [];
     } finally {
@@ -46,7 +47,7 @@ export function useBookmarks() {
       await BookmarkService.Sync();
       return true;
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : '同步失败';
+      const errorMsg = err instanceof Error ? err.message : t('同步失败');
       setError(errorMsg);
       return false;
     } finally {
@@ -68,7 +69,7 @@ export function useBookmarks() {
       await BookmarkService.OpenURL(url);
       return true;
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : '打开链接失败';
+      const errorMsg = err instanceof Error ? err.message : t('打开链接失败');
       setError(errorMsg);
       return false;
     }
@@ -79,7 +80,7 @@ export function useBookmarks() {
       const path = await BookmarkService.ExportHTML();
       return path || null;
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : '导出 HTML 失败';
+      const errorMsg = err instanceof Error ? err.message : t('导出 HTML 失败');
       setError(errorMsg);
       return null;
     }
@@ -90,7 +91,7 @@ export function useBookmarks() {
       const path = await BookmarkService.ExportJSON();
       return path || null;
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : '导出 JSON 失败';
+      const errorMsg = err instanceof Error ? err.message : t('导出 JSON 失败');
       setError(errorMsg);
       return null;
     }

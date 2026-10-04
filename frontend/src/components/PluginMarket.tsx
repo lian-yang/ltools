@@ -6,6 +6,7 @@ import { Icon } from './Icon';
 import { useToast } from '../hooks/useToast';
 import { ToastContainer } from './Toast';
 import { getPluginIcon } from '../utils/pluginHelpers';
+import { t } from '@/i18n';
 
 /**
  * 插件卡片组件
@@ -39,13 +40,13 @@ function PluginCard({ plugin, onEnable, onDisable, isLoading }: PluginCardProps)
   const getStatusText = () => {
     switch (plugin.state) {
       case PluginState.PluginStateEnabled:
-        return '已启用';
+        return t('已启用');
       case PluginState.PluginStateDisabled:
-        return '已禁用';
+        return t('已禁用');
       case PluginState.PluginStateError:
-        return '错误';
+        return t('错误');
       default:
-        return '未知';
+        return t('未知');
     }
   };
 
@@ -53,13 +54,13 @@ function PluginCard({ plugin, onEnable, onDisable, isLoading }: PluginCardProps)
   const getTypeBadge = () => {
     switch (plugin.type) {
       case PluginType.PluginTypeBuiltIn:
-        return { label: '内置', className: 'bg-[#7C3AED]/10 text-[#A78BFA] border-[#7C3AED]/20' };
+        return { label: t('内置'), className: 'bg-[#7C3AED]/10 text-[#A78BFA] border-[#7C3AED]/20' };
       case PluginType.PluginTypeWeb:
         return { label: 'Web', className: 'bg-[#3B82F6]/10 text-[#60A5FA] border-[#3B82F6]/20' };
       case PluginType.PluginTypeNative:
-        return { label: '原生', className: 'bg-[#22C55E]/10 text-[#22C55E] border-[#22C55E]/20' };
+        return { label: t('原生'), className: 'bg-[#22C55E]/10 text-[#22C55E] border-[#22C55E]/20' };
       default:
-        return { label: '未知', className: 'bg-white/5 text-white/50 border-white/10' };
+        return { label: t('未知'), className: 'bg-white/5 text-white/50 border-white/10' };
     }
   };
 
@@ -79,7 +80,7 @@ function PluginCard({ plugin, onEnable, onDisable, isLoading }: PluginCardProps)
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
               <h3 className="text-lg font-semibold text-white truncate">
-                {plugin.name}
+                {t(plugin.name)}
               </h3>
               <p className="text-sm text-white/40">
                 v{plugin.version} · by {plugin.author}
@@ -96,7 +97,7 @@ function PluginCard({ plugin, onEnable, onDisable, isLoading }: PluginCardProps)
 
       {/* 描述 */}
       <p className="text-sm text-white/60 mb-4 line-clamp-2">
-        {plugin.description}
+        {t(plugin.description)}
       </p>
 
       {/* 关键词 */}
@@ -116,7 +117,7 @@ function PluginCard({ plugin, onEnable, onDisable, isLoading }: PluginCardProps)
       {/* 权限 */}
       {plugin.permissions && plugin.permissions.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-4">
-          <span className="text-xs text-white/40">权限:</span>
+          <span className="text-xs text-white/40">{t('权限:')}</span>
           {plugin.permissions.map((permission, index) => (
             <span
               key={index}
@@ -143,7 +144,7 @@ function PluginCard({ plugin, onEnable, onDisable, isLoading }: PluginCardProps)
               target="_blank"
               rel="noopener noreferrer"
               className="p-2 rounded-lg text-white/40 hover:text-white/80 hover:bg-white/5 transition-all duration-200 clickable"
-              title="查看主页"
+              title={t("查看主页")}
             >
               <Icon name="external-link" size={16} />
             </a>
@@ -155,7 +156,7 @@ function PluginCard({ plugin, onEnable, onDisable, isLoading }: PluginCardProps)
               onClick={() => onDisable(plugin.id)}
               disabled={isLoading}
             >
-              {isLoading ? '处理中...' : '禁用'}
+              {isLoading ? t('处理中...') : t('禁用')}
             </button>
           ) : (
             <button
@@ -163,7 +164,7 @@ function PluginCard({ plugin, onEnable, onDisable, isLoading }: PluginCardProps)
               onClick={() => onEnable(plugin.id)}
               disabled={isLoading}
             >
-              {isLoading ? '处理中...' : '启用'}
+              {isLoading ? t('处理中...') : t('启用')}
             </button>
           )}
         </div>
@@ -213,7 +214,7 @@ function SearchBar({ onSearch, resultCount }: SearchBarProps): JSX.Element {
         <input
           type="text"
           className="flex-1 bg-transparent text-white placeholder-white/30 focus:outline-none"
-          placeholder="搜索插件（支持关键词、名称、描述）..."
+          placeholder={t("搜索插件（支持关键词、名称、描述）...")}
           value={searchText}
           onChange={(e) => setSearchText(e.target.value)}
           onKeyPress={handleKeyPress}
@@ -234,7 +235,7 @@ function SearchBar({ onSearch, resultCount }: SearchBarProps): JSX.Element {
           className="px-5 py-2 rounded-lg bg-[#7C3AED] text-white hover:bg-[#6D28D9] transition-all duration-200 text-sm font-medium clickable"
           onClick={handleSearch}
         >
-          搜索
+          {t('搜索')}
         </button>
       </div>
 
@@ -242,7 +243,7 @@ function SearchBar({ onSearch, resultCount }: SearchBarProps): JSX.Element {
       {resultCount > 0 && (
         <div className="mt-3 pt-3 border-t border-white/10">
           <p className="text-sm text-white/40">
-            找到 <span className="text-[#A78BFA] font-medium">{resultCount}</span> 个插件
+            {t('找到')} <span className="text-[#A78BFA] font-medium">{resultCount}</span> {t('个插件')}
           </p>
         </div>
       )}
@@ -265,7 +266,7 @@ function PluginFilters({ onFilterType, onFilterState, currentType, currentState 
     <div className="glass-light rounded-xl p-4 flex flex-wrap gap-3 mb-6">
       {/* 类型过滤器 */}
       <div className="flex items-center gap-2">
-        <span className="text-sm text-white/40">类型:</span>
+        <span className="text-sm text-white/40">{t('类型:')}</span>
         <div className="flex gap-2">
           <button
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 clickable ${
@@ -275,7 +276,7 @@ function PluginFilters({ onFilterType, onFilterState, currentType, currentState 
             }`}
             onClick={() => onFilterType(null)}
           >
-            全部
+            {t('全部')}
           </button>
           <button
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 clickable ${
@@ -285,7 +286,7 @@ function PluginFilters({ onFilterType, onFilterState, currentType, currentState 
             }`}
             onClick={() => onFilterType(PluginType.PluginTypeBuiltIn)}
           >
-            内置
+            {t('内置')}
           </button>
           <button
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 clickable ${
@@ -305,14 +306,14 @@ function PluginFilters({ onFilterType, onFilterState, currentType, currentState 
             }`}
             onClick={() => onFilterType(PluginType.PluginTypeNative)}
           >
-            原生
+            {t('原生')}
           </button>
         </div>
       </div>
 
       {/* 状态过滤器 */}
       <div className="flex items-center gap-2">
-        <span className="text-sm text-white/40">状态:</span>
+        <span className="text-sm text-white/40">{t('状态:')}</span>
         <div className="flex gap-2">
           <button
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 clickable ${
@@ -322,7 +323,7 @@ function PluginFilters({ onFilterType, onFilterState, currentType, currentState 
             }`}
             onClick={() => onFilterState(null)}
           >
-            全部
+            {t('全部')}
           </button>
           <button
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 clickable ${
@@ -332,7 +333,7 @@ function PluginFilters({ onFilterType, onFilterState, currentType, currentState 
             }`}
             onClick={() => onFilterState(PluginState.PluginStateEnabled)}
           >
-            已启用
+            {t('已启用')}
           </button>
           <button
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 clickable ${
@@ -342,7 +343,7 @@ function PluginFilters({ onFilterType, onFilterState, currentType, currentState 
             }`}
             onClick={() => onFilterState(PluginState.PluginStateDisabled)}
           >
-            已禁用
+            {t('已禁用')}
           </button>
         </div>
       </div>
@@ -419,9 +420,9 @@ export function PluginMarket(): JSX.Element {
       setProcessingId(id);
       await enablePluginBase(id);
       const plugin = plugins.find((p) => p.id === id);
-      success(`插件 "${plugin?.name || id}" 已启用`);
+      success(t('插件 "{name}" 已启用', { name: plugin?.name || id }));
     } catch (err) {
-      showError(`启用插件失败: ${err instanceof Error ? err.message : '未知错误'}`);
+      showError(t('启用插件失败: {msg}', { msg: err instanceof Error ? err.message : t('未知错误') }));
     } finally {
       setProcessingId(null);
     }
@@ -433,9 +434,9 @@ export function PluginMarket(): JSX.Element {
       setProcessingId(id);
       await disablePluginBase(id);
       const plugin = plugins.find((p) => p.id === id);
-      success(`插件 "${plugin?.name || id}" 已禁用`);
+      success(t('插件 "{name}" 已禁用', { name: plugin?.name || id }));
     } catch (err) {
-      showError(`禁用插件失败: ${err instanceof Error ? err.message : '未知错误'}`);
+      showError(t('禁用插件失败: {msg}', { msg: err instanceof Error ? err.message : t('未知错误') }));
     } finally {
       setProcessingId(null);
     }
@@ -446,8 +447,8 @@ export function PluginMarket(): JSX.Element {
     return (
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-white mb-2">插件市场</h1>
-          <p className="text-white/40">加载中...</p>
+          <h1 className="text-2xl font-bold text-white mb-2">{t('插件市场')}</h1>
+          <p className="text-white/40">{t('加载中...')}</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {Array.from({ length: 6 }).map((_, i) => (
@@ -465,13 +466,13 @@ export function PluginMarket(): JSX.Element {
         <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[#EF4444]/10 mb-4">
           <Icon name="exclamation-circle" size={32} color="#EF4444" />
         </div>
-        <h2 className="text-xl font-semibold text-white mb-2">加载失败</h2>
+        <h2 className="text-xl font-semibold text-white mb-2">{t('加载失败')}</h2>
         <p className="text-white/60 mb-6">{error.message}</p>
         <button
           className="px-6 py-3 rounded-lg bg-[#7C3AED] text-white hover:bg-[#6D28D9] transition-all duration-200 font-medium clickable hover-lift"
           onClick={() => window.location.reload()}
         >
-          重新加载
+          {t('重新加载')}
         </button>
       </div>
     );
@@ -484,9 +485,9 @@ export function PluginMarket(): JSX.Element {
       <ToastContainer toasts={toasts} onRemove={removeToast} />
       {/* 页头 */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-white mb-2">插件市场</h1>
+        <h1 className="text-2xl font-bold text-white mb-2">{t('插件市场')}</h1>
         <p className="text-white/40">
-          浏览和管理所有可用插件
+          {t('浏览和管理所有可用插件')}
         </p>
       </div>
 
@@ -523,9 +524,9 @@ export function PluginMarket(): JSX.Element {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-white/5 mb-4">
             <Icon name="search" size={28} color="rgba(255,255,255,0.3)" />
           </div>
-          <h3 className="text-lg font-medium text-white mb-2">没有找到匹配的插件</h3>
+          <h3 className="text-lg font-medium text-white mb-2">{t('没有找到匹配的插件')}</h3>
           <p className="text-white/40 text-sm">
-            {hasSearched ? '尝试使用不同的关键词搜索' : '尝试调整过滤器条件'}
+            {hasSearched ? t('尝试使用不同的关键词搜索') : t('尝试调整过滤器条件')}
           </p>
         </div>
       )}

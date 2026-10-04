@@ -3,6 +3,7 @@ import { HostsService } from '../../bindings/ltools/plugins/hosts';
 import { Scenario, Backup, SystemInfo, HostEntry } from '../../bindings/ltools/plugins/hosts/models';
 import { Icon } from './Icon';
 import { useToast } from '../hooks/useToast';
+import { t } from '@/i18n';
 
 type View = 'scenarios' | 'editor' | 'backups';
 
@@ -31,7 +32,7 @@ function ScenarioCard({ scenario, onSwitch, onEdit, onDelete }: ScenarioCardProp
 
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (confirm(`确定要删除场景 "${scenario.name}" 吗？`)) {
+    if (confirm(t('确定要删除场景 "{name}" 吗？', { name: scenario.name }))) {
       onDelete(scenario.id);
     }
   };
@@ -51,7 +52,7 @@ function ScenarioCard({ scenario, onSwitch, onEdit, onDelete }: ScenarioCardProp
         <h3 className="font-semibold text-white text-lg">{scenario.name}</h3>
         {scenario.isActive && (
           <span className="px-2 py-0.5 rounded-full bg-[#22C55E]/20 text-[#22C55E] text-xs font-medium">
-            活跃
+            {t('活跃')}
           </span>
         )}
       </div>
@@ -61,7 +62,7 @@ function ScenarioCard({ scenario, onSwitch, onEdit, onDelete }: ScenarioCardProp
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-xs text-white/40">
           <Icon name="document" size={14} />
-          <span>{enabledCount}/{scenario.entries.length} 条目</span>
+          <span>{enabledCount}/{scenario.entries.length} {t('条目')}</span>
         </div>
 
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -69,7 +70,7 @@ function ScenarioCard({ scenario, onSwitch, onEdit, onDelete }: ScenarioCardProp
             <button
               className="p-1.5 rounded-lg bg-[#7C3AED]/10 text-[#A78BFA] hover:bg-[#7C3AED]/20 clickable"
               onClick={handleSwitch}
-              title="切换到此场景"
+              title={t("切换到此场景")}
             >
               <Icon name="refresh" size={14} />
             </button>
@@ -77,7 +78,7 @@ function ScenarioCard({ scenario, onSwitch, onEdit, onDelete }: ScenarioCardProp
           <button
             className="p-1.5 rounded-lg bg-white/5 text-white/60 hover:bg-[#EF4444]/10 hover:text-[#EF4444] clickable"
             onClick={handleDelete}
-            title="删除场景"
+            title={t("删除场景")}
           >
             <Icon name="trash" size={14} />
           </button>
@@ -130,16 +131,16 @@ function BackupItem({ backup, scenarios, onRestore, onDelete }: BackupItemProps)
             className="px-3 py-1.5 rounded-lg text-xs font-medium bg-[#7C3AED]/10 text-[#A78BFA] hover:bg-[#7C3AED]/20 clickable"
             onClick={() => onRestore(backup.id)}
           >
-            恢复
+            {t('恢复')}
           </button>
           <button
             className="p-1.5 rounded-lg text-white/60 hover:bg-[#EF4444]/10 hover:text-[#EF4444] clickable"
             onClick={() => {
-              if (confirm('确定要删除此备份吗？')) {
+              if (confirm(t('确定要删除此备份吗？'))) {
                 onDelete(backup.id);
               }
             }}
-            title="删除备份"
+            title={t("删除备份")}
           >
             <Icon name="trash" size={14} />
           </button>
@@ -183,18 +184,18 @@ function CreateScenarioDialog({ isOpen, onClose, onCreate }: CreateScenarioDialo
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
       <div className="glass-heavy rounded-2xl p-6 w-full max-w-md mx-4">
-        <h2 className="text-xl font-bold text-white mb-4">创建新场景</h2>
+        <h2 className="text-xl font-bold text-white mb-4">{t('创建新场景')}</h2>
 
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-white/70 mb-2">
-              场景名称 <span className="text-[#EF4444]">*</span>
+              {t('场景名称')} <span className="text-[#EF4444]">*</span>
             </label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="例如: 开发环境"
+              placeholder={t("例如: 开发环境")}
               className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-[#7C3AED]/50 focus:bg-white/10 transition-all"
               autoFocus
               onKeyPress={(e) => e.key === 'Enter' && handleCreate()}
@@ -203,12 +204,12 @@ function CreateScenarioDialog({ isOpen, onClose, onCreate }: CreateScenarioDialo
 
           <div>
             <label className="block text-sm font-medium text-white/70 mb-2">
-              描述
+              {t('描述')}
             </label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="场景的用途说明..."
+              placeholder={t("场景的用途说明...")}
               rows={3}
               className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-[#7C3AED]/50 focus:bg-white/10 transition-all resize-none"
             />
@@ -221,14 +222,14 @@ function CreateScenarioDialog({ isOpen, onClose, onCreate }: CreateScenarioDialo
             onClick={onClose}
             disabled={creating}
           >
-            取消
+            {t('取消')}
           </button>
           <button
             className="flex-1 px-4 py-2.5 rounded-xl bg-[#7C3AED] text-white hover:bg-[#6D28D9] transition-colors clickable disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={handleCreate}
             disabled={!name.trim() || creating}
           >
-            {creating ? '创建中...' : '创建'}
+            {creating ? t('创建中...') : t('创建')}
           </button>
         </div>
       </div>
@@ -309,13 +310,13 @@ function EditorView({ scenario, onClose, onUpdate }: EditorViewProps): JSX.Eleme
           className="px-4 py-2 rounded-xl bg-white/5 text-white/70 hover:bg-white/10 clickable"
           onClick={onClose}
         >
-          返回
+          {t('返回')}
         </button>
       </div>
 
       {validationErrors.length > 0 && (
         <div className="glass-light rounded-xl p-4 border border-[#EF4444]/30">
-          <h3 className="text-[#EF4444] font-medium mb-2">验证错误</h3>
+          <h3 className="text-[#EF4444] font-medium mb-2">{t('验证错误')}</h3>
           <ul className="text-sm text-[#EF4444]/80 space-y-1">
             {validationErrors.map((error, i) => (
               <li key={i}>• {error}</li>
@@ -328,11 +329,11 @@ function EditorView({ scenario, onClose, onUpdate }: EditorViewProps): JSX.Eleme
         <table className="w-full">
           <thead className="bg-white/5">
             <tr>
-              <th className="px-4 py-3 text-left text-sm font-medium text-white/60">IP 地址</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-white/60">主机名</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-white/60">备注</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-white/60 w-20">启用</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-white/60 w-20">操作</th>
+              <th className="px-4 py-3 text-left text-sm font-medium text-white/60">{t('IP 地址')}</th>
+              <th className="px-4 py-3 text-left text-sm font-medium text-white/60">{t('主机名')}</th>
+              <th className="px-4 py-3 text-left text-sm font-medium text-white/60">{t('备注')}</th>
+              <th className="px-4 py-3 text-left text-sm font-medium text-white/60 w-20">{t('启用')}</th>
+              <th className="px-4 py-3 text-left text-sm font-medium text-white/60 w-20">{t('操作')}</th>
             </tr>
           </thead>
           <tbody>
@@ -361,7 +362,7 @@ function EditorView({ scenario, onClose, onUpdate }: EditorViewProps): JSX.Eleme
                     type="text"
                     value={entry.comment || ''}
                     onChange={(e) => updateEntry(index, 'comment', e.target.value)}
-                    placeholder="# 备注说明"
+                    placeholder={t("# 备注说明")}
                     className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-[#7C3AED]/50"
                   />
                 </td>
@@ -393,7 +394,7 @@ function EditorView({ scenario, onClose, onUpdate }: EditorViewProps): JSX.Eleme
           onClick={addEntry}
         >
           <Icon name="plus" size={16} />
-          添加条目
+          {t('添加条目')}
         </button>
 
         <button
@@ -401,7 +402,7 @@ function EditorView({ scenario, onClose, onUpdate }: EditorViewProps): JSX.Eleme
           onClick={saveChanges}
           disabled={loading || validating}
         >
-          {loading || validating ? '保存中...' : '保存更改'}
+          {loading || validating ? t('保存中...') : t('保存更改')}
         </button>
       </div>
     </div>
@@ -487,10 +488,10 @@ export function HostsWidget(): JSX.Element {
     try {
       await HostsService.SwitchScenario(id);
       await loadData();
-      success('场景已切换');
+      success(t('场景已切换'));
     } catch (err) {
       console.error('Failed to switch scenario:', err);
-      showError('切换场景失败');
+      showError(t('切换场景失败'));
     }
   };
 
@@ -500,13 +501,13 @@ export function HostsWidget(): JSX.Element {
       const result = await HostsService.CreateScenario(name, description);
       if (result && result.scenario) {
         await loadData();
-        success('场景创建成功');
+        success(t('场景创建成功'));
       } else if (result?.error) {
         showError(result.error);
       }
     } catch (err) {
       console.error('Failed to create scenario:', err);
-      showError('创建场景失败');
+      showError(t('创建场景失败'));
     }
   };
 
@@ -515,10 +516,10 @@ export function HostsWidget(): JSX.Element {
     try {
       await HostsService.DeleteScenario(id);
       await loadData();
-      success('场景已删除');
+      success(t('场景已删除'));
     } catch (err) {
       console.error('Failed to delete scenario:', err);
-      showError('删除场景失败');
+      showError(t('删除场景失败'));
     }
   };
 
@@ -528,10 +529,10 @@ export function HostsWidget(): JSX.Element {
       await HostsService.RestoreBackup(id);
       await loadData();
       await loadBackups();
-      success('备份已恢复');
+      success(t('备份已恢复'));
     } catch (err) {
       console.error('Failed to restore backup:', err);
-      showError('恢复备份失败');
+      showError(t('恢复备份失败'));
     }
   };
 
@@ -540,10 +541,10 @@ export function HostsWidget(): JSX.Element {
     try {
       await HostsService.DeleteBackup(id);
       await loadBackups();
-      success('备份已删除');
+      success(t('备份已删除'));
     } catch (err) {
       console.error('Failed to delete backup:', err);
-      showError('删除备份失败');
+      showError(t('删除备份失败'));
     }
   };
 
@@ -553,7 +554,7 @@ export function HostsWidget(): JSX.Element {
         <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-white/5 animate-pulse">
           <Icon name="refresh" size={20} color="rgba(255,255,255,0.3)" />
         </div>
-        <p className="text-white/40 mt-4">加载中...</p>
+        <p className="text-white/40 mt-4">{t('加载中...')}</p>
       </div>
     );
   }
@@ -581,10 +582,10 @@ export function HostsWidget(): JSX.Element {
         {/* 页头 */}
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-2xl font-bold text-white">Hosts 管理器</h2>
+            <h2 className="text-2xl font-bold text-white">{t('Hosts 管理器')}</h2>
             {systemInfo && (
               <p className="text-sm text-white/50">
-                {systemInfo.hostsPath} · 当前: {systemInfo.currentScenario || '系统默认'}
+                {systemInfo.hostsPath} {t('· 当前:')} {systemInfo.currentScenario || t('系统默认')}
               </p>
             )}
           </div>
@@ -598,7 +599,7 @@ export function HostsWidget(): JSX.Element {
             }`}>
               <Icon name={systemInfo.hasPrivileges ? 'check-circle' : 'exclamation-circle'} size={16} />
               <span className="text-sm font-medium">
-                {systemInfo.hasPrivileges ? '已提权' : '需要提权'}
+                {systemInfo.hasPrivileges ? t('已提权') : t('需要提权')}
               </span>
             </div>
           )}
@@ -614,7 +615,7 @@ export function HostsWidget(): JSX.Element {
                 : 'glass-light text-white/60 hover:text-white/80'
             }`}
           >
-            场景
+            {t('场景')}
           </button>
           <button
             onClick={() => setCurrentView('backups')}
@@ -624,7 +625,7 @@ export function HostsWidget(): JSX.Element {
                 : 'glass-light text-white/60 hover:text-white/80'
             }`}
           >
-            备份
+            {t('备份')}
           </button>
         </div>
 
@@ -633,8 +634,8 @@ export function HostsWidget(): JSX.Element {
           <>
             {scenarios.length === 0 ? (
               <EmptyState
-                message="还没有创建任何场景"
-                action={{ label: '创建第一个场景', onClick: () => setShowCreateDialog(true) }}
+                message={t("还没有创建任何场景")}
+                action={{ label: t('创建第一个场景'), onClick: () => setShowCreateDialog(true) }}
               />
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -657,7 +658,7 @@ export function HostsWidget(): JSX.Element {
                   onClick={() => setShowCreateDialog(true)}
                 >
                   <Icon name="plus" size={32} />
-                  <span className="mt-2 font-medium">创建场景</span>
+                  <span className="mt-2 font-medium">{t('创建场景')}</span>
                 </button>
               </div>
             )}
@@ -668,16 +669,16 @@ export function HostsWidget(): JSX.Element {
         {currentView === 'backups' && (
           <>
             {backups.length === 0 ? (
-              <EmptyState message="还没有任何备份记录" />
+              <EmptyState message={t("还没有任何备份记录")} />
             ) : (
               <div className="glass-light rounded-xl overflow-hidden">
                 <table className="w-full">
                   <thead className="bg-[#7C3AED]/10">
                     <tr>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-white">场景</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-white">创建时间</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-white">大小</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-white">操作</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-white">{t('场景')}</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-white">{t('创建时间')}</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-white">{t('大小')}</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-white">{t('操作')}</th>
                     </tr>
                   </thead>
                   <tbody>

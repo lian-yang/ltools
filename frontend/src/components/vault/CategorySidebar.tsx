@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Icon } from '../Icon';
+import { t } from '@/i18n';
 
 interface CategorySidebarProps {
   categories: string[];
@@ -43,7 +44,7 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
     <div className="w-64 border-r border-white/10 bg-black/20 flex flex-col">
       {/* 头部 */}
       <div className="p-4 border-b border-white/10">
-        <h3 className="text-sm font-medium text-gray-400">分类</h3>
+        <h3 className="text-sm font-medium text-gray-400">{t('分类')}</h3>
       </div>
 
       {/* 分类列表 */}
@@ -58,7 +59,7 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
           }`}
         >
           <div className="w-2 h-2 rounded-full bg-gray-500" />
-          <span className="flex-1 text-left">全部</span>
+          <span className="flex-1 text-left">{t('全部')}</span>
         </button>
 
         {/* 分类项 */}
@@ -76,12 +77,12 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
               }`}
             >
               <div className={`w-2 h-2 rounded-full ${getCategoryColor(category)}`} />
-              <span className="flex-1 text-left truncate">{category}</span>
+              <span className="flex-1 text-left truncate">{t(category)}</span>
             </button>
             <button
               onClick={() => onDeleteCategory(category)}
               className="p-1.5 rounded opacity-0 group-hover:opacity-100 hover:bg-white/10 transition-all"
-              title="删除分类"
+              title={t("删除分类")}
             >
               <Icon name="x" className="w-3.5 h-3.5 text-gray-400 hover:text-red-400" />
             </button>
@@ -104,7 +105,7 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
                 }
               }}
               autoFocus
-              placeholder="输入分类名称"
+              placeholder={t("输入分类名称")}
               className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg
                        text-white placeholder-gray-400 focus:outline-none focus:border-primary
                        text-sm"
@@ -121,7 +122,7 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
                    hover:bg-white/5 rounded-lg transition-colors text-sm"
         >
           <Icon name="plus" className="w-4 h-4" />
-          <span>添加分类</span>
+          <span>{t('添加分类')}</span>
         </button>
       </div>
     </div>

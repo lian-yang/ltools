@@ -4,6 +4,8 @@
 
 **LTools** - 插件式桌面工具箱
 
+[English](README.en.md) | [简体中文](README.md)
+
 一个基于 Wails v3 构建的现代化跨平台桌面应用，采用插件式架构设计。
 
 [![Go Version](https://img.shields.io/badge/Go-1.25+-00ADD8?style=flat&logo=go)](https://golang.org/)

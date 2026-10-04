@@ -3,6 +3,7 @@ import { usePlugins } from '../plugins/usePlugins';
 import { useToast } from '../hooks/useToast';
 import { PluginState } from '../../bindings/ltools/internal/plugins';
 import { getPluginIcon } from '../utils/pluginHelpers';
+import { t } from '@/i18n';
 
 /**
  * 插件设置组件
@@ -19,9 +20,9 @@ export function PluginsSettings() {
       } else {
         await disablePlugin(pluginId);
       }
-      success(enabled ? '插件已启用' : '插件已禁用');
+      success(enabled ? t('插件已启用') : t('插件已禁用'));
     } catch (err: any) {
-      error(`操作失败: ${err.message || err}`);
+      error(t('操作失败: {msg}', { msg: err.message || err }));
     }
   };
 
@@ -31,10 +32,10 @@ export function PluginsSettings() {
       <div>
         <h2 className="text-xl font-semibold text-white flex items-center gap-2">
           <Icon name="puzzle-piece" size={20} color="#A78BFA" />
-          插件管理
+          {t('插件管理')}
         </h2>
         <p className="text-white/50 text-sm mt-1">
-          管理已安装的插件，启用或禁用功能模块
+          {t('管理已安装的插件，启用或禁用功能模块')}
         </p>
       </div>
 
@@ -43,7 +44,7 @@ export function PluginsSettings() {
         {plugins.length === 0 ? (
           <div className="text-center py-12 text-white/50">
             <Icon name="puzzle-piece" size={32} color="rgba(167, 139, 250, 0.3)" className="mx-auto mb-3" />
-            <p>暂无已安装的插件</p>
+            <p>{t('暂无已安装的插件')}</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -51,9 +52,9 @@ export function PluginsSettings() {
               <PluginItem
                 key={plugin.id}
                 id={plugin.id}
-                name={plugin.name}
+                name={t(plugin.name)}
                 version={plugin.version}
-                description={plugin.description}
+                description={t(plugin.description)}
                 icon={getPluginIcon(plugin)}
                 enabled={plugin.state === PluginState.PluginStateEnabled}
                 onToggle={(enabled) => handleTogglePlugin(plugin.id, enabled)}
@@ -92,7 +93,7 @@ function PluginItem({ id, name, version, description, icon, enabled, onToggle }:
             <h3 className="text-white font-medium truncate">{name}</h3>
             <span className="text-xs text-white/30 font-mono">v{version}</span>
           </div>
-          <p className="text-sm text-white/40 truncate mt-0.5">{description || '暂无描述'}</p>
+          <p className="text-sm text-white/40 truncate mt-0.5">{description || t('暂无描述')}</p>
         </div>
       </div>
 

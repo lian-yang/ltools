@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useBookmarks, CacheStatus } from '../hooks/useBookmarks';
 import { Icon } from '../components/Icon';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { t } from '@/i18n';
 
 // 浏览器图标映射
 const BROWSER_ICONS: Record<string, string> = {
@@ -108,8 +109,8 @@ export const BookmarkPage = () => {
               <Icon name="bookmark" size={22} color="white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold">书签管理</h1>
-              <p className="text-white/40 text-sm">搜索和管理浏览器书签</p>
+              <h1 className="text-2xl font-bold">{t('书签管理')}</h1>
+              <p className="text-white/40 text-sm">{t('搜索和管理浏览器书签')}</p>
             </div>
           </div>
 
@@ -121,17 +122,17 @@ export const BookmarkPage = () => {
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="搜索书签..."
+                placeholder={t("搜索书签...")}
                 className="w-full pl-10 pr-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm placeholder-white/40 focus:outline-none focus:border-[#7C3AED]/50 transition-all"
               />
             </div>
             <div className="flex-1 min-w-[130px] max-w-[160px]">
               <Select value={browserFilter} onValueChange={setBrowserFilter}>
                 <SelectTrigger className="h-[42px]">
-                  <SelectValue placeholder="浏览器" />
+                  <SelectValue placeholder={t("浏览器")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">全部</SelectItem>
+                  <SelectItem value="all">{t('全部')}</SelectItem>
                   <SelectItem value="chrome">Chrome</SelectItem>
                   <SelectItem value="safari">Safari</SelectItem>
                   <SelectItem value="firefox">Firefox</SelectItem>
@@ -151,12 +152,12 @@ export const BookmarkPage = () => {
                 {syncing ? (
                   <>
                     <span className="animate-spin">⏳</span>
-                    同步中...
+                    {t('同步中...')}
                   </>
                 ) : (
                   <>
                     <Icon name="refresh" size={14} color="white" />
-                    同步
+                    {t('同步')}
                   </>
                 )}
               </button>
@@ -168,7 +169,7 @@ export const BookmarkPage = () => {
                   className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-lg transition-colors flex items-center gap-2 text-sm font-medium"
                 >
                   <Icon name="download" size={14} color="white" />
-                  导出
+                  {t('导出')}
                   <Icon name="chevron-down" size={12} color="white" />
                 </button>
 
@@ -180,8 +181,8 @@ export const BookmarkPage = () => {
                     >
                       <span>📄</span>
                       <div>
-                        <div className="font-medium">导出 HTML</div>
-                        <div className="text-xs text-white/40">Netscape 格式</div>
+                        <div className="font-medium">{t('导出 HTML')}</div>
+                        <div className="text-xs text-white/40">{t('Netscape 格式')}</div>
                       </div>
                     </button>
                     <button
@@ -190,8 +191,8 @@ export const BookmarkPage = () => {
                     >
                       <span>📋</span>
                       <div>
-                        <div className="font-medium">导出 JSON</div>
-                        <div className="text-xs text-white/40">结构化数据</div>
+                        <div className="font-medium">{t('导出 JSON')}</div>
+                        <div className="text-xs text-white/40">{t('结构化数据')}</div>
                       </div>
                     </button>
                   </div>
@@ -202,14 +203,14 @@ export const BookmarkPage = () => {
             {/* 缓存状态 */}
             {cacheStatus && (
               <div className="flex items-center gap-4 text-sm text-white/50">
-                <span>共 <span className="text-white font-medium">{cacheStatus.total_count}</span> 个书签</span>
+                <span>{t('共')} <span className="text-white font-medium">{cacheStatus.total_count}</span> {t('个书签')}</span>
                 <span className="hidden sm:inline">
-                  同步于 <span className="text-white/70">{cacheStatus.last_sync || '从未'}</span>
+                  {t('同步于')} <span className="text-white/70">{cacheStatus.last_sync || t('从未')}</span>
                 </span>
                 {cacheStatus.is_expired && (
                   <span className="text-yellow-400 flex items-center gap-1">
                     <Icon name="exclamation-circle" size={12} color="#F59E0B" />
-                    需同步
+                    {t('需同步')}
                   </span>
                 )}
               </div>
@@ -250,18 +251,18 @@ export const BookmarkPage = () => {
           {searching ? (
             <div className="text-center text-white/40 py-12">
               <span className="animate-spin inline-block text-xl mb-2">⏳</span>
-              <p className="text-sm">搜索中...</p>
+              <p className="text-sm">{t('搜索中...')}</p>
             </div>
           ) : query && filteredResults.length === 0 ? (
             <div className="text-center text-white/40 py-12">
               <Icon name="search" size={32} color="rgba(255,255,255,0.2)" className="mb-3" />
-              <p className="text-sm">未找到匹配的书签</p>
+              <p className="text-sm">{t('未找到匹配的书签')}</p>
             </div>
           ) : !query ? (
             <div className="text-center text-white/40 py-12">
               <Icon name="bookmark" size={32} color="rgba(255,255,255,0.2)" className="mb-3" />
-              <p className="text-sm">输入关键词搜索书签</p>
-              <p className="text-xs text-white/30 mt-1">支持标题、URL 和拼音</p>
+              <p className="text-sm">{t('输入关键词搜索书签')}</p>
+              <p className="text-xs text-white/30 mt-1">{t('支持标题、URL 和拼音')}</p>
             </div>
           ) : (
             <div className="space-y-2">

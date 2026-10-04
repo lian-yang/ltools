@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { t } from '@/i18n';
 
 interface InputDialogProps {
   isOpen: boolean;
@@ -75,13 +76,13 @@ export function InputDialog({
               onClick={onCancel}
               className="px-4 py-2 rounded-lg bg-white/10 text-white/60 hover:bg-white/20 hover:text-white transition-colors"
             >
-              取消
+              {t('取消')}
             </button>
             <button
               type="submit"
               className="px-4 py-2 rounded-lg bg-[#7C3AED] text-white hover:bg-[#6D28D9] transition-colors"
             >
-              确定
+              {t('确定')}
             </button>
           </div>
         </form>

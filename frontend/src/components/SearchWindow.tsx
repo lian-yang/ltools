@@ -7,6 +7,7 @@ import { usePlugins } from '../plugins/usePlugins';
 import { getPluginIcon, getPluginIconName } from '../utils/pluginHelpers';
 import { PluginState, PluginMetadata } from '../../bindings/ltools/internal/plugins';
 import './SearchWindow.css';
+import { t } from '@/i18n';
 
 /**
  * 插件图标组件 - 优先使用专业 SVG 图标，fallback 到 emoji
@@ -36,7 +37,7 @@ function PluginIcon({
   }
 
   return (
-    <span className={emojiSize} role="img" aria-label={plugin.name}>
+    <span className={emojiSize} role="img" aria-label={t(plugin.name)}>
       {emoji}
     </span>
   )
@@ -381,10 +382,10 @@ export function SearchWindow() {
   // 获取匹配字段名称
   const getMatchedFieldLabel = (field: string): string => {
     const labels: Record<string, string> = {
-      name: '名称',
-      description: '描述',
-      keyword: '关键词',
-      author: '作者',
+      name: t('名称'),
+      description: t('描述'),
+      keyword: t('关键词'),
+      author: t('作者'),
     };
     return labels[field] || field;
   };
@@ -399,7 +400,7 @@ export function SearchWindow() {
             ref={inputRef}
             type="text"
             className="search-input"
-            placeholder="搜索插件..."
+            placeholder={t("搜索插件...")}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             data-wails-drag-draggable="false"
@@ -413,7 +414,7 @@ export function SearchWindow() {
               inputRef.current?.focus();
             }}
             data-wails-drag-draggable="false"
-            title="清空搜索"
+            title={t("清空搜索")}
           >
             <Icon name="x-circle" size={18} color="rgba(255,255,255,0.5)" />
           </button>
@@ -425,7 +426,7 @@ export function SearchWindow() {
         {loading && (
           <div className="search-loading">
             <div className="loading-spinner" />
-            <p className="text-white/50 text-sm">搜索中...</p>
+            <p className="text-white/50 text-sm">{t('搜索中...')}</p>
           </div>
         )}
 
@@ -454,7 +455,7 @@ export function SearchWindow() {
                             <div className="plugin-card-icon">
                               <PluginIcon plugin={plugin} size="normal" />
                             </div>
-                            <div className="plugin-card-name">{plugin.name}</div>
+                            <div className="plugin-card-name">{t(plugin.name)}</div>
                           </div>
                         ))}
                     </div>
@@ -482,8 +483,8 @@ export function SearchWindow() {
         {!loading && query && results.length === 0 && (
           <div className="search-empty">
             <Icon name="search" size={48} color="rgba(167, 139, 250, 0.2)" />
-            <p className="text-white/40 mt-3">未找到匹配的结果</p>
-            <p className="text-white/30 text-sm mt-1">尝试其他关键词</p>
+            <p className="text-white/40 mt-3">{t('未找到匹配的结果')}</p>
+            <p className="text-white/30 text-sm mt-1">{t('尝试其他关键词')}</p>
           </div>
         )}
 
@@ -522,7 +523,7 @@ export function SearchWindow() {
                     </div>
                   )}
                   <div className="result-type-badge">
-                    {result.type === 'app' ? '应用' : result.type === 'file' ? (result.isDirectory ? '文件夹' : '文件') : '插件'}
+                    {result.type === 'app' ? t('应用') : result.type === 'file' ? (result.isDirectory ? t('文件夹') : t('文件')) : t('插件')}
                   </div>
                 </div>
                 {index === selectedIndex && (
@@ -541,12 +542,12 @@ export function SearchWindow() {
         <div className="search-statusbar">
           <div className="statusbar-info">
             <span className="statusbar-count">
-              找到 {results.length} 个结果
+              {t('找到')} {results.length} {t('个结果')}
             </span>
           </div>
           <div className="statusbar-shortcuts">
             <span className="shortcut-hint-inline">
-              ↑↓ 导航 • Enter 打开 • Esc 关闭
+              {t('↑↓ 导航 • Enter 打开 • Esc 关闭')}
             </span>
           </div>
         </div>

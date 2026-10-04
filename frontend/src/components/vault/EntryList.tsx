@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { VaultEntry } from '../../../bindings/ltools/plugins/vault/models';
 import EntryCard from './EntryCard';
 import { Icon } from '../Icon';
+import { t } from '@/i18n';
 
 interface EntryListProps {
   entries: VaultEntry[];
@@ -25,9 +26,9 @@ const EntryList: React.FC<EntryListProps> = ({ entries, onEdit, onDelete }) => {
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center">
           <Icon name="key" className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-400 mb-2">暂无密码条目</h3>
+          <h3 className="text-lg font-medium text-gray-400 mb-2">{t('暂无密码条目')}</h3>
           <p className="text-sm text-gray-500">
-            点击右上角的"新建"按钮添加您的第一个密码
+            {t('点击右上角的"新建"按钮添加您的第一个密码')}
           </p>
         </div>
       </div>
@@ -39,7 +40,7 @@ const EntryList: React.FC<EntryListProps> = ({ entries, onEdit, onDelete }) => {
       {/* 视图切换 */}
       <div className="flex items-center justify-between mb-4">
         <p className="text-sm text-gray-400">
-          共 {entries.length} 个条目
+          {t('共')} {entries.length} {t('个条目')}
         </p>
         <div className="flex items-center gap-1 bg-white/5 rounded-lg p-1">
           <button
@@ -47,7 +48,7 @@ const EntryList: React.FC<EntryListProps> = ({ entries, onEdit, onDelete }) => {
             className={`p-2 rounded transition-colors ${
               viewMode === 'list' ? 'bg-white/10 text-white' : 'text-gray-400 hover:text-white'
             }`}
-            title="列表视图"
+            title={t("列表视图")}
           >
             <Icon name="list" className="w-4 h-4" />
           </button>
@@ -56,7 +57,7 @@ const EntryList: React.FC<EntryListProps> = ({ entries, onEdit, onDelete }) => {
             className={`p-2 rounded transition-colors ${
               viewMode === 'grid' ? 'bg-white/10 text-white' : 'text-gray-400 hover:text-white'
             }`}
-            title="网格视图"
+            title={t("网格视图")}
           >
             <Icon name="grid" className="w-4 h-4" />
           </button>

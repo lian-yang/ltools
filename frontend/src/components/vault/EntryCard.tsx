@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { VaultEntry } from '../../../bindings/ltools/plugins/vault/models';
 import { Icon } from '../Icon';
+import { t } from '@/i18n';
 
 interface EntryCardProps {
   entry: VaultEntry;
@@ -72,7 +73,7 @@ const EntryCard: React.FC<EntryCardProps> = ({ entry, mode, onEdit, onDelete }) 
         {/* 分类标签 */}
         {entry.category && (
           <span className={`px-2 py-1 text-xs rounded-full text-white ${getCategoryColor(entry.category)}`}>
-            {entry.category}
+            {t(entry.category)}
           </span>
         )}
 
@@ -81,7 +82,7 @@ const EntryCard: React.FC<EntryCardProps> = ({ entry, mode, onEdit, onDelete }) 
           <button
             onClick={() => copyToClipboard(entry.username, 'username')}
             className="p-2 rounded-lg hover:bg-white/10 transition-colors"
-            title="复制用户名"
+            title={t("复制用户名")}
           >
             {copied === 'username' ? (
               <Icon name="check" className="w-4 h-4 text-green-500" />
@@ -92,7 +93,7 @@ const EntryCard: React.FC<EntryCardProps> = ({ entry, mode, onEdit, onDelete }) 
           <button
             onClick={() => copyToClipboard(entry.password, 'password')}
             className="p-2 rounded-lg hover:bg-white/10 transition-colors"
-            title="复制密码"
+            title={t("复制密码")}
           >
             {copied === 'password' ? (
               <Icon name="check" className="w-4 h-4 text-green-500" />
@@ -103,14 +104,14 @@ const EntryCard: React.FC<EntryCardProps> = ({ entry, mode, onEdit, onDelete }) 
           <button
             onClick={onEdit}
             className="p-2 rounded-lg hover:bg-white/10 transition-colors"
-            title="编辑"
+            title={t("编辑")}
           >
             <Icon name="edit" className="w-4 h-4 text-gray-400" />
           </button>
           <button
             onClick={onDelete}
             className="p-2 rounded-lg hover:bg-white/10 transition-colors"
-            title="删除"
+            title={t("删除")}
           >
             <Icon name="trash" className="w-4 h-4 text-gray-400 hover:text-red-400" />
           </button>
@@ -154,7 +155,7 @@ const EntryCard: React.FC<EntryCardProps> = ({ entry, mode, onEdit, onDelete }) 
 
       {/* 用户名 */}
       <div className="mb-2">
-        <p className="text-xs text-gray-500 mb-1">用户名</p>
+        <p className="text-xs text-gray-500 mb-1">{t('用户名')}</p>
         <div className="flex items-center gap-2">
           <p className="text-sm text-gray-300 truncate flex-1">{entry.username}</p>
           <button
@@ -172,7 +173,7 @@ const EntryCard: React.FC<EntryCardProps> = ({ entry, mode, onEdit, onDelete }) 
 
       {/* 密码 */}
       <div className="mb-3">
-        <p className="text-xs text-gray-500 mb-1">密码</p>
+        <p className="text-xs text-gray-500 mb-1">{t('密码')}</p>
         <div className="flex items-center gap-2">
           <p className="text-sm text-gray-300 flex-1 font-mono">
             {showPassword ? entry.password : '••••••••'}
@@ -200,7 +201,7 @@ const EntryCard: React.FC<EntryCardProps> = ({ entry, mode, onEdit, onDelete }) 
       <div className="flex items-center justify-between">
         {entry.category && (
           <span className={`px-2 py-0.5 text-xs rounded-full text-white ${getCategoryColor(entry.category)}`}>
-            {entry.category}
+            {t(entry.category)}
           </span>
         )}
         {entry.website && (

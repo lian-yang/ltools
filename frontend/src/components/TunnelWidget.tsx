@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from './ui/select';
 import { Events } from '@wailsio/runtime';
+import { t as tI18n, t } from '@/i18n';
 
 type View = 'tunnels' | 'create' | 'edit' | 'settings';
 
@@ -135,25 +136,25 @@ export function TunnelWidget({ onBack }: TunnelWidgetProps): JSX.Element {
 
     // 隧道启动成功
     unsubscribers.push(Events.On('tunnel:started', (ev: { data: string }) => {
-      toast.success(`隧道 "${ev.data}" 已启动`);
+      toast.success(t('隧道 "{name}" 已启动', { name: ev.data }));
       loadStatuses();
     }));
 
     // 隧道停止
     unsubscribers.push(Events.On('tunnel:stopped', (ev: { data: string }) => {
-      toast.info(`隧道 "${ev.data}" 已停止`);
+      toast.info(t('隧道 "{name}" 已停止', { name: ev.data }));
       loadStatuses();
     }));
 
     // 隧道错误
     unsubscribers.push(Events.On('tunnel:error', (ev: { data: { tunnelId: string; error: string } }) => {
-      toast.error(`隧道 "${ev.data.tunnelId}" 错误: ${ev.data.error}`);
+      toast.error(t('隧道 "{id}" 错误: {error}', { id: ev.data.tunnelId, error: ev.data.error }));
       loadStatuses();
     }));
 
     // 隧道 URL 更新
     unsubscribers.push(Events.On('tunnel:url', (ev: { data: { tunnelId: string; url: string } }) => {
-      toast.success(`隧道 "${ev.data.tunnelId}" 公网地址: ${ev.data.url}`);
+      toast.success(t('隧道 "{id}" 公网地址: {url}', { id: ev.data.tunnelId, url: ev.data.url }));
       loadStatuses();
     }));
 
@@ -168,16 +169,16 @@ export function TunnelWidget({ onBack }: TunnelWidgetProps): JSX.Element {
   }, [loadStatuses, toast]);
 
   const handleDeleteTunnel = async (id: string) => {
-    if (!confirm('确定要删除此隧道吗？')) return;
+    if (!confirm(tI18n('确定要删除此隧道吗？'))) return;
 
     setIsLoading(true);
     try {
       const result = await TunnelService.DeleteTunnel(id);
       if (result?.success) {
-        toast.success('隧道删除成功');
+        toast.success(tI18n('隧道删除成功'));
         await loadTunnels();
       } else {
-        toast.error(result?.error || '删除失败');
+        toast.error(result?.error || tI18n('删除失败'));
       }
     } finally {
       setIsLoading(false);
@@ -189,10 +190,10 @@ export function TunnelWidget({ onBack }: TunnelWidgetProps): JSX.Element {
     try {
       const result = await TunnelService.StartTunnel(id);
       if (result?.success) {
-        toast.success('隧道启动成功');
+        toast.success(tI18n('隧道启动成功'));
         await loadStatuses();
       } else {
-        toast.error(result?.error || '启动失败');
+        toast.error(result?.error || tI18n('启动失败'));
       }
     } finally {
       setIsLoading(false);
@@ -204,10 +205,10 @@ export function TunnelWidget({ onBack }: TunnelWidgetProps): JSX.Element {
     try {
       const result = await TunnelService.StopTunnel(id);
       if (result?.success) {
-        toast.success('隧道停止成功');
+        toast.success(tI18n('隧道停止成功'));
         await loadStatuses();
       } else {
-        toast.error(result?.error || '停止失败');
+        toast.error(result?.error || tI18n('停止失败'));
       }
     } finally {
       setIsLoading(false);
@@ -219,10 +220,10 @@ export function TunnelWidget({ onBack }: TunnelWidgetProps): JSX.Element {
     try {
       const result = await TunnelService.RestartTunnel(id);
       if (result?.success) {
-        toast.success('隧道重启成功');
+        toast.success(tI18n('隧道重启成功'));
         await loadStatuses();
       } else {
-        toast.error(result?.error || '重启失败');
+        toast.error(result?.error || tI18n('重启失败'));
       }
     } finally {
       setIsLoading(false);
@@ -234,10 +235,10 @@ export function TunnelWidget({ onBack }: TunnelWidgetProps): JSX.Element {
     try {
       const result = await TunnelService.InstallFRP();
       if (result?.success) {
-        toast.success('FRP 安装成功');
+        toast.success(tI18n('FRP 安装成功'));
         await loadStatuses();
       } else {
-        toast.error(result?.error || '安装失败');
+        toast.error(result?.error || tI18n('安装失败'));
       }
     } finally {
       setIsLoading(false);
@@ -257,10 +258,10 @@ export function TunnelWidget({ onBack }: TunnelWidgetProps): JSX.Element {
 
       const result = await TunnelService.SetGlobalOptions(opts);
       if (result?.success) {
-        toast.success('设置保存成功');
+        toast.success(tI18n('设置保存成功'));
         await loadGlobalOptions();
       } else {
-        toast.error(result?.error || '保存失败');
+        toast.error(result?.error || tI18n('保存失败'));
       }
     } finally {
       setIsLoading(false);
@@ -271,9 +272,9 @@ export function TunnelWidget({ onBack }: TunnelWidgetProps): JSX.Element {
   const handleCopy = async (text: string, label: string) => {
     try {
       await navigator.clipboard.writeText(text);
-      toast.success(`${label}已复制到剪贴板`);
+      toast.success(t('{label}已复制到剪贴板', { label }));
     } catch (err) {
-      toast.error('复制失败');
+      toast.error(tI18n('复制失败'));
     }
   };
 
@@ -285,12 +286,12 @@ export function TunnelWidget({ onBack }: TunnelWidgetProps): JSX.Element {
   const handleViewLog = async (tunnel: Tunnel) => {
     const status = getTunnelStatus(tunnel.id);
     if (!status?.logPath) {
-      toast.info('暂无日志文件');
+      toast.info(tI18n('暂无日志文件'));
       return;
     }
 
     setCurrentLogTunnelId(tunnel.id);
-    setCurrentLogTitle(`隧道 "${tunnel.name}" 日志`);
+    setCurrentLogTitle(t('隧道 "{name}" 日志', { name: tunnel.name }));
     setShowLogModal(true);
     setAutoRefreshLog(true);
 
@@ -301,9 +302,9 @@ export function TunnelWidget({ onBack }: TunnelWidgetProps): JSX.Element {
   const loadLogContent = async (tunnelId: string, lineCount: number = 100) => {
     try {
       const logContent = await TunnelService.GetTunnelLog(tunnelId, lineCount);
-      setCurrentLog(logContent || '(暂无日志内容)');
+      setCurrentLog(logContent || tI18n('(暂无日志内容)'));
     } catch (error: any) {
-      setCurrentLog(`加载日志失败: ${error?.message || '未知错误'}`);
+      setCurrentLog(t('加载日志失败: {msg}', { msg: error?.message || tI18n('未知错误') }));
     }
   };
 
@@ -381,19 +382,19 @@ export function TunnelWidget({ onBack }: TunnelWidgetProps): JSX.Element {
   // 验证表单
   const validateForm = (isEdit: boolean = false): { valid: boolean; error?: string } => {
     if (!formData.name.trim()) {
-      return { valid: false, error: '请输入隧道名称' };
+      return { valid: false, error: tI18n('请输入隧道名称') };
     }
     if (!formData.localHost.trim()) {
-      return { valid: false, error: '请输入本地地址' };
+      return { valid: false, error: tI18n('请输入本地地址') };
     }
     const port = parseInt(formData.localPort);
     if (isNaN(port) || port < 1 || port > 65535) {
-      return { valid: false, error: '端口号必须在 1-65535 之间' };
+      return { valid: false, error: tI18n('端口号必须在 1-65535 之间') };
     }
     if (!isEdit || view === 'edit') {
       if (formData.protocol === ProtocolType.ProtocolFRP) {
         if (!formData.frpServerAddress.trim()) {
-          return { valid: false, error: '请输入 FRP 服务器地址' };
+          return { valid: false, error: tI18n('请输入 FRP 服务器地址') };
         }
       }
     }
@@ -404,7 +405,7 @@ export function TunnelWidget({ onBack }: TunnelWidgetProps): JSX.Element {
   const handleCreateTunnel = async () => {
     const validation = validateForm(false);
     if (!validation.valid) {
-      toast.error(validation.error || '表单验证失败');
+      toast.error(validation.error || tI18n('表单验证失败'));
       return;
     }
 
@@ -445,11 +446,11 @@ export function TunnelWidget({ onBack }: TunnelWidgetProps): JSX.Element {
           }
         }
 
-        toast.success('隧道创建成功');
+        toast.success(tI18n('隧道创建成功'));
         await loadTunnels();
         setView('tunnels');
       } else {
-        toast.error(result?.error || '创建失败');
+        toast.error(result?.error || tI18n('创建失败'));
       }
     } finally {
       setIsLoading(false);
@@ -462,7 +463,7 @@ export function TunnelWidget({ onBack }: TunnelWidgetProps): JSX.Element {
 
     const validation = validateForm(true);
     if (!validation.valid) {
-      toast.error(validation.error || '表单验证失败');
+      toast.error(validation.error || tI18n('表单验证失败'));
       return;
     }
 
@@ -490,11 +491,11 @@ export function TunnelWidget({ onBack }: TunnelWidgetProps): JSX.Element {
       const result = await TunnelService.UpdateTunnel(editingTunnel.id, request);
 
       if (result?.success) {
-        toast.success('隧道更新成功');
+        toast.success(tI18n('隧道更新成功'));
         await loadTunnels();
         setView('tunnels');
       } else {
-        toast.error(result?.error || '更新失败');
+        toast.error(result?.error || tI18n('更新失败'));
       }
     } finally {
       setIsLoading(false);
@@ -506,16 +507,16 @@ export function TunnelWidget({ onBack }: TunnelWidgetProps): JSX.Element {
   };
 
   const getStatusDisplay = (status?: TunnelRuntimeInfo) => {
-    if (!status) return { text: '已停止', color: 'bg-white/10 text-white/60', icon: 'x-circle' };
+    if (!status) return { text: tI18n('已停止'), color: 'bg-white/10 text-white/60', icon: 'x-circle' };
     switch (status.status) {
       case 'running':
-        return { text: '运行中', color: 'bg-[#22C55E] text-white', icon: 'check-circle' };
+        return { text: tI18n('运行中'), color: 'bg-[#22C55E] text-white', icon: 'check-circle' };
       case 'starting':
-        return { text: '启动中', color: 'bg-[#F59E0B] text-white', icon: 'refresh' };
+        return { text: tI18n('启动中'), color: 'bg-[#F59E0B] text-white', icon: 'refresh' };
       case 'error':
-        return { text: '错误', color: 'bg-[#EF4444] text-white', icon: 'alert-circle' };
+        return { text: tI18n('错误'), color: 'bg-[#EF4444] text-white', icon: 'alert-circle' };
       default:
-        return { text: '已停止', color: 'bg-white/10 text-white/60', icon: 'x-circle' };
+        return { text: tI18n('已停止'), color: 'bg-white/10 text-white/60', icon: 'x-circle' };
     }
   };
 
@@ -523,8 +524,8 @@ export function TunnelWidget({ onBack }: TunnelWidgetProps): JSX.Element {
     <div className="space-y-4">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-xl font-semibold text-white">隧道管理</h2>
-          <p className="text-sm text-white/50 mt-1">管理 FRP 内网穿透隧道</p>
+          <h2 className="text-xl font-semibold text-white">{tI18n('隧道管理')}</h2>
+          <p className="text-sm text-white/50 mt-1">{tI18n('管理 FRP 内网穿透隧道')}</p>
         </div>
         <button
           className="px-4 py-2 bg-[#7C3AED] hover:bg-[#6D28D9] rounded-lg text-white font-medium clickable flex items-center"
@@ -532,7 +533,7 @@ export function TunnelWidget({ onBack }: TunnelWidgetProps): JSX.Element {
           disabled={isLoading}
         >
           <Icon name="plus" size={16} />
-          <span className="ml-2">创建隧道</span>
+          <span className="ml-2">{tI18n('创建隧道')}</span>
         </button>
       </div>
 
@@ -542,14 +543,14 @@ export function TunnelWidget({ onBack }: TunnelWidgetProps): JSX.Element {
           <div className="flex items-center gap-3">
             <Icon name="alert-circle" size={20} color="#F59E0B" />
             <div className="flex-1">
-              <p className="text-white/80">FRP 未安装</p>
-              <p className="text-sm text-white/50">请先安装 FRP 或配置 FRP 路径</p>
+              <p className="text-white/80">{tI18n('FRP 未安装')}</p>
+              <p className="text-sm text-white/50">{tI18n('请先安装 FRP 或配置 FRP 路径')}</p>
             </div>
             <button
               className="px-3 py-1.5 bg-[#7C3AED] hover:bg-[#6D28D9] rounded-lg text-white text-sm clickable"
               onClick={() => setView('settings')}
             >
-              去设置
+              {tI18n('去设置')}
             </button>
           </div>
         </div>
@@ -558,8 +559,8 @@ export function TunnelWidget({ onBack }: TunnelWidgetProps): JSX.Element {
       {tunnels.length === 0 ? (
         <div className="glass-light p-8 rounded-xl text-center text-white/60">
           <Icon name="network" size={48} className="mx-auto mb-4 text-white/40" />
-          <p className="text-lg">暂无隧道配置</p>
-          <p className="text-sm mt-2">点击上方按钮创建您的第一个隧道</p>
+          <p className="text-lg">{tI18n('暂无隧道配置')}</p>
+          <p className="text-sm mt-2">{tI18n('点击上方按钮创建您的第一个隧道')}</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -584,7 +585,7 @@ export function TunnelWidget({ onBack }: TunnelWidgetProps): JSX.Element {
 
                 <div className="space-y-1.5 text-sm text-white/70">
                   <div className="flex items-center gap-2">
-                    <span className="text-white/40 w-12">类型:</span>
+                    <span className="text-white/40 w-12">{tI18n('类型:')}</span>
                     {tunnel.proxyType ? (
                       <span className="px-1.5 py-0.5 rounded bg-[#7C3AED]/20 text-[#A78BFA] text-xs">
                         {tunnel.proxyType}
@@ -594,26 +595,26 @@ export function TunnelWidget({ onBack }: TunnelWidgetProps): JSX.Element {
                     )}
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-white/40 w-12">本地:</span>
+                    <span className="text-white/40 w-12">{tI18n('本地:')}</span>
                     <code className="text-xs bg-white/5 px-1.5 py-0.5 rounded">{tunnel.localHost}:{tunnel.localPort}</code>
                   </div>
                   {tunnel.subdomain && (
                     <div className="flex items-center gap-2">
-                      <span className="text-white/40 w-12">子域名:</span>
+                      <span className="text-white/40 w-12">{tI18n('子域名:')}</span>
                       <span>{tunnel.subdomain}</span>
                     </div>
                   )}
                   {status?.publicUrl && (
                     <div className="flex items-center gap-2">
-                      <span className="text-white/40 w-12">公网:</span>
+                      <span className="text-white/40 w-12">{tI18n('公网:')}</span>
                       <a href={status.publicUrl} target="_blank" rel="noopener noreferrer"
                          className="text-[#7C3AED] hover:underline truncate flex-1">
                         {status.publicUrl}
                       </a>
                       <button
                         className="p-1 rounded hover:bg-white/10 clickable"
-                        onClick={() => handleCopy(status.publicUrl!, '公网地址')}
-                        title="复制地址"
+                        onClick={() => handleCopy(status.publicUrl!, tI18n('公网地址'))}
+                        title={tI18n("复制地址")}
                       >
                         <Icon name="copy" size={14} />
                       </button>
@@ -621,7 +622,7 @@ export function TunnelWidget({ onBack }: TunnelWidgetProps): JSX.Element {
                   )}
                   {status?.lastError && (
                     <div className="text-[#EF4444] text-xs bg-[#EF4444]/10 p-2 rounded mt-2">
-                      <span className="font-medium">错误:</span> {status.lastError}
+                      <span className="font-medium">{tI18n('错误:')}</span> {status.lastError}
                     </div>
                   )}
                 </div>
@@ -633,7 +634,7 @@ export function TunnelWidget({ onBack }: TunnelWidgetProps): JSX.Element {
                         className="p-2 rounded-lg bg-[#EF4444]/20 hover:bg-[#EF4444]/30 clickable text-[#EF4444]"
                         onClick={() => handleStopTunnel(tunnel.id)}
                         disabled={isLoading}
-                        title="停止"
+                        title={tI18n("停止")}
                       >
                         <Icon name="stop" size={16} />
                       </button>
@@ -642,7 +643,7 @@ export function TunnelWidget({ onBack }: TunnelWidgetProps): JSX.Element {
                         className="p-2 rounded-lg bg-[#22C55E]/20 hover:bg-[#22C55E]/30 clickable text-[#22C55E]"
                         onClick={() => handleStartTunnel(tunnel.id)}
                         disabled={isLoading || isStarting}
-                        title="启动"
+                        title={tI18n("启动")}
                       >
                         <Icon name="play" size={16} />
                       </button>
@@ -651,21 +652,21 @@ export function TunnelWidget({ onBack }: TunnelWidgetProps): JSX.Element {
                       className="p-2 rounded-lg bg-white/10 hover:bg-white/20 clickable text-white/70"
                       onClick={() => handleRestartTunnel(tunnel.id)}
                       disabled={isLoading || isStarting}
-                      title="重启"
+                      title={tI18n("重启")}
                     >
                       <Icon name="refresh" size={16} />
                     </button>
                     <button
                       className="p-2 rounded-lg bg-white/10 hover:bg-white/20 clickable text-white/70"
                       onClick={() => handleViewLog(tunnel)}
-                      title="查看日志"
+                      title={tI18n("查看日志")}
                     >
                       <Icon name="log" size={16} />
                     </button>
                     <button
                       className="p-2 rounded-lg bg-white/10 hover:bg-white/20 clickable text-white/70"
                       onClick={() => handleSwitchToEdit(tunnel)}
-                      title="编辑"
+                      title={tI18n("编辑")}
                     >
                       <Icon name="pencil" size={16} />
                     </button>
@@ -673,7 +674,7 @@ export function TunnelWidget({ onBack }: TunnelWidgetProps): JSX.Element {
                       className="p-2 rounded-lg bg-[#EF4444]/20 hover:bg-[#EF4444]/30 clickable text-[#EF4444]"
                       onClick={() => handleDeleteTunnel(tunnel.id)}
                       disabled={isLoading}
-                      title="删除"
+                      title={tI18n("删除")}
                     >
                       <Icon name="trash" size={16} />
                     </button>
@@ -681,7 +682,7 @@ export function TunnelWidget({ onBack }: TunnelWidgetProps): JSX.Element {
                   {tunnel.autoStart && (
                     <span className="text-xs text-white/40 flex items-center gap-1">
                       <Icon name="check" size={12} />
-                      自启动
+                      {tI18n('自启动')}
                     </span>
                   )}
                 </div>
@@ -696,8 +697,8 @@ export function TunnelWidget({ onBack }: TunnelWidgetProps): JSX.Element {
   const renderSettingsView = () => (
     <div className="space-y-4">
       <div className="mb-6">
-        <h2 className="text-xl font-semibold text-white">FRP 设置</h2>
-        <p className="text-sm text-white/50 mt-1">配置默认 FRP 服务器和安装选项</p>
+        <h2 className="text-xl font-semibold text-white">{tI18n('FRP 设置')}</h2>
+        <p className="text-sm text-white/50 mt-1">{tI18n('配置默认 FRP 服务器和安装选项')}</p>
       </div>
 
       {/* 安装状态 */}
@@ -711,11 +712,11 @@ export function TunnelWidget({ onBack }: TunnelWidgetProps): JSX.Element {
                 color={installStatus?.frpInstalled ? '#22C55E' : '#F59E0B'} />
             </div>
             <div>
-              <h3 className="font-semibold text-white">FRP 安装状态</h3>
+              <h3 className="font-semibold text-white">{tI18n('FRP 安装状态')}</h3>
               <p className="text-sm text-white/50">
                 {installStatus?.frpInstalled
-                  ? `已安装${installStatus.frpVersion ? ` (${installStatus.frpVersion})` : ''}`
-                  : '未安装'}
+                  ? t('已安装{version}', { version: installStatus.frpVersion ? ` (${installStatus.frpVersion})` : '' })
+                  : tI18n('未安装')}
               </p>
             </div>
           </div>
@@ -725,16 +726,16 @@ export function TunnelWidget({ onBack }: TunnelWidgetProps): JSX.Element {
               onClick={handleInstallFRP}
               disabled={isLoading}
             >
-              {isLoading ? '安装中...' : '安装 FRP'}
+              {isLoading ? tI18n('安装中...') : tI18n('安装 FRP')}
             </button>
           )}
         </div>
 
         {!installStatus?.frpInstalled && (
           <div className="text-sm text-white/50 bg-white/5 p-3 rounded-lg">
-            <p>FRP 是一个高性能的反向代理应用，用于内网穿透。</p>
-            <p className="mt-1">也可以手动从 <a href="https://github.com/fatedier/frp/releases" target="_blank" rel="noopener noreferrer"
-                            className="text-[#7C3AED] hover:underline">GitHub Releases</a> 下载并安装到系统 PATH。</p>
+            <p>{tI18n('FRP 是一个高性能的反向代理应用，用于内网穿透。')}</p>
+            <p className="mt-1">{tI18n('也可以手动从')} <a href="https://github.com/fatedier/frp/releases" target="_blank" rel="noopener noreferrer"
+                            className="text-[#7C3AED] hover:underline">GitHub Releases</a> {tI18n('下载并安装到系统 PATH。')}</p>
           </div>
         )}
       </div>
@@ -743,32 +744,32 @@ export function TunnelWidget({ onBack }: TunnelWidgetProps): JSX.Element {
       <div className="glass-light p-4 rounded-xl">
         <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
           <Icon name="server" size={18} />
-          默认 FRP 服务器
+          {tI18n('默认 FRP 服务器')}
         </h3>
 
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-white/70 mb-2">服务器地址</label>
+            <label className="block text-sm font-medium text-white/70 mb-2">{tI18n('服务器地址')}</label>
             <input
               type="text"
               value={settingsForm.frpServerAddress}
               onChange={(e) => setSettingsForm({ ...settingsForm, frpServerAddress: e.target.value })}
               className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-[#7C3AED]"
-              placeholder="例如: frp.example.com:7000"
+              placeholder={tI18n("例如: frp.example.com:7000")}
             />
-            <p className="text-xs text-white/40 mt-1">FRP 服务器的地址和端口</p>
+            <p className="text-xs text-white/40 mt-1">{tI18n('FRP 服务器的地址和端口')}</p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-white/70 mb-2">认证 Token</label>
+            <label className="block text-sm font-medium text-white/70 mb-2">{tI18n('认证 Token')}</label>
             <input
               type="password"
               value={settingsForm.frpServerToken}
               onChange={(e) => setSettingsForm({ ...settingsForm, frpServerToken: e.target.value })}
               className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-[#7C3AED]"
-              placeholder="输入服务器 Token"
+              placeholder={tI18n("输入服务器 Token")}
             />
-            <p className="text-xs text-white/40 mt-1">用于连接 FRP 服务器的认证令牌</p>
+            <p className="text-xs text-white/40 mt-1">{tI18n('用于连接 FRP 服务器的认证令牌')}</p>
           </div>
 
           <div className="pt-4 border-t border-white/10">
@@ -777,7 +778,7 @@ export function TunnelWidget({ onBack }: TunnelWidgetProps): JSX.Element {
               onClick={handleSaveSettings}
               disabled={isLoading}
             >
-              {isLoading ? '保存中...' : '保存设置'}
+              {isLoading ? tI18n('保存中...') : tI18n('保存设置')}
             </button>
           </div>
         </div>
@@ -787,14 +788,14 @@ export function TunnelWidget({ onBack }: TunnelWidgetProps): JSX.Element {
       <div className="glass-light p-4 rounded-xl">
         <h3 className="font-semibold text-white mb-3 flex items-center gap-2">
           <Icon name="information-circle" size={18} />
-          使用说明
+          {tI18n('使用说明')}
         </h3>
         <div className="text-sm text-white/60 space-y-2">
-          <p>1. 确保 FRP 服务端 (frps) 已部署并运行</p>
-          <p>2. 在设置中配置默认 FRP 服务器地址和 Token</p>
-          <p>3. 创建隧道时选择代理类型（HTTP、HTTPS、TCP 等）</p>
-          <p>4. 启动隧道后，系统会分配公网访问地址</p>
-          <p>5. 支持子域名配置（需要服务端支持）</p>
+          <p>{tI18n('1. 确保 FRP 服务端 (frps) 已部署并运行')}</p>
+          <p>{tI18n('2. 在设置中配置默认 FRP 服务器地址和 Token')}</p>
+          <p>{tI18n('3. 创建隧道时选择代理类型（HTTP、HTTPS、TCP 等）')}</p>
+          <p>{tI18n('4. 启动隧道后，系统会分配公网访问地址')}</p>
+          <p>{tI18n('5. 支持子域名配置（需要服务端支持）')}</p>
         </div>
       </div>
     </div>
@@ -803,25 +804,25 @@ export function TunnelWidget({ onBack }: TunnelWidgetProps): JSX.Element {
   // 渲染创建表单
   const renderCreateForm = () => (
     <div className="glass-light p-6 rounded-xl">
-      <h2 className="text-xl font-semibold text-white mb-6">创建新隧道</h2>
+      <h2 className="text-xl font-semibold text-white mb-6">{tI18n('创建新隧道')}</h2>
 
       <div className="space-y-4">
         {/* 基本信息 */}
         <div className="space-y-3">
           <div>
-            <label className="block text-sm font-medium text-white/70 mb-2">隧道名称 *</label>
+            <label className="block text-sm font-medium text-white/70 mb-2">{tI18n('隧道名称 *')}</label>
             <input
               type="text"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-[#7C3AED]"
-              placeholder="例如: 我的 Web 服务"
+              placeholder={tI18n("例如: 我的 Web 服务")}
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">本地地址 *</label>
+              <label className="block text-sm font-medium text-white/70 mb-2">{tI18n('本地地址 *')}</label>
               <input
                 type="text"
                 value={formData.localHost}
@@ -831,7 +832,7 @@ export function TunnelWidget({ onBack }: TunnelWidgetProps): JSX.Element {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">本地端口 *</label>
+              <label className="block text-sm font-medium text-white/70 mb-2">{tI18n('本地端口 *')}</label>
               <input
                 type="number"
                 value={formData.localPort}
@@ -847,58 +848,58 @@ export function TunnelWidget({ onBack }: TunnelWidgetProps): JSX.Element {
 
         {/* FRP 配置 */}
         <div className="space-y-3 pt-4 border-t border-white/10">
-          <h3 className="text-lg font-medium text-white mb-2">FRP 配置</h3>
+          <h3 className="text-lg font-medium text-white mb-2">{tI18n('FRP 配置')}</h3>
 
             <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">代理类型</label>
+              <label className="block text-sm font-medium text-white/70 mb-2">{tI18n('代理类型')}</label>
               <Select
                 value={formData.proxyType}
                 onValueChange={(value) => setFormData({ ...formData, proxyType: value as ProxyType })}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="选择代理类型" />
+                  <SelectValue placeholder={tI18n("选择代理类型")} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value={ProxyType.ProxyTypeHTTP}>HTTP</SelectItem>
                   <SelectItem value={ProxyType.ProxyTypeHTTPS}>HTTPS</SelectItem>
                   <SelectItem value={ProxyType.ProxyTypeTCP}>TCP</SelectItem>
-                  <SelectItem value={ProxyType.ProxyTypeSTCP}>STCP (秘密 TCP)</SelectItem>
+                  <SelectItem value={ProxyType.ProxyTypeSTCP}>{tI18n('STCP (秘密 TCP)')}</SelectItem>
                   <SelectItem value={ProxyType.ProxyTypeXTCP}>XTCP (P2P TCP)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">子域名 (可选)</label>
+              <label className="block text-sm font-medium text-white/70 mb-2">{tI18n('子域名 (可选)')}</label>
               <input
                 type="text"
                 value={formData.subdomain}
                 onChange={(e) => setFormData({ ...formData, subdomain: e.target.value })}
                 className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-[#7C3AED]"
-                placeholder="例如: myapp"
+                placeholder={tI18n("例如: myapp")}
               />
-              <p className="text-xs text-white/40 mt-1">需要服务端支持自定义域名</p>
+              <p className="text-xs text-white/40 mt-1">{tI18n('需要服务端支持自定义域名')}</p>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">服务器地址 *</label>
+              <label className="block text-sm font-medium text-white/70 mb-2">{tI18n('服务器地址 *')}</label>
               <input
                 type="text"
                 value={formData.frpServerAddress}
                 onChange={(e) => setFormData({ ...formData, frpServerAddress: e.target.value })}
                 className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-[#7C3AED]"
-                placeholder="例如: frp.example.com:7000"
+                placeholder={tI18n("例如: frp.example.com:7000")}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">认证 Token *</label>
+              <label className="block text-sm font-medium text-white/70 mb-2">{tI18n('认证 Token *')}</label>
               <input
                 type="password"
                 value={formData.frpServerToken}
                 onChange={(e) => setFormData({ ...formData, frpServerToken: e.target.value })}
                 className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-[#7C3AED]"
-                placeholder="输入服务器 Token"
+                placeholder={tI18n("输入服务器 Token")}
               />
             </div>
         </div>
@@ -912,7 +913,7 @@ export function TunnelWidget({ onBack }: TunnelWidgetProps): JSX.Element {
               onChange={(e) => setFormData({ ...formData, autoStart: e.target.checked })}
               className="w-5 h-5 rounded border-white/20 accent-[#7C3AED]"
             />
-            <span className="text-sm text-white/70">应用启动时自动启动此隧道</span>
+            <span className="text-sm text-white/70">{tI18n('应用启动时自动启动此隧道')}</span>
           </label>
         </div>
       </div>
@@ -924,14 +925,14 @@ export function TunnelWidget({ onBack }: TunnelWidgetProps): JSX.Element {
           onClick={handleCreateTunnel}
           disabled={isLoading}
         >
-          {isLoading ? '创建中...' : '创建隧道'}
+          {isLoading ? tI18n('创建中...') : tI18n('创建隧道')}
         </button>
         <button
           className="px-6 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white font-medium clickable"
           onClick={() => setView('tunnels')}
           disabled={isLoading}
         >
-          取消
+          {tI18n('取消')}
         </button>
       </div>
     </div>
@@ -940,13 +941,13 @@ export function TunnelWidget({ onBack }: TunnelWidgetProps): JSX.Element {
   // 渲染编辑表单
   const renderEditForm = () => (
     <div className="glass-light p-6 rounded-xl">
-      <h2 className="text-xl font-semibold text-white mb-6">编辑隧道: {editingTunnel?.name}</h2>
+      <h2 className="text-xl font-semibold text-white mb-6">{tI18n('编辑隧道:')} {editingTunnel?.name}</h2>
 
       <div className="space-y-4">
         {/* 基本信息 */}
         <div className="space-y-3">
           <div>
-            <label className="block text-sm font-medium text-white/70 mb-2">隧道名称</label>
+            <label className="block text-sm font-medium text-white/70 mb-2">{tI18n('隧道名称')}</label>
             <input
               type="text"
               value={formData.name}
@@ -957,7 +958,7 @@ export function TunnelWidget({ onBack }: TunnelWidgetProps): JSX.Element {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">本地地址</label>
+              <label className="block text-sm font-medium text-white/70 mb-2">{tI18n('本地地址')}</label>
               <input
                 type="text"
                 value={formData.localHost}
@@ -966,7 +967,7 @@ export function TunnelWidget({ onBack }: TunnelWidgetProps): JSX.Element {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">本地端口</label>
+              <label className="block text-sm font-medium text-white/70 mb-2">{tI18n('本地端口')}</label>
               <input
                 type="number"
                 value={formData.localPort}
@@ -981,40 +982,40 @@ export function TunnelWidget({ onBack }: TunnelWidgetProps): JSX.Element {
 
         {/* FRP 专用配置 */}
         <div className="space-y-3 pt-4 border-t border-white/10">
-          <h3 className="text-lg font-medium text-white mb-2">FRP 服务器配置</h3>
+          <h3 className="text-lg font-medium text-white mb-2">{tI18n('FRP 服务器配置')}</h3>
 
             <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">代理类型</label>
+              <label className="block text-sm font-medium text-white/70 mb-2">{tI18n('代理类型')}</label>
               <Select
                 value={formData.proxyType}
                 onValueChange={(value) => setFormData({ ...formData, proxyType: value as ProxyType })}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="选择代理类型" />
+                  <SelectValue placeholder={tI18n("选择代理类型")} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value={ProxyType.ProxyTypeHTTP}>HTTP</SelectItem>
                   <SelectItem value={ProxyType.ProxyTypeHTTPS}>HTTPS</SelectItem>
                   <SelectItem value={ProxyType.ProxyTypeTCP}>TCP</SelectItem>
-                  <SelectItem value={ProxyType.ProxyTypeSTCP}>STCP (秘密 TCP)</SelectItem>
+                  <SelectItem value={ProxyType.ProxyTypeSTCP}>{tI18n('STCP (秘密 TCP)')}</SelectItem>
                   <SelectItem value={ProxyType.ProxyTypeXTCP}>XTCP (P2P TCP)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">子域名 (可选)</label>
+              <label className="block text-sm font-medium text-white/70 mb-2">{tI18n('子域名 (可选)')}</label>
               <input
                 type="text"
                 value={formData.subdomain}
                 onChange={(e) => setFormData({ ...formData, subdomain: e.target.value })}
                 className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-[#7C3AED]"
-                placeholder="例如: myapp"
+                placeholder={tI18n("例如: myapp")}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">服务器地址</label>
+              <label className="block text-sm font-medium text-white/70 mb-2">{tI18n('服务器地址')}</label>
               <input
                 type="text"
                 value={formData.frpServerAddress}
@@ -1024,7 +1025,7 @@ export function TunnelWidget({ onBack }: TunnelWidgetProps): JSX.Element {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">认证 Token</label>
+              <label className="block text-sm font-medium text-white/70 mb-2">{tI18n('认证 Token')}</label>
               <input
                 type="password"
                 value={formData.frpServerToken}
@@ -1043,7 +1044,7 @@ export function TunnelWidget({ onBack }: TunnelWidgetProps): JSX.Element {
               onChange={(e) => setFormData({ ...formData, autoStart: e.target.checked })}
               className="w-5 h-5 rounded border-white/20 accent-[#7C3AED]"
             />
-            <span className="text-sm text-white/70">应用启动时自动启动此隧道</span>
+            <span className="text-sm text-white/70">{tI18n('应用启动时自动启动此隧道')}</span>
           </label>
         </div>
       </div>
@@ -1055,14 +1056,14 @@ export function TunnelWidget({ onBack }: TunnelWidgetProps): JSX.Element {
           onClick={handleUpdateTunnel}
           disabled={isLoading}
         >
-          {isLoading ? '保存中...' : '保存更改'}
+          {isLoading ? tI18n('保存中...') : tI18n('保存更改')}
         </button>
         <button
           className="px-6 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white font-medium clickable"
           onClick={() => setView('tunnels')}
           disabled={isLoading}
         >
-          取消
+          {tI18n('取消')}
         </button>
       </div>
     </div>
@@ -1084,7 +1085,7 @@ export function TunnelWidget({ onBack }: TunnelWidgetProps): JSX.Element {
               <button
                 className="p-2 rounded-lg hover:bg-white/10 clickable text-white/70"
                 onClick={() => loadLogContent(currentLogTunnelId, 100)}
-                title="手动刷新"
+                title={tI18n("手动刷新")}
               >
                 <Icon name="refresh" size={16} />
               </button>
@@ -1099,11 +1100,11 @@ export function TunnelWidget({ onBack }: TunnelWidgetProps): JSX.Element {
 
           <div className="flex items-center justify-between px-4 py-2 border-b border-white/10 bg-white/5">
             <div className="flex items-center gap-2">
-              <span className="text-xs text-white/50">显示最后 100 行</span>
+              <span className="text-xs text-white/50">{tI18n('显示最后 100 行')}</span>
               {autoRefreshLog && (
                 <span className="flex items-center gap-1 text-xs text-[#22C55E]">
                   <span className="w-1.5 h-1.5 rounded-full bg-[#22C55E] animate-pulse"></span>
-                  实时刷新中
+                  {tI18n('实时刷新中')}
                 </span>
               )}
             </div>
@@ -1114,12 +1115,12 @@ export function TunnelWidget({ onBack }: TunnelWidgetProps): JSX.Element {
                 onChange={(e) => setAutoRefreshLog(e.target.checked)}
                 className="w-4 h-4 rounded border-white/20 accent-[#7C3AED]"
               />
-              <span className="text-sm text-white/70">自动刷新</span>
+              <span className="text-sm text-white/70">{tI18n('自动刷新')}</span>
             </label>
           </div>
 
           <div className="flex-1 overflow-auto p-4 bg-black/30">
-            <pre className="text-sm text-white/80 font-mono whitespace-pre-wrap leading-relaxed">{currentLog || '(暂无日志)'}</pre>
+            <pre className="text-sm text-white/80 font-mono whitespace-pre-wrap leading-relaxed">{currentLog || tI18n('(暂无日志)')}</pre>
           </div>
 
           <div className="p-4 border-t border-white/10 flex justify-end gap-2">
@@ -1128,13 +1129,13 @@ export function TunnelWidget({ onBack }: TunnelWidgetProps): JSX.Element {
               onClick={() => loadLogContent(currentLogTunnelId, 100)}
             >
               <Icon name="refresh" size={14} />
-              刷新
+              {tI18n('刷新')}
             </button>
             <button
               className="px-4 py-2 bg-[#7C3AED] hover:bg-[#6D28D9] rounded-lg text-white clickable"
               onClick={handleCloseLogModal}
             >
-              关闭
+              {tI18n('关闭')}
             </button>
           </div>
         </div>
@@ -1151,7 +1152,7 @@ export function TunnelWidget({ onBack }: TunnelWidgetProps): JSX.Element {
         onClick={onBack}
       >
         <Icon name="arrow-left" size={16} />
-        <span>返回</span>
+        <span>{tI18n('返回')}</span>
       </button>
 
       <div className="flex gap-4 mb-6">
@@ -1163,7 +1164,7 @@ export function TunnelWidget({ onBack }: TunnelWidgetProps): JSX.Element {
           }`}
           onClick={() => setView('tunnels')}
         >
-          隧道列表
+          {tI18n('隧道列表')}
         </button>
         <button
           className={`px-4 py-2 rounded-lg font-medium transition-all ${
@@ -1173,7 +1174,7 @@ export function TunnelWidget({ onBack }: TunnelWidgetProps): JSX.Element {
           }`}
           onClick={handleSwitchToCreate}
         >
-          创建隧道
+          {tI18n('创建隧道')}
         </button>
         <button
           className={`px-4 py-2 rounded-lg font-medium transition-all ${
@@ -1183,7 +1184,7 @@ export function TunnelWidget({ onBack }: TunnelWidgetProps): JSX.Element {
           }`}
           onClick={() => setView('settings')}
         >
-          设置
+          {tI18n('设置')}
         </button>
       </div>
 

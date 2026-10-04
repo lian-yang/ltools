@@ -21,6 +21,7 @@ import { CardEditor } from './CardEditor';
 import { InputDialog } from './InputDialog';
 import { ConfirmDialog } from './ConfirmDialog';
 import { Icon } from '../Icon';
+import { t } from '@/i18n';
 
 interface BoardViewProps {
   board: Board;
@@ -205,7 +206,7 @@ export function BoardView({ board, kanban }: BoardViewProps): JSX.Element {
               className="w-full h-12 rounded-xl border-2 border-dashed border-white/10 hover:border-white/20 text-white/40 hover:text-white/60 transition-colors flex items-center justify-center gap-2 clickable"
             >
               <Icon name="plus" size={20} />
-              <span>添加列</span>
+              <span>{t('添加列')}</span>
             </button>
           </div>
         </div>
@@ -229,16 +230,16 @@ export function BoardView({ board, kanban }: BoardViewProps): JSX.Element {
 
       <InputDialog
         isOpen={showAddColumn}
-        title="添加列"
-        placeholder="请输入列名称"
+        title={t("添加列")}
+        placeholder={t("请输入列名称")}
         onConfirm={handleConfirmAddColumn}
         onCancel={() => setShowAddColumn(false)}
       />
 
       <ConfirmDialog
         isOpen={deleteColumnId !== null}
-        title="删除列"
-        message="确定要删除这一列吗？所有卡片将被删除。"
+        title={t("删除列")}
+        message={t("确定要删除这一列吗？所有卡片将被删除。")}
         onConfirm={handleConfirmDeleteColumn}
         onCancel={() => setDeleteColumnId(null)}
       />

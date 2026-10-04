@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useBookmarks, SearchResult } from '../hooks/useBookmarks';
 import { Icon } from './Icon';
+import { t } from '@/i18n';
 
 interface BookmarkWidgetProps {
   query: string;
@@ -77,7 +78,7 @@ export const BookmarkWidget: React.FC<BookmarkWidgetProps> = ({ query, onSelect 
   if (!query.trim()) {
     return (
       <div className="p-4 text-center text-gray-400">
-        输入关键词搜索浏览器书签
+        {t('输入关键词搜索浏览器书签')}
       </div>
     );
   }
@@ -86,7 +87,7 @@ export const BookmarkWidget: React.FC<BookmarkWidgetProps> = ({ query, onSelect 
     return (
       <div className="p-4 text-center text-gray-400">
         <Icon name="refresh" className="inline animate-spin mr-2" size={16} />
-        搜索中...
+        {t('搜索中...')}
       </div>
     );
   }
@@ -94,7 +95,7 @@ export const BookmarkWidget: React.FC<BookmarkWidgetProps> = ({ query, onSelect 
   if (results.length === 0) {
     return (
       <div className="p-4 text-center text-gray-400">
-        未找到匹配的书签
+        {t('未找到匹配的书签')}
       </div>
     );
   }

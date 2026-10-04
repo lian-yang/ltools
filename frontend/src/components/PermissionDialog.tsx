@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { PluginService, Permission, PluginMetadata } from '../../bindings/ltools/internal/plugins';
+import { t } from '@/i18n';
 
 interface PermissionDialogProps {
   pluginId: string | null;
@@ -64,11 +65,11 @@ export function PermissionDialog({
 
   const getPermissionLabel = (permission: Permission): string => {
     const labels: Record<string, string> = {
-      'filesystem': '文件系统访问',
-      'network': '网络访问',
-      'clipboard': '剪贴板访问',
-      'notification': '通知权限',
-      'process': '进程管理',
+      'filesystem': t('文件系统访问'),
+      'network': t('网络访问'),
+      'clipboard': t('剪贴板访问'),
+      'notification': t('通知权限'),
+      'process': t('进程管理'),
     };
     // Convert enum to string value
     const permStr = permission.toString().replace('Permission', '').toLowerCase();
@@ -77,11 +78,11 @@ export function PermissionDialog({
 
   const getPermissionDescription = (permission: Permission): string => {
     const descriptions: Record<string, string> = {
-      'filesystem': '允许插件读写文件系统',
-      'network': '允许插件进行网络请求',
-      'clipboard': '允许插件读写剪贴板内容',
-      'notification': '允许插件显示系统通知',
-      'process': '允许插件启动和管理进程',
+      'filesystem': t('允许插件读写文件系统'),
+      'network': t('允许插件进行网络请求'),
+      'clipboard': t('允许插件读写剪贴板内容'),
+      'notification': t('允许插件显示系统通知'),
+      'process': t('允许插件启动和管理进程'),
     };
     // Convert enum to string value
     const permStr = permission.toString().replace('Permission', '').toLowerCase();
@@ -94,7 +95,7 @@ export function PermissionDialog({
     <div className="permission-dialog-overlay">
       <div className="permission-dialog">
         <div className="permission-dialog-header">
-          <h2>权限请求</h2>
+          <h2>{t('权限请求')}</h2>
           <button className="close-button" onClick={onDeny}>
             ×
           </button>
@@ -102,7 +103,7 @@ export function PermissionDialog({
 
         <div className="permission-dialog-body">
           <p className="permission-request-message">
-            <strong>{pluginName}</strong> 请求以下权限：
+            <strong>{pluginName}</strong> {t('请求以下权限：')}
           </p>
 
           <div className="permissions-list">
@@ -127,7 +128,7 @@ export function PermissionDialog({
 
           {pluginInfo && pluginInfo.homepage && (
             <p className="plugin-homepage">
-              了解更多：{' '}
+              {t('了解更多：')}{' '}
               <a
                 href={pluginInfo.homepage}
                 target="_blank"
@@ -141,14 +142,14 @@ export function PermissionDialog({
 
         <div className="permission-dialog-footer">
           <button className="btn-deny" onClick={onDeny}>
-            拒绝
+            {t('拒绝')}
           </button>
           <button
             className="btn-grant"
             onClick={handleGrant}
             disabled={selectedPermissions.size === 0}
           >
-            授权 ({selectedPermissions.size}/{requestedPermissions.length})
+            {t('授权 (')}{selectedPermissions.size}/{requestedPermissions.length})
           </button>
         </div>
       </div>
