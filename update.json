@@ -1,23 +1,23 @@
 {
-  "version": "0.1.6",
-  "releaseDate": "2026-10-04T08:18:19Z",
-  "releaseNotes": "fix: 发版构建修复——钉住 wails3 CLI 版本、Linux 构建机降至 22.04、补充 MIT LICENSE\n\n- wails3 CLI 固定为 v3.0.0-alpha.74（@latest 已是 beta.27，需要 gtk4，\n  与项目的 gtk3/webkit2gtk-4.1 依赖不兼容），缓存 key 同步加入版本\n- Linux 构建机固定 ubuntu-22.04：24.04 构建的 AppImage 捆绑库要求\n  glibc 2.38+，在旧发行版上直接退出（AppImage 目录测试的\n  error-glibc-too-new / error-app-exits 根因）\n- 新增 MIT LICENSE 文件（README 徽章一直指向它但文件缺失）",
+  "version": "0.1.7",
+  "releaseDate": "2026-10-04T13:28:36Z",
+  "releaseNotes": "chore: 更新版本号到 v0.1.7",
   "mandatory": false,
   "platforms": {
     "darwin-arm64": {
-      "url": "https://github.com/lian-yang/ltools/releases/download/v0.1.6/ltools-v0.1.6-darwin-arm64.tar.gz",
-      "size": 10359374,
-      "checksum": "sha256:755fe315ad7bb2c284473c7f81114b3d30939cda471bb47ab1cb4f5bd4fbe093"
+      "url": "https://github.com/lian-yang/ltools/releases/download/v0.1.7/ltools-v0.1.7-darwin-arm64.tar.gz",
+      "size": 10359501,
+      "checksum": "sha256:6a18c76b7aceee324e70b1bd6100cc249613ea12058050fccfb8b5684d29dfa7"
     },
     "windows-amd64": {
-      "url": "https://github.com/lian-yang/ltools/releases/download/v0.1.6/ltools-v0.1.6-windows-amd64-installer.exe",
-      "size": 14891820,
-      "checksum": "sha256:36e23307d2cdd42d72d8df955906331c9cef085513867bdfb37fe8d63c1de62c"
+      "url": "https://github.com/lian-yang/ltools/releases/download/v0.1.7/ltools-v0.1.7-windows-amd64-installer.exe",
+      "size": 14892110,
+      "checksum": "sha256:5dc95983bcb177bd68621a77958268cb49f002e9fed5a0743c1bd2416b85de03"
     },
     "linux-amd64": {
-      "url": "https://github.com/lian-yang/ltools/releases/download/v0.1.6/ltools-v0.1.6-linux-amd64.AppImage",
-      "size": 87669240,
-      "checksum": "sha256:d3ce2a234cbb610244501457b28d9026c54d19e10771a52b6baa9902942bf10f"
+      "url": "https://github.com/lian-yang/ltools/releases/download/v0.1.7/ltools-v0.1.7-linux-amd64.AppImage",
+      "size": 87677432,
+      "checksum": "sha256:c8c7bfb2fdfeeaa8fc26ccbac40866eb94cdf761a2c02d9f107f464600a5c6c8"
     }
   }
 }
