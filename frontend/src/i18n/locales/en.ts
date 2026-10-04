@@ -1453,4 +1453,15 @@ export const en: Record<string, string> = {
   "默认字体": "Default Font",
   "💡 密码种子用于加密水印，提取时需要使用相同的密码": "💡 The password seed encrypts the watermark; extraction requires the same password",
   "💡 提示：可以使用 Ctrl、Shift、Alt、Cmd (macOS) 等修饰键组合。例如：": "💡 Tip: modifier keys like Ctrl, Shift, Alt, Cmd (macOS) can be combined. For example:",
+
+  // ---- Go 插件元数据补漏（对 plugins/*/ 元数据字段与词典的审计补充；
+  //      注意"元力KW"等 ID 类字段属逻辑数据，刻意不翻译）----
+  "IP信息": "IP Info",
+  "JSON 格式化、验证和可视化编辑工具": "JSON formatting, validation and visual editing tool",
+  "Markdown 编辑器": "Markdown Editor",
+  "密码保险库": "Password Vault",
+  "密码生成器": "Password Generator",
+  "应用启动器": "App Launcher",
+  "截图": "Screenshot",
+  "默认字体 (Go Regular)": "Default Font (Go Regular)",
 };
