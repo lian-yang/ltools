@@ -11,7 +11,7 @@ info:
   description: "多功能开发工具集" # 应用程序描述
   copyright: "(c) 2025, LTools" # 版权文本
   comments: "开发者效率工具" # 备注
-  version: "0.1.6" # 应用程序版本
+  version: "0.1.7" # 应用程序版本
 
 # 自定义协议配置
 protocols:
