@@ -77,3 +77,26 @@ func writeTestPNG(t *testing.T, path string) {
 		t.Fatalf("encode png: %v", err)
 	}
 }
+
+// writeTestPNGWithSize 生成指定尺寸、单色填充的 PNG，用于需要足够容量
+// 的频域水印等测试场景
+func writeTestPNGWithSize(t *testing.T, path string, w, h int, c color.NRGBA) {
+	t.Helper()
+
+	f, err := os.Create(path)
+	if err != nil {
+		t.Fatalf("create png: %v", err)
+	}
+	defer f.Close()
+
+	img := image.NewNRGBA(image.Rect(0, 0, w, h))
+	for y := 0; y < h; y++ {
+		for x := 0; x < w; x++ {
+			img.Set(x, y, c)
+		}
+	}
+
+	if err := png.Encode(f, img); err != nil {
+		t.Fatalf("encode png: %v", err)
+	}
+}

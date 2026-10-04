@@ -56,7 +56,8 @@ func (m *Manager) Register(plugin Plugin) error {
 
 	// Synchronize plugin enabled state with metadata state
 	// After Register, metadata.State reflects the saved state
-	shouldBeEnabled := metadata.State == PluginStateEnabled
+	// installed 视为默认启用，与 StartupAll 的 installed->enabled 语义一致
+	shouldBeEnabled := metadata.State == PluginStateEnabled || metadata.State == PluginStateInstalled
 	currentlyEnabled := plugin.Enabled()
 
 	if shouldBeEnabled != currentlyEnabled {
