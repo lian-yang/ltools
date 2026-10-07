@@ -270,6 +270,11 @@ jobs:
 
           # Linux: AppImage (用于更新和首次安装)
           # 注意：实际生成的文件名是 ltools-x86_64.AppImage (带连字符)
+          # 后处理：修复 WebKit 辅助进程在未安装 webkit 的宿主机上无法启动的问题
+          # （详见 scripts/fix-appimage-webkit.sh 头部说明）
+          sudo apt-get install -y squashfs-tools
+          chmod +x scripts/fix-appimage-webkit.sh
+          ./scripts/fix-appimage-webkit.sh bin/ltools-x86_64.AppImage
           if [ -f bin/ltools-x86_64.AppImage ]; then
             cp bin/ltools-x86_64.AppImage ltools-${{ github.ref_name }}-${{ matrix.goos }}-${ARCH}.AppImage
             echo "✓ AppImage copied successfully"

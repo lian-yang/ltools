@@ -9,6 +9,11 @@
 - 插件市场、全局搜索、快捷键设置与所有独立窗口均已国际化
 - 后端错误消息在界面上自动翻译显示
 
+### 🐛 Linux AppImage 修复
+- 修复 WebKit 辅助进程在未安装 webkit2gtk 的系统上无法启动导致应用闪退的问题
+  （辅助进程查找路径改为 AppImage 内相对路径，随包捆绑 helper，无需系统预装依赖）
+- 修复 glibc 版本要求过高的问题（改用 ubuntu-22.04 构建，兼容 glibc ≥ 2.35 的发行版）
+
 ### 🧪 测试修复
 - 修复新安装插件默认启用状态与 StartupAll 语义不一致的问题（Manager.Register）
 - 补充图片处理插件缺失的水印测试辅助函数 `writeTestPNGWithSize`
