@@ -1,23 +1,23 @@
 {
   "version": "0.1.8",
-  "releaseDate": "2026-10-07T11:15:45Z",
-  "releaseNotes": "fix: 修复 AppImage 后处理脚本对 linuxdeploy 库文件布局的适配\n\n- linuxdeploy 将库重命名去版本后缀（libwebkit2gtk-4.1.so.0 无 .x.y），\n  glob 模式改为 so.0* 并优先选取非符号链接的真实文件\n- 增加辅助进程（WebKitWebProcess）存在性检查，缺失时明确报错",
+  "releaseDate": "2026-10-07T11:51:34Z",
+  "releaseNotes": "fix: AppImage 后处理恢复 WebKit 辅助进程可执行位并支持幂等重跑\n\nwails3 的 COPY 经 os.Create 写文件（0644），导致打包出的\nWebKitWebProcess/WebKitNetworkProcess/GPUProcess 丢失可执行位，\n相对路径补丁后 spawn 仍报 Permission denied（v0.1.8 目录重测失败根因）。\n修复脚本统一恢复 0755，并改为幂等（重复运行对已补丁库跳过）。",
   "mandatory": false,
   "platforms": {
     "darwin-arm64": {
       "url": "https://github.com/lian-yang/ltools/releases/download/v0.1.8/ltools-v0.1.8-darwin-arm64.tar.gz",
-      "size": 10359522,
-      "checksum": "sha256:efe6f3ff856ed69be43ca7e33bbf4ced6205117f31758055b19fedaefd47b488"
+      "size": 10359521,
+      "checksum": "sha256:79a9046ef231b0bb004de37ff818d74fb2f42800ae15ff49a2409cb4acfd5444"
     },
     "windows-amd64": {
       "url": "https://github.com/lian-yang/ltools/releases/download/v0.1.8/ltools-v0.1.8-windows-amd64-installer.exe",
-      "size": 14892142,
-      "checksum": "sha256:1f15a061b81ffed9506b12fc042f7e16b6b04f424d21879da81e4f5d4b5b5f34"
+      "size": 14891928,
+      "checksum": "sha256:38b1f32540db1fc5374981654fd143d878a89604901c1eb79820bb77730c4392"
     },
     "linux-amd64": {
       "url": "https://github.com/lian-yang/ltools/releases/download/v0.1.8/ltools-v0.1.8-linux-amd64.AppImage",
       "size": 81701368,
-      "checksum": "sha256:b131936b0755a01d998b09a41b7dbe017a5d14802c1c894dce4005504a434f4b"
+      "checksum": "sha256:608b9450122c468869e1eed4bad3077704e2e9970d1eb3a476c72c657593c454"
     }
   }
 }
