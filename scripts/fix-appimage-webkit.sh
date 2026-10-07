@@ -68,14 +68,17 @@ SQ="$WORK/squashfs-root"
 
 echo "==> 补丁 libwebkit2gtk：绝对辅助进程路径 → 相对路径（等长替换）"
 python3 - "$SQ" <<'PY'
-import glob, sys
+import glob, os, sys
 
 sq = sys.argv[1]
-# linuxdeploy/wails3 将库平铺在 usr/lib/，也可能保留 usr/lib/<triplet>/ 层级，
-# 因此递归查找
-candidates = glob.glob(sq + '/usr/lib/**/libwebkit2gtk-4.1.so.0.*', recursive=True)
-assert len(candidates) == 1, f'libwebkit2gtk-4.1.so.0.* 找到 {len(candidates)} 个: {candidates}'
-p = candidates[0]
+# linuxdeploy/wails3 将库平铺在 usr/lib/，也可能保留 usr/lib/<triplet>/ 层级；
+# 库文件名可能是 libwebkit2gtk-4.1.so.0（linuxdeploy 常重命名去版本后缀）
+# 或带完整版本号的 so.0.x.y，因此用 so.0* 递归匹配
+candidates = glob.glob(sq + '/usr/lib/**/libwebkit2gtk-4.1.so.0*', recursive=True)
+# 同一库可能以符号链接（so.0）+ 真实文件（so.0.x.y）并存，只补丁真实文件
+real_files = [c for c in candidates if not os.path.islink(c)]
+assert len(real_files) == 1, f'libwebkit2gtk-4.1.so.0* 找到 {len(real_files)} 个真实文件: {candidates}'
+p = real_files[0]
 with open(p, 'rb') as f:
     data = f.read()
 
@@ -96,6 +99,12 @@ for old, new in pairs:
 with open(p, 'wb') as f:
     f.write(data)
 print('已补丁:', p)
+
+# 辅助进程应已由 wails3 findGTKFiles 拷入（缺则为打包配置问题，明确报错）
+helpers = glob.glob(sq + '/usr/lib/*/webkit2gtk-4.1/WebKitWebProcess') + \
+          glob.glob(sq + '/usr/lib/webkit2gtk-4.1/WebKitWebProcess')
+assert helpers, '未找到捆绑的 WebKitWebProcess，请检查 wails3 打包配置'
+print('辅助进程:', helpers[0].replace(sq + '/', ''))
 PY
 
 echo "==> 替换 AppRun（cd 到 AppDir + 禁用 webkit 沙箱）"
