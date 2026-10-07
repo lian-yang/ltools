@@ -92,19 +92,28 @@ pairs = [
 for old, new in pairs:
     assert len(old) == len(new), f'补丁必须等长: {old!r}'
     count = data.count(old)
-    data = data.replace(old, new)
-    print(f'{old.decode()!r}: 替换 {count} 处')
-    assert count >= 1, '未找到目标字符串，库文件布局可能已变化'
+    if count:
+        data = data.replace(old, new)
+    # 幂等：相对路径已存在说明补丁过，跳过
+    assert count or data.count(new), '未找到目标字符串，库文件布局可能已变化'
+    print(f'{old.decode()!r}: 替换 {count} 处' + ('（已是相对路径，跳过）' if not count else ''))
 
 with open(p, 'wb') as f:
     f.write(data)
 print('已补丁:', p)
 
-# 辅助进程应已由 wails3 findGTKFiles 拷入（缺则为打包配置问题，明确报错）
-helpers = glob.glob(sq + '/usr/lib/*/webkit2gtk-4.1/WebKitWebProcess') + \
-          glob.glob(sq + '/usr/lib/webkit2gtk-4.1/WebKitWebProcess')
-assert helpers, '未找到捆绑的 WebKitWebProcess，请检查 wails3 打包配置'
-print('辅助进程:', helpers[0].replace(sq + '/', ''))
+# 辅助进程应已由 wails3 findGTKFiles 拷入（缺则为打包配置问题，明确报错）。
+# wails3 的 COPY 经 os.Create 写文件（0666&~umask=0644），辅助进程会丢失
+# 可执行位——spawn 时报 Permission denied，这里统一恢复 0755。
+fixed = []
+for pattern in ('usr/lib/*/webkit2gtk-4.1/WebKit*Process',
+                'usr/lib/*/webkit2gtk-4.1/injected-bundle/*.so'):
+    for h in glob.glob(sq + '/' + pattern):
+        os.chmod(h, 0o755)
+        fixed.append(h.replace(sq + '/', ''))
+assert any('WebKitWebProcess' in f for f in fixed), '未找到捆绑的 WebKitWebProcess'
+assert any('WebKitNetworkProcess' in f for f in fixed), '未找到捆绑的 WebKitNetworkProcess'
+print('辅助进程权限已恢复 0755:', '; '.join(fixed))
 PY
 
 echo "==> 替换 AppRun（cd 到 AppDir + 禁用 webkit 沙箱）"
